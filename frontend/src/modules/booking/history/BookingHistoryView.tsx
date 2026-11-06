@@ -150,7 +150,7 @@ export const BookingHistoryView: React.FC = () => {
                   <div>
                     <h3 className="text-sm font-bold text-slate-900">{order.facilityName}</h3>
                     <div className="text-[11px] text-slate-500 font-mono">
-                      Mã: <strong>{order.bookingCode}</strong> • Ngày tạo: {new Date(order.createdAt).toLocaleDateString('vi-VN')}
+                      Mã: <strong>{order.bookingCode}</strong> | Ngày tạo: {new Date(order.createdAt).toLocaleDateString('vi-VN')}
                     </div>
                   </div>
                 </div>
@@ -178,7 +178,7 @@ export const BookingHistoryView: React.FC = () => {
                         <div>
                           <span className="font-bold text-slate-900">{s.courtName}</span>
                           <div className="text-[10px] text-slate-500">
-                            {s.date} • {s.startTime} - {s.endTime}
+                            {s.date} | {s.startTime} - {s.endTime}
                           </div>
                         </div>
                       </div>

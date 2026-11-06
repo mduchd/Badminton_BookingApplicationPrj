@@ -155,7 +155,7 @@ export const CourtDetailView: React.FC = () => {
             <div className="flex items-center gap-2 text-slate-700 text-xs sm:text-sm font-medium mt-1.5 flex-wrap">
               <MapPin className="w-4 h-4 text-emerald-600 flex-shrink-0" />
               <span>{facility.address}</span>
-              <span className="text-slate-300">•</span>
+              <span className="text-slate-300">|</span>
               <span className="text-amber-700 font-semibold">{facility.distance}</span>
             </div>
           </div>
@@ -205,10 +205,10 @@ export const CourtDetailView: React.FC = () => {
 
       {/* Two Column Layout: Details & Booking Preview */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Description, SubCourts, Pricing, Map */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* About & Features */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-4">
+        {/* Left Column: Unified Detailed Canvas (Airbnb / Booking style) */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 divide-y divide-slate-200 shadow-xs">
+          {/* Section 1: Giới thiệu cơ sở & Tiện ích */}
+          <div className="pb-6 space-y-4">
             <h2 className="text-base sm:text-lg font-bold text-slate-900">Giới thiệu cơ sở</h2>
             <p className="text-sm text-slate-700 leading-relaxed font-normal">
               {facility.description}
@@ -230,8 +230,8 @@ export const CourtDetailView: React.FC = () => {
             </div>
           </div>
 
-          {/* Sub Courts List */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-4">
+          {/* Section 2: Danh sách sân con */}
+          <div className="py-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-base sm:text-lg font-bold text-slate-900">
                 Danh sách sân con ({facility.subCourts.length} sân)
@@ -265,10 +265,10 @@ export const CourtDetailView: React.FC = () => {
             </div>
           </div>
 
-          {/* Price Rules Table */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-4">
+          {/* Section 3: Bảng giá niêm yết theo khung giờ */}
+          <div className="py-6 space-y-4">
             <h2 className="text-base sm:text-lg font-bold text-slate-900">Bảng giá niêm yết theo khung giờ</h2>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto border border-slate-200 rounded-xl overflow-hidden">
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500 font-semibold bg-slate-50">
@@ -297,8 +297,8 @@ export const CourtDetailView: React.FC = () => {
             </div>
           </div>
 
-          {/* Embedded Google Maps Location */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-3">
+          {/* Section 4: Vị trí cụm sân */}
+          <div className="pt-6 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-base sm:text-lg font-bold text-slate-900">Vị trí cụm sân</h2>
               <button

@@ -38,16 +38,16 @@ export const OwnerDashboardView: React.FC = () => {
       title="Báo cáo & Thống kê vận hành"
       subtitle="Theo dõi doanh thu, lịch đón khách và tỷ lệ lấp đầy sân theo thời gian thực"
     >
-      {/* Facility Switcher */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Facility Switcher: Flat natural toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
         <div className="flex items-center gap-2">
-          <Building className="w-5 h-5 text-emerald-600" />
-          <span className="text-xs sm:text-sm font-bold text-slate-900">Đang quản lý cụm sân:</span>
+          <Building className="w-5 h-5 text-[#168039]" />
+          <span className="text-sm font-bold text-slate-900">Đang quản lý cụm sân:</span>
         </div>
         <select
           value={selectedFacilityId}
           onChange={(e) => setSelectedFacilityId(e.target.value)}
-          className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-900 text-xs sm:text-sm cursor-pointer"
+          className="p-2.5 rounded-xl border border-slate-200 bg-white font-bold text-slate-900 text-xs sm:text-sm cursor-pointer shadow-2xs hover:border-slate-300"
         >
           {facilities.map((f) => (
             <option key={f.id} value={f.id}>

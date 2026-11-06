@@ -255,19 +255,19 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     <span>Tiêu chí tìm kiếm:</span>
                   </div>
                   {msg.extractedCriteria.district && (
-                    <div>• Khu vực: <strong>{msg.extractedCriteria.district}</strong></div>
+                    <div>- Khu vực: <strong>{msg.extractedCriteria.district}</strong></div>
                   )}
                   {msg.extractedCriteria.date && (
-                    <div>• Ngày: <strong>{msg.extractedCriteria.date}</strong></div>
+                    <div>- Ngày: <strong>{msg.extractedCriteria.date}</strong></div>
                   )}
                   {msg.extractedCriteria.startTime && (
-                    <div>• Khung giờ: <strong>{msg.extractedCriteria.startTime} – {msg.extractedCriteria.endTime}</strong></div>
+                    <div>- Khung giờ: <strong>{msg.extractedCriteria.startTime} – {msg.extractedCriteria.endTime}</strong></div>
                   )}
                   {msg.extractedCriteria.maxPricePerHour && (
-                    <div>• Ngân sách: <strong>{formatPrice(msg.extractedCriteria.maxPricePerHour)}/h</strong></div>
+                    <div>- Ngân sách: <strong>{formatPrice(msg.extractedCriteria.maxPricePerHour)}/h</strong></div>
                   )}
                   {msg.extractedCriteria.amenities && msg.extractedCriteria.amenities.length > 0 && (
-                    <div>• Tiện ích: <strong>{msg.extractedCriteria.amenities.join(', ')}</strong></div>
+                    <div>- Tiện ích: <strong>{msg.extractedCriteria.amenities.join(', ')}</strong></div>
                   )}
                 </div>
               )}

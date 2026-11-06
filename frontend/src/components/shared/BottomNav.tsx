@@ -18,8 +18,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       aria-label="Thanh điều hướng chính"
       className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] sm:bottom-5 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-16px)] sm:w-[calc(100%-32px)] max-w-3xl lg:max-w-4xl select-none"
     >
-      {/* Floating Pill Dock Container with signature green border and spacious rounded pill */}
-      <div className="relative bg-white/95 backdrop-blur-md rounded-3xl sm:rounded-[36px] border-2 border-[#168039] shadow-[0_10px_35px_rgba(0,0,0,0.12)] px-2 sm:px-6 md:px-8 py-1.5 sm:py-2 transition-all">
+      {/* Floating Pill Dock Container with signature green border and deep elevation shadow */}
+      <div className="relative bg-white rounded-3xl sm:rounded-[36px] border-2 border-[#168039] shadow-[0_20px_50px_rgba(15,23,42,0.25),0_6px_18px_rgba(15,23,42,0.12)] ring-1 ring-slate-900/10 px-2 sm:px-6 md:px-8 py-1.5 sm:py-2 transition-all">
         {/* Floating Center Action Button (Khám phá) nổi bật trên thanh dock */}
         <button
           type="button"
@@ -39,25 +39,28 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           />
         </button>
 
-        {/* 5-Column Navigation Bar - Giãn rộng chiều ngang rất thoáng */}
+        {/* 5-Column Navigation Bar */}
         <div className="h-[70px] sm:h-[74px] relative">
-          {/* 5-Column Buttons Grid - Giãn cách rộng rãi */}
-          <div className="h-full grid grid-cols-5 relative z-10 gap-2 sm:gap-4">
+          <div className="h-full grid grid-cols-5 relative z-10 gap-1 sm:gap-3 items-center">
             {/* 1. Trang chủ */}
             <button
               type="button"
               onClick={() => onSelectTab('home')}
-              className="relative flex flex-col items-center justify-center py-1 transition-transform duration-200 cursor-pointer group active:scale-95 w-full h-full"
+              className={`relative flex flex-col items-center justify-center py-1.5 px-1 sm:px-2 rounded-2xl transition-all duration-200 cursor-pointer group active:scale-95 w-full h-[90%] ${
+                activeTab === 'home'
+                  ? 'bg-slate-100 text-[#168039] font-bold border border-slate-200/90'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+              }`}
             >
               <div
-                className={`p-1 rounded-xl transition-all duration-300 flex items-center justify-center ${
+                className={`p-0.5 rounded-lg transition-all duration-200 flex items-center justify-center ${
                   activeTab === 'home'
-                    ? 'text-[#168039] -translate-y-1 scale-110'
-                    : 'text-slate-600 group-hover:text-slate-900 group-hover:-translate-y-0.5 group-hover:scale-105'
+                    ? 'text-[#168039]'
+                    : 'text-slate-600 group-hover:text-slate-900'
                 }`}
               >
                 <Home
-                  className={`w-6 h-6 sm:w-7 sm:h-7 transition-transform duration-300 ${
+                  className={`w-6 h-6 sm:w-6.5 sm:h-6.5 transition-transform duration-200 ${
                     activeTab === 'home'
                       ? 'stroke-[2.5]'
                       : 'stroke-[1.9] group-hover:scale-105'
@@ -65,9 +68,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 />
               </div>
               <span
-                className={`text-xs sm:text-[13px] leading-tight transition-all duration-300 tracking-tight mt-0.5 ${
+                className={`text-xs sm:text-[13px] leading-tight transition-all duration-200 tracking-tight mt-0.5 ${
                   activeTab === 'home'
-                    ? 'font-black text-[#168039] scale-105 -translate-y-0.5'
+                    ? 'font-black text-[#168039]'
                     : 'font-semibold text-slate-600 group-hover:text-slate-900'
                 }`}
               >
@@ -79,17 +82,21 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <button
               type="button"
               onClick={() => onSelectTab('map')}
-              className="relative flex flex-col items-center justify-center py-1 transition-transform duration-200 cursor-pointer group active:scale-95 w-full h-full"
+              className={`relative flex flex-col items-center justify-center py-1.5 px-1 sm:px-2 rounded-2xl transition-all duration-200 cursor-pointer group active:scale-95 w-full h-[90%] ${
+                activeTab === 'map'
+                  ? 'bg-slate-100 text-[#168039] font-bold border border-slate-200/90'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+              }`}
             >
               <div
-                className={`p-1 rounded-xl transition-all duration-300 flex items-center justify-center ${
+                className={`p-0.5 rounded-lg transition-all duration-200 flex items-center justify-center ${
                   activeTab === 'map'
-                    ? 'text-[#168039] -translate-y-1 scale-110'
-                    : 'text-slate-600 group-hover:text-slate-900 group-hover:-translate-y-0.5 group-hover:scale-105'
+                    ? 'text-[#168039]'
+                    : 'text-slate-600 group-hover:text-slate-900'
                 }`}
               >
                 <MapPin
-                  className={`w-6 h-6 sm:w-7 sm:h-7 transition-transform duration-300 ${
+                  className={`w-6 h-6 sm:w-6.5 sm:h-6.5 transition-transform duration-200 ${
                     activeTab === 'map'
                       ? 'stroke-[2.5]'
                       : 'stroke-[1.9] group-hover:scale-105'
@@ -97,9 +104,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 />
               </div>
               <span
-                className={`text-xs sm:text-[13px] leading-tight transition-all duration-300 tracking-tight mt-0.5 ${
+                className={`text-xs sm:text-[13px] leading-tight transition-all duration-200 tracking-tight mt-0.5 ${
                   activeTab === 'map'
-                    ? 'font-black text-[#168039] scale-105 -translate-y-0.5'
+                    ? 'font-black text-[#168039]'
                     : 'font-semibold text-slate-600 group-hover:text-slate-900'
                 }`}
               >
@@ -111,7 +118,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <button
               type="button"
               onClick={() => onSelectTab('khampha')}
-              className="relative flex flex-col items-center justify-end pb-1.5 pt-7 sm:pt-8 cursor-pointer group active:scale-95 transition-transform duration-200 w-full h-full"
+              className="relative flex flex-col items-center justify-end pb-2 pt-8 cursor-pointer group active:scale-95 transition-transform duration-200 w-full h-full"
             >
               <span
                 className={`text-xs sm:text-[13px] leading-tight transition-all duration-300 tracking-tight ${
@@ -128,17 +135,21 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <button
               type="button"
               onClick={() => onSelectTab('trending')}
-              className="relative flex flex-col items-center justify-center py-1 transition-transform duration-200 cursor-pointer group active:scale-95 w-full h-full"
+              className={`relative flex flex-col items-center justify-center py-1.5 px-1 sm:px-2 rounded-2xl transition-all duration-200 cursor-pointer group active:scale-95 w-full h-[90%] ${
+                activeTab === 'trending'
+                  ? 'bg-slate-100 text-[#168039] font-bold border border-slate-200/90'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+              }`}
             >
               <div
-                className={`p-1 rounded-xl transition-all duration-300 flex items-center justify-center ${
+                className={`p-0.5 rounded-lg transition-all duration-200 flex items-center justify-center ${
                   activeTab === 'trending'
-                    ? 'text-[#168039] -translate-y-1 scale-110'
-                    : 'text-slate-600 group-hover:text-slate-900 group-hover:-translate-y-0.5 group-hover:scale-105'
+                    ? 'text-[#168039]'
+                    : 'text-slate-600 group-hover:text-slate-900'
                 }`}
               >
                 <Flame
-                  className={`w-6 h-6 sm:w-7 sm:h-7 transition-transform duration-300 ${
+                  className={`w-6 h-6 sm:w-6.5 sm:h-6.5 transition-transform duration-200 ${
                     activeTab === 'trending'
                       ? 'stroke-[2.5]'
                       : 'stroke-[1.9] group-hover:scale-105'
@@ -146,9 +157,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 />
               </div>
               <span
-                className={`text-xs sm:text-[13px] leading-tight transition-all duration-300 tracking-tight mt-0.5 ${
+                className={`text-xs sm:text-[13px] leading-tight transition-all duration-200 tracking-tight mt-0.5 ${
                   activeTab === 'trending'
-                    ? 'font-black text-[#168039] scale-105 -translate-y-0.5'
+                    ? 'font-black text-[#168039]'
                     : 'font-semibold text-slate-600 group-hover:text-slate-900'
                 }`}
               >
@@ -160,17 +171,21 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <button
               type="button"
               onClick={() => onSelectTab('account')}
-              className="relative flex flex-col items-center justify-center py-1 transition-transform duration-200 cursor-pointer group active:scale-95 w-full h-full"
+              className={`relative flex flex-col items-center justify-center py-1.5 px-1 sm:px-2 rounded-2xl transition-all duration-200 cursor-pointer group active:scale-95 w-full h-[90%] ${
+                activeTab === 'account'
+                  ? 'bg-slate-100 text-[#168039] font-bold border border-slate-200/90'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+              }`}
             >
               <div
-                className={`p-1 rounded-xl transition-all duration-300 flex items-center justify-center ${
+                className={`p-0.5 rounded-lg transition-all duration-200 flex items-center justify-center ${
                   activeTab === 'account'
-                    ? 'text-[#168039] -translate-y-1 scale-110'
-                    : 'text-slate-600 group-hover:text-slate-900 group-hover:-translate-y-0.5 group-hover:scale-105'
+                    ? 'text-[#168039]'
+                    : 'text-slate-600 group-hover:text-slate-900'
                 }`}
               >
                 <UserIcon
-                  className={`w-6 h-6 sm:w-7 sm:h-7 transition-transform duration-300 ${
+                  className={`w-6 h-6 sm:w-6.5 sm:h-6.5 transition-transform duration-200 ${
                     activeTab === 'account'
                       ? 'stroke-[2.5]'
                       : 'stroke-[1.9] group-hover:scale-105'
@@ -178,9 +193,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 />
               </div>
               <span
-                className={`text-xs sm:text-[13px] leading-tight transition-all duration-300 tracking-tight mt-0.5 ${
+                className={`text-xs sm:text-[13px] leading-tight transition-all duration-200 tracking-tight mt-0.5 ${
                   activeTab === 'account'
-                    ? 'font-black text-[#168039] scale-105 -translate-y-0.5'
+                    ? 'font-black text-[#168039]'
                     : 'font-semibold text-slate-600 group-hover:text-slate-900'
                 }`}
               >

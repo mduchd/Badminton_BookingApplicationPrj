@@ -39,7 +39,7 @@ export const CourtSearchBar: React.FC<CourtSearchBarProps> = ({
   }
 
   return (
-    <div className="w-full bg-white rounded-2xl lg:rounded-full border border-slate-200/90 px-4 sm:px-5 py-2.5 sm:py-3 transition-colors focus-within:border-[#1b7a42] shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
+    <div className="w-full bg-white rounded-xl border border-slate-300/90 px-4 sm:px-5 py-2.5 sm:py-3 transition-all focus-within:border-[#1b7a42] focus-within:ring-2 focus-within:ring-[#1b7a42]/20 shadow-[0_4px_8px_-2px_rgba(15,23,42,0.1),0_16px_32px_-6px_rgba(15,23,42,0.2)] ring-1 ring-slate-900/10">
       <div className="flex flex-col lg:flex-row items-center gap-3 sm:gap-4">
         {/* Unified Search Input Area (Completely flat & airy, no nested border/box) */}
         <div className="relative flex-1 w-full flex items-center min-w-0">
@@ -71,7 +71,7 @@ export const CourtSearchBar: React.FC<CourtSearchBarProps> = ({
           <button
             type="button"
             onClick={handleLocateMe}
-            className={`p-2 text-slate-500 hover:text-[#1b7a42] hover:bg-slate-100 rounded-full transition-colors ml-1 cursor-pointer ${
+            className={`p-2 text-slate-500 hover:text-[#1b7a42] hover:bg-slate-100 rounded-lg transition-colors ml-1 cursor-pointer ${
               gpsLoading ? 'animate-spin text-emerald-600' : ''
             }`}
             title="Định vị vị trí hiện tại của tôi"
@@ -83,7 +83,7 @@ export const CourtSearchBar: React.FC<CourtSearchBarProps> = ({
           <button
             type="button"
             onClick={onOpenFilter}
-            className="relative p-2 text-slate-500 hover:text-[#1b7a42] hover:bg-slate-100 rounded-full transition-colors ml-1 cursor-pointer"
+            className="relative p-2 text-slate-500 hover:text-[#1b7a42] hover:bg-slate-100 rounded-lg transition-colors ml-1 cursor-pointer"
             title="Bộ lọc Smart Filter chi tiết"
           >
             <SlidersHorizontal className="w-4 h-4" />
@@ -96,7 +96,7 @@ export const CourtSearchBar: React.FC<CourtSearchBarProps> = ({
         </div>
 
         {/* Vertical divider on desktop */}
-        <div className="hidden lg:block w-px h-6 bg-slate-200 mx-1 flex-shrink-0" />
+        <div className="hidden lg:block w-px h-6 bg-slate-300 mx-1 flex-shrink-0" />
 
         {/* Quick Nav Action Pills */}
         <div className="flex items-center gap-2 overflow-x-auto w-full lg:w-auto pb-0.5 lg:pb-0 no-scrollbar flex-shrink-0">
@@ -105,7 +105,7 @@ export const CourtSearchBar: React.FC<CourtSearchBarProps> = ({
             <button
               type="button"
               onClick={onOpenSocial}
-              className="px-4 py-2 rounded-full bg-[#1b7a42] hover:bg-[#156335] text-white text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer"
+              className="px-3.5 py-2 rounded-lg bg-[#1b7a42] hover:bg-[#156335] text-white text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer"
             >
               <Compass className="w-3.5 h-3.5 text-emerald-200" />
               <span>Giao lưu & Ghép đội</span>
@@ -116,7 +116,7 @@ export const CourtSearchBar: React.FC<CourtSearchBarProps> = ({
           <button
             type="button"
             onClick={() => onSelectTab(activeTab === 'map' ? 'all' : 'map')}
-            className={`px-3.5 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+            className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === 'map'
                 ? 'bg-emerald-100 text-emerald-800'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -130,7 +130,7 @@ export const CourtSearchBar: React.FC<CourtSearchBarProps> = ({
           <button
             type="button"
             onClick={() => onSelectTab(activeTab === 'booked' ? 'all' : 'booked')}
-            className={`px-3.5 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+            className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === 'booked'
                 ? 'bg-emerald-100 text-emerald-800'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -144,7 +144,7 @@ export const CourtSearchBar: React.FC<CourtSearchBarProps> = ({
           <button
             type="button"
             onClick={() => onSelectTab(activeTab === 'favorite' ? 'all' : 'favorite')}
-            className={`px-3.5 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+            className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === 'favorite'
                 ? 'bg-emerald-100 text-emerald-800'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'

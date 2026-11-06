@@ -332,13 +332,15 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
 
         {/* Right Column: Ngày tổ chức & Session Cards Grid */}
         <section className="lg:col-span-8 space-y-4">
-          {/* Ngày tổ chức Header Card */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 space-y-3">
+          {/* Ngày tổ chức: Toolbar phẳng, tự nhiên, không đóng hộp lơ lửng */}
+          <div className="pb-3 border-b border-slate-200 space-y-2.5">
             <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold text-slate-800">Ngày tổ chức</h2>
-              <div className="flex items-center gap-1 px-3 py-1 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer hover:bg-slate-200/70">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#1b7a42]" />
+                <h2 className="text-sm font-bold text-slate-900">Lịch các buổi giao lưu</h2>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold">
                 <span>06/11 - 19/11/2026</span>
-                <Calendar className="w-3.5 h-3.5 text-emerald-700" />
               </div>
             </div>
 
@@ -351,10 +353,10 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
                     key={day.date}
                     onClick={() => setSelectedDay(day.date)}
                     style={{ '--stagger-delay': `${idx * 20}ms` } as React.CSSProperties}
-                    className={`fade-in-item flex flex-col items-center justify-center min-w-[50px] py-2 px-1.5 rounded-xl transition-all duration-200 cursor-pointer active:scale-95 ${
+                    className={`fade-in-item flex flex-col items-center justify-center min-w-[52px] py-1.5 px-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-95 ${
                       isSelected
-                        ? 'bg-[#1b7a42] text-white shadow-xs font-bold scale-102'
-                        : 'bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold border border-slate-200/60'
+                        ? 'bg-[#1b7a42] text-white font-bold'
+                        : 'bg-white hover:bg-slate-50 text-slate-700 font-semibold border border-slate-200'
                     }`}
                   >
                     <span className="text-[10px] opacity-80">{day.label}</span>
@@ -368,7 +370,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
           {/* Subheader summary */}
           <div className="flex items-center justify-between px-1">
             <div className="text-xs font-bold text-slate-800">
-              <span>168 sân • 826 buổi chơi</span>
+              <span>168 sân - 826 buổi chơi</span>
             </div>
             <div className="flex items-center gap-2">
               <button type="button" className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-600 cursor-pointer">
@@ -401,7 +403,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
                         {session.clubName}
                       </h3>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        📍 {session.distance} • {session.schedulesToday} lịch hôm nay
+                        📍 {session.distance} | {session.schedulesToday} lịch hôm nay
                       </p>
                     </div>
                   </div>

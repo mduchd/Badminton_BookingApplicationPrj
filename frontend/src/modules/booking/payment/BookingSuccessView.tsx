@@ -143,7 +143,7 @@ export const BookingSuccessView: React.FC = () => {
                 <div>
                   <strong className="text-slate-900">{s.courtName}</strong>
                   <div className="text-[11px] text-slate-500">
-                    {s.date} • {s.startTime} - {s.endTime}
+                    {s.date} | {s.startTime} - {s.endTime}
                   </div>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import Supercluster from 'supercluster'
 import {
   Search,
@@ -214,11 +215,11 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
       zoomControl: false, // Custom zoom buttons
     })
 
-    // OpenStreetMap tiles (100% Free, reliable worldwide, no watermark, no API key needed)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      subdomains: ['a', 'b', 'c'],
-      attribution: '&copy; OpenStreetMap contributors',
+    // Google Maps tiles (Tốc độ số 1 tại VN, tiếng Việt đầy đủ, không watermark, không bị nghẽn/rate-limit)
+    L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['0', '1', '2', '3'],
+      attribution: '&copy; Google Maps',
     }).addTo(map)
 
     const layerGroup = L.layerGroup().addTo(map)
@@ -280,7 +281,6 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
           const userIcon = L.divIcon({
             html: `
               <div class="relative flex items-center justify-center">
-                <span class="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-[#1b7a42] opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-4 w-4 bg-[#1b7a42] border-2 border-white shadow"></span>
               </div>
             `,
@@ -446,7 +446,7 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
                   <Star className="w-4 h-4 fill-[#e5a92c] text-[#e5a92c]" />
                   <span className="font-extrabold text-slate-900">{selectedCourt.rating || 4.8}</span>
                   <span className="text-slate-600 font-medium">({selectedCourt.reviewCount || 100})</span>
-                  <span className="mx-1 text-slate-400">•</span>
+                  <span className="mx-1 text-slate-300">|</span>
                   <span className="text-[#ea580c] font-black">{selectedCourt.distance}</span>
                 </div>
                 <h4 className="font-black text-slate-900 text-sm sm:text-base line-clamp-1 group-hover:text-emerald-700 transition-colors">

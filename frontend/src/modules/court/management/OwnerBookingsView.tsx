@@ -135,13 +135,13 @@ export const OwnerBookingsView: React.FC = () => {
 
                   <div className="text-xs text-slate-700 font-medium">
                     <span className="font-bold text-emerald-800">{bk.facilityName}</span>
-                    <span className="mx-1.5 text-slate-300">•</span>
+                    <span className="mx-1.5 text-slate-300">|</span>
                     <span>{bk.slots.map((s) => `${s.courtName} (${s.date} ${s.startTime}-${s.endTime})`).join(', ')}</span>
                   </div>
 
                   <div className="flex items-center gap-2 text-xs text-slate-500">
                     <span>Phương thức: <strong className="text-slate-700">{bk.paymentMethod || 'PAYOS'}</strong></span>
-                    <span>•</span>
+                    <span className="text-slate-300">|</span>
                     <span>Tổng tiền: <strong className="text-[#168039] font-black text-sm">{bk.totalAmount.toLocaleString('vi-VN')} đ</strong></span>
                   </div>
                 </div>

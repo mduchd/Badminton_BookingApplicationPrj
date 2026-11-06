@@ -21,7 +21,6 @@ import {
   Check,
   GraduationCap,
   Copy,
-  UserCheck,
   User as UserIcon,
   ChevronDown,
   Building,
@@ -306,175 +305,147 @@ END:VCALENDAR`
           </button>
         </div>
 
-        {/* 2. Four Quick Action Shortcut Buttons */}
-        <div className="grid grid-cols-4 gap-2 p-3 sm:p-4 bg-[#eef8f2] border-b border-emerald-200/60">
-          {/* Calendar */}
-          <button
-            type="button"
-            onClick={() => setActiveSection('bookings')}
-            className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-colors cursor-pointer text-center ${
-              activeSection === 'bookings'
-                ? 'bg-emerald-100/90 border-[#168039] text-[#168039] shadow-xs'
-                : 'bg-white hover:bg-emerald-50/70 border-emerald-200/60 text-slate-800 shadow-xs'
-            }`}
-          >
-            <Calendar
-              className={`w-5 h-5 mb-1.5 transition-colors ${
-                activeSection === 'bookings' ? 'text-[#168039]' : 'text-slate-700'
-              }`}
-            />
-            <span className="text-[11px] font-semibold leading-tight">Đặt sân</span>
-          </button>
+        {/* 2. Four Quick Action Shortcut Buttons & Grouped Functional Blocks (Matching reference image) */}
+        <div className="p-3 sm:p-4 bg-[#f0f7f3] space-y-4 flex-1 overflow-y-auto">
+          {/* Card containing the 4 Quick Shortcuts (Matching reference image) */}
+          <div className="bg-white rounded-2xl p-2.5 sm:p-3 border border-slate-200/90 shadow-2xs">
+            <div className="grid grid-cols-4 gap-2">
+              {/* Calendar */}
+              <button
+                type="button"
+                onClick={() => setActiveSection('bookings')}
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all cursor-pointer text-center ${
+                  activeSection === 'bookings'
+                    ? 'bg-emerald-50 border-[#168039] text-[#168039]'
+                    : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
+                }`}
+              >
+                <Calendar className={`w-5 h-5 mb-1 ${activeSection === 'bookings' ? 'text-[#168039]' : 'text-emerald-700'}`} />
+                <span className="text-[11px] font-bold">Đặt sân</span>
+              </button>
 
-          {/* Notification */}
-          <button
-            type="button"
-            onClick={() => setActiveSection('settings')}
-            className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-colors cursor-pointer text-center ${
-              activeSection === 'settings'
-                ? 'bg-emerald-100/90 border-[#168039] text-[#168039] shadow-xs'
-                : 'bg-white hover:bg-emerald-50/70 border-emerald-200/60 text-slate-800 shadow-xs'
-            }`}
-          >
-            <Bell
-              className={`w-5 h-5 mb-1.5 transition-colors ${
-                activeSection === 'settings' ? 'text-[#168039]' : 'text-slate-700'
-              }`}
-            />
-            <span className="text-[11px] font-semibold leading-tight">Thông báo</span>
-          </button>
-
-          {/* Course / Giao lưu */}
-          <button
-            type="button"
-            onClick={() => setActiveSection('classes')}
-            className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-colors cursor-pointer text-center ${
-              activeSection === 'classes'
-                ? 'bg-emerald-100/90 border-[#168039] text-[#168039] shadow-xs'
-                : 'bg-white hover:bg-emerald-50/70 border-emerald-200/60 text-slate-800 shadow-xs'
-            }`}
-          >
-            <Trophy
-              className={`w-5 h-5 mb-1.5 transition-colors ${
-                activeSection === 'classes' ? 'text-[#168039]' : 'text-slate-700'
-              }`}
-            />
-            <span className="text-[11px] font-semibold leading-tight">Lớp học</span>
-          </button>
-
-          {/* Voucher */}
-          <button
-            type="button"
-            onClick={() => setActiveSection('vouchers')}
-            className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-colors cursor-pointer text-center ${
-              activeSection === 'vouchers'
-                ? 'bg-emerald-100/90 border-[#168039] text-[#168039] shadow-xs'
-                : 'bg-white hover:bg-emerald-50/70 border-emerald-200/60 text-slate-800 shadow-xs'
-            }`}
-          >
-            <Ticket
-              className={`w-5 h-5 mb-1.5 transition-colors ${
-                activeSection === 'vouchers' ? 'text-[#168039]' : 'text-slate-700'
-              }`}
-            />
-            <span className="text-[11px] font-semibold leading-tight">Voucher</span>
-          </button>
-        </div>
-
-        {/* 3. Activities Group */}
-        <div className="py-2 border-b border-emerald-200/60">
-          <div className="px-4 py-2 text-xs font-bold text-slate-900">Hoạt động</div>
-
-          <div className="space-y-0.5">
-            {/* My group */}
-            <button
-              type="button"
-              onClick={() => setActiveSection('groups')}
-              className={`w-full px-4 py-3 flex items-center justify-between text-xs transition-colors cursor-pointer ${
-                activeSection === 'groups'
-                  ? 'bg-white text-[#168039] font-bold border-l-4 border-[#168039] shadow-xs'
-                  : 'text-slate-800 hover:bg-white/70 font-medium'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Users className="w-4 h-4 text-[#168039]" />
-                <span>Nhóm giao lưu</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-400" />
-            </button>
-
-            {/* Class schedule list */}
-            <button
-              type="button"
-              onClick={() => setActiveSection('classes')}
-              className={`w-full px-4 py-3 flex items-center justify-between text-xs transition-colors cursor-pointer ${
-                activeSection === 'classes'
-                  ? 'bg-white text-[#168039] font-bold border-l-4 border-[#168039] shadow-xs'
-                  : 'text-slate-800 hover:bg-white/70 font-medium'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <GraduationCap className="w-4 h-4 text-[#168039]" />
-                <span>Lịch lớp học</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-400" />
-            </button>
-
-            {/* Membership package */}
-            <button
-              type="button"
-              onClick={() => setActiveSection('membership')}
-              className={`w-full px-4 py-3 flex items-center justify-between text-xs transition-colors cursor-pointer ${
-                activeSection === 'membership'
-                  ? 'bg-white text-[#168039] font-bold border-l-4 border-[#168039] shadow-xs'
-                  : 'text-slate-800 hover:bg-white/70 font-medium'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Crown className="w-4 h-4 text-[#168039]" />
-                <span>Gói thành viên</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-400" />
-            </button>
-          </div>
-        </div>
-
-        {/* 4. System Group */}
-        <div className="py-2 flex-1 flex flex-col justify-between">
-          <div>
-            <div className="px-4 py-2 text-xs font-bold text-slate-900">Hệ thống</div>
-
-            <div className="space-y-0.5">
-              {/* Settings */}
+              {/* Notification */}
               <button
                 type="button"
                 onClick={() => setActiveSection('settings')}
-                className={`w-full px-4 py-3 flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all cursor-pointer text-center ${
                   activeSection === 'settings'
-                    ? 'bg-white text-[#168039] font-bold border-l-4 border-[#168039] shadow-xs'
-                    : 'text-slate-800 hover:bg-white/70 font-medium'
+                    ? 'bg-emerald-50 border-[#168039] text-[#168039]'
+                    : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
+                }`}
+              >
+                <Bell className={`w-5 h-5 mb-1 ${activeSection === 'settings' ? 'text-[#168039]' : 'text-amber-600'}`} />
+                <span className="text-[11px] font-bold">Thông báo</span>
+              </button>
+
+              {/* Course */}
+              <button
+                type="button"
+                onClick={() => setActiveSection('classes')}
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all cursor-pointer text-center ${
+                  activeSection === 'classes'
+                    ? 'bg-emerald-50 border-[#168039] text-[#168039]'
+                    : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
+                }`}
+              >
+                <Trophy className={`w-5 h-5 mb-1 ${activeSection === 'classes' ? 'text-[#168039]' : 'text-emerald-600'}`} />
+                <span className="text-[11px] font-bold">Lớp học</span>
+              </button>
+
+              {/* Voucher */}
+              <button
+                type="button"
+                onClick={() => setActiveSection('vouchers')}
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all cursor-pointer text-center ${
+                  activeSection === 'vouchers'
+                    ? 'bg-emerald-50 border-[#168039] text-[#168039]'
+                    : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
+                }`}
+              >
+                <Ticket className={`w-5 h-5 mb-1 ${activeSection === 'vouchers' ? 'text-[#168039]' : 'text-rose-600'}`} />
+                <span className="text-[11px] font-bold">Voucher</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Group 1: Hoạt động */}
+          <div className="space-y-1.5">
+            <h3 className="text-xs sm:text-[13px] font-bold text-[#168039] px-1 flex items-center justify-between">
+              <span>Hoạt động</span>
+            </h3>
+            <div className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden divide-y divide-slate-100 shadow-2xs">
+              {/* My group */}
+              <button
+                type="button"
+                onClick={() => setActiveSection('groups')}
+                className={`w-full px-3.5 py-3 flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                  activeSection === 'groups'
+                    ? 'bg-emerald-50 text-[#168039] font-bold'
+                    : 'text-slate-800 hover:bg-slate-50 font-semibold'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <SettingsIcon className="w-4 h-4 text-[#168039]" />
-                  <span>Cài đặt hệ thống</span>
+                  <Users className={`w-4 h-4 ${activeSection === 'groups' ? 'text-[#168039]' : 'text-emerald-700'}`} />
+                  <span>Nhóm câu lạc bộ</span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400" />
               </button>
 
-              {/* Terms and conditions */}
+              {/* Class schedule list */}
               <button
                 type="button"
-                onClick={() => setActiveSection('terms')}
-                className={`w-full px-4 py-3 flex items-center justify-between text-xs transition-colors cursor-pointer ${
-                  activeSection === 'terms'
-                    ? 'bg-white text-[#168039] font-bold border-l-4 border-[#168039] shadow-xs'
-                    : 'text-slate-800 hover:bg-white/70 font-medium'
+                onClick={() => setActiveSection('classes')}
+                className={`w-full px-3.5 py-3 flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                  activeSection === 'classes'
+                    ? 'bg-emerald-50 text-[#168039] font-bold'
+                    : 'text-slate-800 hover:bg-slate-50 font-semibold'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <ShieldCheck className="w-4 h-4 text-[#168039]" />
-                  <span>Điều khoản & chính sách</span>
+                  <GraduationCap className={`w-4 h-4 ${activeSection === 'classes' ? 'text-[#168039]' : 'text-emerald-700'}`} />
+                  <span>Lịch thi đấu & Lớp học</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </button>
+
+              {/* Membership package */}
+              <button
+                type="button"
+                onClick={() => setActiveSection('membership')}
+                className={`w-full px-3.5 py-3 flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                  activeSection === 'membership'
+                    ? 'bg-emerald-50 text-[#168039] font-bold'
+                    : 'text-slate-800 hover:bg-slate-50 font-semibold'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Crown className={`w-4 h-4 ${activeSection === 'membership' ? 'text-[#168039]' : 'text-amber-500'}`} />
+                  <span>Gói hội viên</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+          </div>
+
+          {/* Group 2: Hệ thống */}
+          <div className="space-y-1.5">
+            <h3 className="text-xs sm:text-[13px] font-bold text-[#168039] px-1 flex items-center justify-between">
+              <span>Hệ thống</span>
+            </h3>
+            <div className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden divide-y divide-slate-100 shadow-2xs">
+              {/* Settings */}
+              <button
+                type="button"
+                onClick={() => setActiveSection('settings')}
+                className={`w-full px-3.5 py-3 flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                  activeSection === 'settings'
+                    ? 'bg-emerald-50 text-[#168039] font-bold'
+                    : 'text-slate-800 hover:bg-slate-50 font-semibold'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <SettingsIcon className={`w-4 h-4 ${activeSection === 'settings' ? 'text-[#168039]' : 'text-slate-600'}`} />
+                  <span>Cài đặt hệ thống</span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400" />
               </button>
@@ -483,89 +454,89 @@ END:VCALENDAR`
               <button
                 type="button"
                 onClick={() => setActiveSection('version')}
-                className={`w-full px-4 py-3 flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                className={`w-full px-3.5 py-3 flex items-center justify-between text-xs transition-colors cursor-pointer ${
                   activeSection === 'version'
-                    ? 'bg-white text-[#168039] font-bold border-l-4 border-[#168039] shadow-xs'
-                    : 'text-slate-800 hover:bg-white/70 font-medium'
+                    ? 'bg-emerald-50 text-[#168039] font-bold'
+                    : 'text-slate-800 hover:bg-slate-50 font-semibold'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Info className="w-4 h-4 text-[#168039]" />
-                  <span>Thông tin phiên bản: 1.0.0 SmashCourt</span>
+                  <Info className={`w-4 h-4 ${activeSection === 'version' ? 'text-[#168039]' : 'text-slate-600'}`} />
+                  <span>Thông tin phiên bản</span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400" />
               </button>
-            </div>
 
-            {/* Quản lý nâng cao: Phân quyền theo vai trò (Chỉ hiển thị cho Chủ sân hoặc Quản trị viên) */}
-            {currentUser && (currentUser.role === 'COURT_OWNER' || currentUser.role === 'SYSTEM_ADMIN') && (
-              <div className="mt-3 pt-3 border-t border-emerald-200/60">
-                <div className="px-4 py-1 text-xs font-bold text-slate-900">Quản lý nâng cao</div>
-                <div className="space-y-0.5 mt-1">
-                  <button
-                    type="button"
-                    onClick={() => navigate(ROUTES.OWNER_DASHBOARD)}
-                    className="w-full px-4 py-2.5 flex items-center justify-between text-xs text-slate-800 hover:bg-white/80 font-medium transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Building className="w-4 h-4 text-emerald-700" />
-                      <span className="font-bold text-slate-900 group-hover:text-emerald-800">Kênh Quản lý Chủ sân</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-700" />
-                  </button>
-
-                  {currentUser.role === 'SYSTEM_ADMIN' && (
-                    <button
-                      type="button"
-                      onClick={() => navigate(ROUTES.ADMIN_PORTAL)}
-                      className="w-full px-4 py-2.5 flex items-center justify-between text-xs text-slate-800 hover:bg-white/80 font-medium transition-colors cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <ShieldCheck className="w-4 h-4 text-slate-900" />
-                        <span className="font-bold text-slate-900">Cổng Quản trị viên</span>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Authentication Actions at Bottom of Sidebar */}
-          <div className="p-4 border-t border-emerald-200/60 bg-[#e4f3e9]">
-            {currentUser ? (
+              {/* Terms and conditions */}
               <button
                 type="button"
-                onClick={() => {
-                  onLogout()
-                  toast.info('Đã đăng xuất khỏi SmashCourt')
-                }}
-                className="w-full py-2.5 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                onClick={() => setActiveSection('terms')}
+                className={`w-full px-3.5 py-3 flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                  activeSection === 'terms'
+                    ? 'bg-emerald-50 text-[#168039] font-bold'
+                    : 'text-slate-800 hover:bg-slate-50 font-semibold'
+                }`}
               >
-                <LogOut className="w-4 h-4 text-slate-500" />
-                <span>Đăng xuất</span>
+                <div className="flex items-center gap-3">
+                  <ShieldCheck className={`w-4 h-4 ${activeSection === 'terms' ? 'text-[#168039]' : 'text-slate-600'}`} />
+                  <span>Điều khoản & quy chế</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
               </button>
-            ) : (
-              <div className="flex items-center gap-2">
+
+              {/* Đăng xuất tài khoản (chỉ hiển thị khi đã đăng nhập) */}
+              {currentUser && (
                 <button
                   type="button"
-                  onClick={() => onOpenAuth('login')}
-                  className="flex-1 py-2.5 px-3 rounded-xl bg-[#168039] hover:bg-[#136c30] text-white text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  onClick={() => {
+                    onLogout()
+                    toast.info('Đã đăng xuất khỏi SmashCourt')
+                  }}
+                  className="w-full px-3.5 py-3 flex items-center justify-between text-xs text-rose-700 hover:bg-rose-50 font-bold transition-colors cursor-pointer"
                 >
-                  <UserCheck className="w-4 h-4" />
-                  <span>Đăng nhập</span>
+                  <div className="flex items-center gap-3">
+                    <LogOut className="w-4 h-4 text-rose-600" />
+                    <span>Đăng xuất tài khoản</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-rose-400" />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => onOpenAuth('register')}
-                  className="flex-1 py-2.5 px-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
-                >
-                  Đăng ký
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
+
+          {/* Group 3: Quản lý nâng cao (Role-based for Court Owner & System Admin) */}
+          {currentUser && (currentUser.role === 'COURT_OWNER' || currentUser.role === 'SYSTEM_ADMIN') && (
+            <div className="space-y-1.5">
+              <h3 className="text-xs sm:text-[13px] font-bold text-[#168039] px-1">Quản lý nâng cao</h3>
+              <div className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden divide-y divide-slate-100 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => navigate(ROUTES.OWNER_DASHBOARD)}
+                  className="w-full px-3.5 py-3 flex items-center justify-between text-xs text-slate-800 hover:bg-slate-50 font-semibold transition-colors cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3">
+                    <Building className="w-4 h-4 text-emerald-700" />
+                    <span className="font-bold text-slate-900 group-hover:text-emerald-800">Kênh Quản lý Chủ sân</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-700" />
+                </button>
+
+                {currentUser.role === 'SYSTEM_ADMIN' && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(ROUTES.ADMIN_PORTAL)}
+                    className="w-full px-3.5 py-3 flex items-center justify-between text-xs text-slate-800 hover:bg-slate-50 font-semibold transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <ShieldCheck className="w-4 h-4 text-slate-900" />
+                      <span className="font-bold text-slate-900">Cổng Quản trị viên</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -586,12 +557,7 @@ END:VCALENDAR`
               {activeSection === 'version' && 'Thông tin phiên bản SmashCourt'}
             </h1>
           </div>
-          <div className="hidden sm:flex items-center gap-2 text-xs text-emerald-100 font-medium">
-            <span>SmashCourt</span>
-            <span>•</span>
-            <span className="text-white font-semibold">Tài khoản</span>
-          </div>
-        </div>
+                  </div>
 
         {/* Sub-bar Filter for Bookings Section */}
         {activeSection === 'bookings' && (
@@ -758,7 +724,7 @@ END:VCALENDAR`
                         <div className="flex items-center gap-2 font-medium flex-wrap">
                           <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                           <span className="text-slate-500">Chi tiết:</span>
-                          <span className="text-slate-900 font-semibold">{b.courtName} • {b.timeRange}</span>
+                          <span className="text-slate-900 font-semibold">{b.courtName} - {b.timeRange}</span>
                           <span className="text-slate-300 hidden sm:inline">|</span>
                           <span className="text-slate-600">{b.date}</span>
                         </div>
@@ -860,6 +826,23 @@ END:VCALENDAR`
                       Hủy
                     </button>
                   </div>
+
+                  {currentUser && (
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Đăng xuất khỏi thiết bị này</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onLogout()
+                          toast.info('Đã đăng xuất khỏi SmashCourt')
+                        }}
+                        className="py-2 px-3 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Đăng xuất</span>
+                      </button>
+                    </div>
+                  )}
                 </form>
               </div>
             </div>
@@ -936,7 +919,7 @@ END:VCALENDAR`
                     </div>
                     <div>
                       <div className="font-bold text-sm text-slate-900">CLB Cầu Lông Tân Triều Sport</div>
-                      <div className="text-xs text-slate-600 font-medium">28 thành viên • Lịch cố định Thứ 3, 5, 7 (20:00 - 22:00)</div>
+                      <div className="text-xs text-slate-600 font-medium">28 thành viên - Lịch cố định Thứ 3, 5, 7 (20:00 - 22:00)</div>
                     </div>
                   </div>
                   <button
@@ -955,7 +938,7 @@ END:VCALENDAR`
                     </div>
                     <div>
                       <div className="font-bold text-sm text-slate-900">Hội Pickleball & Badminton Hà Đông</div>
-                      <div className="text-xs text-slate-600 font-medium">42 thành viên • Giao lưu cuối tuần Sân Thắng Lĩnh</div>
+                      <div className="text-xs text-slate-600 font-medium">42 thành viên - Giao lưu cuối tuần Sân Thắng Lĩnh</div>
                     </div>
                   </div>
                   <button
@@ -982,7 +965,7 @@ END:VCALENDAR`
                   </div>
                   <div className="text-xs text-slate-700 font-medium flex items-center gap-2">
                     <Clock className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Thứ Hai, Thứ Tư (18:00 - 19:30) • HLV Nguyễn Văn An</span>
+                    <span>Thứ Hai, Thứ Tư (18:00 - 19:30) - HLV Nguyễn Văn An</span>
                   </div>
                   <div className="text-xs text-slate-600 font-medium flex items-center gap-2">
                     <MapPin className="w-3.5 h-3.5 text-slate-500" />

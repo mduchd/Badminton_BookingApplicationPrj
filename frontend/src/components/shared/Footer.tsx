@@ -23,10 +23,10 @@ export const Footer: React.FC = () => {
           <div className="space-y-2">
             <h4 className="font-bold text-slate-100 text-xs">Dành cho Khách hàng</h4>
             <ul className="space-y-1.5 text-[11px] text-slate-300">
-              <li>• Tìm kiếm sân trống gần bạn</li>
-              <li>• Đặt lịch nhanh theo khung giờ</li>
-              <li>• Đồng bộ lịch cá nhân Google Calendar</li>
-              <li>• Tham gia giao lưu & ghép trận phong trào</li>
+              <li>Tìm kiếm sân trống gần bạn</li>
+              <li>Đặt lịch nhanh theo khung giờ</li>
+              <li>Đồng bộ lịch cá nhân Google Calendar</li>
+              <li>Tham gia giao lưu & ghép trận phong trào</li>
             </ul>
           </div>
 
@@ -34,10 +34,10 @@ export const Footer: React.FC = () => {
           <div className="space-y-2">
             <h4 className="font-bold text-slate-100 text-xs">Dành cho Chủ sân</h4>
             <ul className="space-y-1.5 text-[11px] text-slate-300">
-              <li>• Quản lý lịch sân & bảng giá linh hoạt</li>
-              <li>• Check-in khách nhanh chóng tại quầy</li>
-              <li>• Thống kê doanh thu & tỷ lệ lấp đầy</li>
-              <li>• Lập lịch khóa sân & bảo dưỡng thiết bị</li>
+              <li>Quản lý lịch sân & bảng giá linh hoạt</li>
+              <li>Check-in khách nhanh chóng tại quầy</li>
+              <li>Thống kê doanh thu & tỷ lệ lấp đầy</li>
+              <li>Lập lịch khóa sân & bảo dưỡng thiết bị</li>
             </ul>
           </div>
 

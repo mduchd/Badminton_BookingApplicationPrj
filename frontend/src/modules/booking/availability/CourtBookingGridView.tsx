@@ -5,13 +5,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Check,
-  Home,
   LogIn,
   Clock,
   Calendar,
   DollarSign,
   X,
-  AlertCircle,
 } from 'lucide-react'
 import { appStore } from '../../../lib/appStore'
 import type { BookingSlot, BookingOrder } from '../../types/booking'
@@ -234,130 +232,118 @@ export const CourtBookingGridView: React.FC<CourtBookingGridViewProps> = ({
   const activeDateItem = dateOptions.find((d) => d.date === selectedDate) || dateOptions[0]
 
   return (
-    <div className="w-full space-y-2.5 sm:space-y-3 pb-28 select-none">
-      {/* 1. TOP GREEN BAR: Edge-to-edge solid flat green header matching Alobo design */}
-      <div className="w-full bg-[#168039] text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3">
-        {/* Left: Back button */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate(`/courts/${facility.id}`)}
-            className="p-1.5 sm:p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-colors cursor-pointer"
-            title="Quay lại chi tiết cụm sân"
-          >
-            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate(ROUTES.HOME)}
-            className="p-1.5 sm:p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-colors cursor-pointer hidden sm:flex items-center gap-1.5 text-xs font-bold"
-            title="Về trang chủ"
-          >
-            <Home className="w-4 h-4 text-white" />
-            <span>Trang chủ</span>
-          </button>
-        </div>
-
-        {/* Center: Title */}
-        <div className="text-center flex-1 min-w-0 px-2">
-          <h1 className="text-sm sm:text-base md:text-lg font-black tracking-normal text-white truncate">
-            Lịch đặt sân trực quan: {facility.name}
-          </h1>
-          <p className="text-[11px] text-white/85 font-medium truncate hidden sm:block">
-            {facility.address} • Hotline: {facility.phone}
-          </p>
-        </div>
-
-        {/* Right: Guest / User Auth Status */}
-        <div className="flex items-center gap-2 shrink-0">
-          {currentUser ? (
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/20 text-white text-xs font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-300" />
-              <span className="truncate max-w-[130px]">{currentUser.fullName}</span>
-            </div>
-          ) : (
+    <div className="w-full pb-28 select-none">
+      {/* UNIFIED SEAMLESS WORKPLACE: Single cohesive layout without fragmented floating cards */}
+      <div className="w-full bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        {/* 1. Header Bar: Clean, professional top bar */}
+        <div className="w-full bg-white border-b border-slate-200 px-4 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => onOpenAuth?.('login')}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-[#168039] text-xs font-bold transition-colors cursor-pointer"
+              onClick={() => navigate(`/courts/${facility.id}`)}
+              className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer"
+              title="Quay lại chi tiết cụm sân"
             >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Đăng nhập</span>
+              <ArrowLeft className="w-5 h-5 text-slate-700" />
             </button>
-          )}
-        </div>
-      </div>
 
-      {/* 2. DATE STRIP: Full width month indicator + date pills + left/right navigation */}
-      <div className="w-full bg-white rounded-xl sm:rounded-2xl border border-slate-200 p-2 sm:p-2.5 flex items-center gap-2">
-        {/* Month Dropdown / Indicator */}
-        <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-slate-100 text-slate-900 text-xs font-black shrink-0 border border-slate-200">
-          <Calendar className="w-3.5 h-3.5 text-[#168039]" />
-          <span>Tháng {activeDateItem?.monthYear || '11/2026'}</span>
-        </div>
+            <div>
+              <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                Lịch đặt sân trực quan: {facility.name}
+              </h1>
+              <p className="text-xs text-slate-600 mt-0.5">
+                {facility.address} | Hotline: <span className="font-bold text-slate-900">{facility.phone}</span>
+              </p>
+            </div>
+          </div>
 
-        {/* Scroll Left Button */}
-        <button
-          type="button"
-          onClick={() => handleScrollDate('left')}
-          className="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer shrink-0 transition-colors"
-          title="Xem ngày trước"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-
-        {/* Date pills container (Scrollable, full-width) */}
-        <div
-          ref={dateListRef}
-          className="flex-1 flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5"
-        >
-          {dateOptions.map((item) => {
-            const isSelected = selectedDate === item.date
-            return (
+          {/* Right: Guest / User Auth Status */}
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+            {currentUser ? (
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-800 text-xs font-bold border border-slate-200">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="truncate max-w-[150px]">{currentUser.fullName}</span>
+              </div>
+            ) : (
               <button
-                key={item.date}
                 type="button"
-                onClick={() => {
-                  setSelectedDate(item.date)
-                  setSelectedSlots([])
-                }}
-                className={`flex flex-col items-center justify-center min-w-[70px] sm:min-w-[78px] py-1.5 sm:py-2 px-2 rounded-xl border text-center transition-all cursor-pointer shrink-0 ${
-                  isSelected
-                    ? 'bg-[#168039] text-white border-[#168039]'
-                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                }`}
+                onClick={() => onOpenAuth?.('login')}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#168039] hover:bg-[#136c30] text-white text-xs font-bold transition-colors cursor-pointer"
               >
-                <span className={`text-[10px] font-semibold ${isSelected ? 'text-white/90' : 'text-slate-500'}`}>
-                  {item.dayName}
-                </span>
-                <span className="text-xs sm:text-sm font-black mt-0.5">
-                  {item.displayDate}
-                </span>
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Đăng nhập</span>
               </button>
-            )
-          })}
+            )}
+          </div>
         </div>
 
-        {/* Scroll Right Button */}
-        <button
-          type="button"
-          onClick={() => handleScrollDate('right')}
-          className="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 cursor-pointer shrink-0 transition-colors"
-          title="Xem ngày tiếp theo"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
+        {/* 2. Unified Date Selector Bar */}
+        <div className="w-full bg-slate-50/70 border-b border-slate-200 px-3 sm:px-4 py-2 flex items-center gap-2">
+          {/* Month Indicator */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-slate-900 text-xs font-bold shrink-0 border border-slate-200">
+            <Calendar className="w-3.5 h-3.5 text-[#168039]" />
+            <span>Tháng {activeDateItem?.monthYear || '11/2026'}</span>
+          </div>
 
-      {/* 3. LEGEND ROW & ATTENTION BANNER: Spans edge-to-edge */}
-      <div className="w-full bg-white rounded-xl sm:rounded-2xl border border-slate-200 p-2.5 sm:p-3 space-y-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          {/* Status color chips */}
-          <div className="flex items-center gap-3 sm:gap-4 flex-wrap text-xs text-slate-700 font-medium">
+          {/* Scroll Left Button */}
+          <button
+            type="button"
+            onClick={() => handleScrollDate('left')}
+            className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 cursor-pointer shrink-0 transition-colors"
+            title="Xem ngày trước"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          {/* Date pills container */}
+          <div
+            ref={dateListRef}
+            className="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5"
+          >
+            {dateOptions.map((item) => {
+              const isSelected = selectedDate === item.date
+              return (
+                <button
+                  key={item.date}
+                  type="button"
+                  onClick={() => {
+                    setSelectedDate(item.date)
+                    setSelectedSlots([])
+                  }}
+                  className={`flex flex-col items-center justify-center min-w-[68px] sm:min-w-[74px] py-1.5 px-2 rounded-lg border text-center transition-all cursor-pointer shrink-0 ${
+                    isSelected
+                      ? 'bg-[#168039] text-white border-[#168039]'
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className={`text-[10px] font-medium ${isSelected ? 'text-white/90' : 'text-slate-500'}`}>
+                    {item.dayName}
+                  </span>
+                  <span className="text-xs sm:text-sm font-black mt-0.5">
+                    {item.displayDate}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Scroll Right Button */}
+          <button
+            type="button"
+            onClick={() => handleScrollDate('right')}
+            className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 cursor-pointer shrink-0 transition-colors"
+            title="Xem ngày tiếp theo"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* 3. Legend & Quick Action Bar */}
+        <div className="w-full bg-white border-b border-slate-200 px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-700">
+          <div className="flex items-center gap-3 sm:gap-4 flex-wrap font-medium">
             <div className="flex items-center gap-1.5">
               <span className="w-3.5 h-3.5 rounded bg-white border-2 border-emerald-600" />
-              <span>Còn trống (Bấm chọn)</span>
+              <span>Còn trống</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-3.5 h-3.5 rounded bg-[#168039] border border-[#168039]" />
@@ -365,7 +351,7 @@ export const CourtBookingGridView: React.FC<CourtBookingGridViewProps> = ({
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-3.5 h-3.5 rounded bg-amber-100 border border-amber-300" />
-              <span>Đang giữ chỗ (10p)</span>
+              <span>Giữ chỗ (10p)</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-3.5 h-3.5 rounded bg-rose-500 border border-rose-600" />
@@ -377,28 +363,17 @@ export const CourtBookingGridView: React.FC<CourtBookingGridViewProps> = ({
             </div>
           </div>
 
-          {/* Quick link: View yards & Price list */}
           <button
             type="button"
             onClick={() => setIsPriceModalOpen(true)}
-            className="text-xs font-bold text-[#168039] hover:underline cursor-pointer flex items-center gap-1 self-start sm:self-auto"
+            className="text-xs font-bold text-[#168039] hover:underline cursor-pointer flex items-center gap-1 self-start sm:self-auto shrink-0"
           >
             <DollarSign className="w-3.5 h-3.5 text-[#168039]" />
             <span>Xem bảng giá & danh sách sân con</span>
           </button>
         </div>
 
-        {/* Attention Banner */}
-        <div className="pt-2 border-t border-slate-100 text-[11px] sm:text-xs text-amber-900 font-medium flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-          <span>
-            <strong className="font-bold text-amber-950">Lưu ý:</strong> Nếu bạn cần đặt lịch cố định theo tuần hoặc tháng, vui lòng liên hệ hotline <strong className="font-bold text-slate-900">{facility.phone}</strong> để được hỗ trợ xếp lịch ưu tiên.
-          </span>
-        </div>
-      </div>
-
-      {/* 4. VISUAL MATRIX TABLE: Full-width edge-to-edge calendar grid */}
-      <div className="w-full bg-white rounded-xl sm:rounded-2xl border border-slate-200 overflow-hidden">
+        {/* 4. VISUAL MATRIX TABLE: Seamlessly integrated inside the workplace canvas */}
         <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-270px)] sm:max-h-[calc(100vh-290px)]">
           <table className="w-full border-collapse select-none">
             {/* Table Header: Time Slots */}
