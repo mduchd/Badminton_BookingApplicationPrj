@@ -26,6 +26,7 @@ console.log('🔍 [SmashCourt Linter] Đang kiểm tra tuân thủ các quy tắ
 const GRADIENT_REGEX = /(?:bg-gradient-to-[a-z]+|from-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d+|to-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d+|bg-clip-text)/
 const TECHNICAL_BADGE_REGEX = /(?:SPRING AI|RBAC Protected|DTO Validated|Structured Output|WebSocket STOMP)/
 const BUTTON_SHADOW_REGEX = /<button[\s\S]*?(?:shadow-md|shadow-lg|shadow-xl|shadow-emerald|shadow-green|shadow-blue|hover:shadow)/
+const HOVER_SCALE_REGEX = /(?:hover:scale-|group-hover:scale-)/
 
 walkDir(SRC_DIR, (filePath) => {
   const content = fs.readFileSync(filePath, 'utf-8')

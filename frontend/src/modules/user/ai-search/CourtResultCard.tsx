@@ -15,7 +15,7 @@ export const CourtResultCard: React.FC<CourtResultCardProps> = ({ court, onBookN
         <img
           src={court.imageUrl}
           alt={court.facilityName}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-cover "
         />
         <div className="absolute inset-0 bg-black/35" />
 

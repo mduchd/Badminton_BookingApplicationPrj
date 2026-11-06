@@ -167,7 +167,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
               <img
                 src={court.imageUrl}
                 alt={court.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                className="w-full h-full object-cover "
               />
 
               {/* Top Action Bar over Cover */}
@@ -176,7 +176,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="w-9 h-9 rounded-full bg-white text-slate-800 flex items-center justify-center hover:bg-slate-100 hover:scale-105 active:scale-90 transition-all duration-150 cursor-pointer shadow-xs"
+                  className="w-9 h-9 rounded-full bg-white text-slate-800 flex items-center justify-center hover:bg-slate-100 active:scale-90 transition-all duration-150 cursor-pointer shadow-xs"
                   title="Quay lại danh sách"
                 >
                   <ArrowLeft className="w-5 h-5 text-slate-800 hover:-translate-x-0.5 transition-transform" />
@@ -187,7 +187,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                   <button
                     type="button"
                     onClick={handleOpenGoogleMaps}
-                    className="w-9 h-9 rounded-full bg-white text-slate-800 flex items-center justify-center hover:bg-slate-100 hover:scale-105 active:scale-90 transition-all duration-150 cursor-pointer shadow-xs"
+                    className="w-9 h-9 rounded-full bg-white text-slate-800 flex items-center justify-center hover:bg-slate-100 active:scale-90 transition-all duration-150 cursor-pointer shadow-xs"
                     title="Chỉ đường Google Maps"
                   >
                     <Navigation className="w-4 h-4 text-slate-700" />
@@ -196,7 +196,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                   <button
                     type="button"
                     onClick={handleToggleFav}
-                    className="w-9 h-9 rounded-full bg-white text-slate-800 flex items-center justify-center hover:bg-slate-100 hover:scale-110 active:scale-75 transition-all duration-150 cursor-pointer shadow-xs"
+                    className="w-9 h-9 rounded-full bg-white text-slate-800 flex items-center justify-center hover:bg-slate-100 active:scale-75 transition-all duration-150 cursor-pointer shadow-xs"
                     title="Yêu thích"
                   >
                     <Heart
@@ -221,7 +221,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
             <div className="relative px-3 sm:px-4 -mt-16 sm:-mt-20 z-20 flex-shrink-0">
               {/* Floating Rating Pill & Chat Button (Nửa trên ảnh bìa, nửa trên mép card) */}
               <div className="flex items-center gap-2 mb-2 px-1">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#10b981] text-white text-xs font-bold shadow-xs transition-transform hover:scale-102">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#10b981] text-white text-xs font-bold shadow-xs ">
                   <Star className="w-3.5 h-3.5 fill-white text-white" />
                   <span>
                     {court.rating ? `${court.rating} (${court.reviewCount || 100} đánh giá)` : 'Chưa có đánh giá'}
@@ -241,7 +241,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
               {/* White Card with Venue Details */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-3.5 space-y-2">
                 <div className="flex items-start gap-3">
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full border border-slate-200 overflow-hidden flex-shrink-0 bg-slate-50 transition-transform duration-200 hover:scale-105">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full border border-slate-200 overflow-hidden flex-shrink-0 bg-slate-50 ">
                     <img
                       src={court.logoUrl}
                       alt={court.name}
@@ -410,7 +410,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
               {activeTab === 'membership' && (
                 <div className="space-y-3.5">
                   <div className="text-center py-4 px-2 bg-slate-50 border border-slate-200 rounded-xl space-y-2 fade-in-item">
-                    <div className="w-10 h-10 rounded-full bg-emerald-100 text-[#1b7a42] flex items-center justify-center mx-auto transition-transform hover:scale-110">
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 text-[#1b7a42] flex items-center justify-center mx-auto ">
                       <Award className="w-5 h-5 text-[#1b7a42]" />
                     </div>
                     <div className="text-xs font-bold text-slate-900">
@@ -516,7 +516,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                         <img
                           src={imgUrl}
                           alt={`${court.name} - ảnh ${idx + 1}`}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 ease-out"
+                          className="w-full h-full object-cover "
                         />
                       </div>
                     ))}

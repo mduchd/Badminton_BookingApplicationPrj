@@ -243,7 +243,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-3 flex-shrink-0">
           <div
             onClick={onNavigateHome}
-            className="flex items-center cursor-pointer group select-none transition-transform hover:scale-[1.02] active:scale-98"
+            className="flex items-center cursor-pointer group select-none transition-colors active:scale-98"
             title="Trang chủ SmashCourt"
           >
             <AppLogo size="md" />
@@ -300,7 +300,7 @@ export const Header: React.FC<HeaderProps> = ({
                     'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
                   }
                   alt={currentUser.fullName}
-                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover ring-2 ring-white/90 group-hover:scale-105 transition-transform"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover ring-2 ring-white/90 "
                 />
               </div>
             </div>

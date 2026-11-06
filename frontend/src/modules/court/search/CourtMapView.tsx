@@ -168,7 +168,7 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
           // Single court pin styling: Green pin badge with "1"
           const singleIcon = L.divIcon({
             html: `
-              <div class="w-8 h-8 rounded-full bg-[#1b7a42] text-white font-bold flex items-center justify-center border-2 border-white shadow-md text-[12px] hover:bg-[#168039] hover:scale-110 transition-all cursor-pointer">
+              <div class="w-8 h-8 rounded-full bg-[#1b7a42] text-white font-bold flex items-center justify-center border-2 border-white shadow-md text-[12px] hover:bg-[#168039] transition-all cursor-pointer">
                 1
               </div>
             `,
@@ -439,7 +439,7 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
               <img
                 src={selectedCourt.imageUrl}
                 alt={selectedCourt.name}
-                className="w-24 h-24 rounded-2xl object-cover flex-shrink-0 group-hover:scale-102 transition-transform duration-200"
+                className="w-24 h-24 rounded-2xl object-cover flex-shrink-0 "
               />
               <div className="flex-1 min-w-0 pr-4">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-[#1b7a42] mb-1">

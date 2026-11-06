@@ -58,7 +58,7 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
         <img
           src={court.imageUrl}
           alt={court.name}
-          className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+          className="w-full h-full object-cover "
           loading="lazy"
         />
 

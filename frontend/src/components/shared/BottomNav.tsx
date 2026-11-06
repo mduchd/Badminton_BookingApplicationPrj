@@ -27,13 +27,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           className={`absolute -top-5 left-1/2 -translate-x-1/2 w-14 h-14 sm:w-15 sm:h-15 rounded-full flex items-center justify-center transition-all duration-300 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] z-20 cursor-pointer active:scale-95 group ${
             activeTab === 'khampha'
               ? 'bg-[#168039] text-white ring-4 ring-white scale-110 -translate-y-1'
-              : 'bg-[#168039] hover:bg-[#136c30] text-white ring-4 ring-white hover:scale-105'
+              : 'bg-[#168039] hover:bg-[#136c30] text-white ring-4 ring-white '
           }`}
           title="Khám phá buổi chơi & Lịch giao lưu"
           aria-label="Khám phá"
         >
           <Newspaper
-            className={`w-7 h-7 text-white stroke-[2.2] transition-transform duration-300 group-hover:scale-110 ${
+            className={`w-7 h-7 text-white stroke-[2.2] transition-transform duration-300  ${
               activeTab === 'khampha' ? 'scale-110' : 'scale-100'
             }`}
           />
@@ -63,7 +63,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   className={`w-6 h-6 sm:w-6.5 sm:h-6.5 transition-transform duration-200 ${
                     activeTab === 'home'
                       ? 'stroke-[2.5]'
-                      : 'stroke-[1.9] group-hover:scale-105'
+                      : 'stroke-[1.9] group-'
                   }`}
                 />
               </div>
@@ -99,7 +99,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   className={`w-6 h-6 sm:w-6.5 sm:h-6.5 transition-transform duration-200 ${
                     activeTab === 'map'
                       ? 'stroke-[2.5]'
-                      : 'stroke-[1.9] group-hover:scale-105'
+                      : 'stroke-[1.9] group-'
                   }`}
                 />
               </div>
@@ -124,7 +124,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 className={`text-xs sm:text-[13px] leading-tight transition-all duration-300 tracking-tight ${
                   activeTab === 'khampha'
                     ? 'text-[#168039] font-black scale-105 -translate-y-0.5'
-                    : 'text-[#168039] font-bold group-hover:font-black group-hover:scale-105'
+                    : 'text-[#168039] font-bold group-hover:font-black group-'
                 }`}
               >
                 Khám phá
@@ -152,7 +152,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   className={`w-6 h-6 sm:w-6.5 sm:h-6.5 transition-transform duration-200 ${
                     activeTab === 'trending'
                       ? 'stroke-[2.5]'
-                      : 'stroke-[1.9] group-hover:scale-105'
+                      : 'stroke-[1.9] group-'
                   }`}
                 />
               </div>
@@ -188,7 +188,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   className={`w-6 h-6 sm:w-6.5 sm:h-6.5 transition-transform duration-200 ${
                     activeTab === 'account'
                       ? 'stroke-[2.5]'
-                      : 'stroke-[1.9] group-hover:scale-105'
+                      : 'stroke-[1.9] group-'
                   }`}
                 />
               </div>

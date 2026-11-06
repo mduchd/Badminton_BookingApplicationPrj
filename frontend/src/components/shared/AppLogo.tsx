@@ -44,7 +44,7 @@ export const AppLogo: React.FC<AppLogoProps> = ({
     <div className={`flex items-center gap-2.5 select-none ${className}`}>
       {/* Dedicated Badminton Shuttlecock Emblem */}
       <div
-        className={`${iconDimensions} ${badgeStyle} flex items-center justify-center flex-shrink-0 transition-transform hover:scale-105`}
+        className={`${iconDimensions} ${badgeStyle} flex items-center justify-center flex-shrink-0`}
         title={name}
       >
         <Feather className={`${featherDimensions} -rotate-45 stroke-[2.4]`} />
