@@ -32,9 +32,9 @@ export const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overlay-enter">
-      <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] sm:modal-enter max-sm:sheet-enter">
+      <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[min(90vh,700px)] sm:modal-enter max-sm:sheet-enter">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
           <div className="flex items-center gap-3">
             <Filter className="w-6 h-6 text-[#1b7a42] shrink-0" />
             <div>
@@ -52,7 +52,7 @@ export const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto space-y-6 text-sm">
+        <div className="p-6 flex-1 overflow-y-auto space-y-6 text-sm">
           {/* 1. District */}
           <div className="space-y-2">
             <label className="font-extrabold text-slate-800 flex items-center gap-2">
@@ -177,7 +177,7 @@ export const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-5 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-4">
+        <div className="p-5 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-4 shrink-0">
           <button
             type="button"
             onClick={onReset}

@@ -54,16 +54,16 @@ export const AppLogo: React.FC<AppLogoProps> = ({
         <div className="flex flex-col justify-center leading-none">
           {/* Distinctive Single-Color Typography (Uniform 1-color solid text) */}
           <span
-            className={`font-black tracking-wider uppercase font-sans ${titleColor} ${
-              size === 'sm' ? 'text-base' : size === 'lg' ? 'text-2xl' : 'text-lg sm:text-xl'
+            className={`font-black tracking-wider uppercase font-sans whitespace-nowrap ${titleColor} ${
+              size === 'sm' ? 'text-sm sm:text-base' : size === 'lg' ? 'text-2xl' : 'text-base sm:text-lg lg:text-xl'
             }`}
           >
             {name}
           </span>
           {subtitle && (
             <span
-              className={`font-semibold tracking-widest uppercase mt-0.5 ${subColor} ${
-                size === 'sm' ? 'text-[10px]' : size === 'lg' ? 'text-xs sm:text-sm' : 'text-xs'
+              className={`font-semibold tracking-widest uppercase mt-0.5 whitespace-nowrap ${subColor} ${
+                size === 'sm' ? 'text-[9px] sm:text-[10px]' : size === 'lg' ? 'text-xs sm:text-sm' : 'text-[11px] sm:text-xs'
               }`}
             >
               {subtitle}

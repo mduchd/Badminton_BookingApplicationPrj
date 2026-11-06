@@ -63,8 +63,8 @@ export const BookingConfirmModal: React.FC<BookingConfirmModalProps> = ({
         {/* Header - Cố định ở trên, không bị tràn */}
         <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-emerald-50 border border-emerald-200/80 text-[#1b7a42] flex items-center justify-center shrink-0">
-              <Calendar className="w-5 h-5 text-[#1b7a42]" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#1b7a42] text-white flex items-center justify-center shrink-0">
+              <Calendar className="w-5 h-5 text-white" />
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
@@ -186,7 +186,7 @@ export const BookingConfirmModal: React.FC<BookingConfirmModalProps> = ({
             type="button"
             disabled={isProcessing}
             onClick={handlePay}
-            className="flex-2 py-2.5 sm:py-3 rounded-xl bg-[#1b7a42] hover:bg-[#156335] active:scale-98 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="flex-[2] py-2.5 sm:py-3 rounded-xl bg-[#1b7a42] hover:bg-[#156335] active:scale-98 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             {isProcessing ? (
               <span>Đang xử lý thanh toán payOS...</span>

@@ -361,7 +361,7 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
       </div>
 
       {/* 2. Floating Action Controls (Right-side) */}
-      <div className="absolute right-3 sm:right-6 top-32 z-20 flex flex-col gap-2">
+      <div className="absolute right-3 sm:right-6 top-28 sm:top-32 z-20 flex flex-col gap-2">
         {/* AI Assistant shortcut */}
         <button
           type="button"
@@ -420,7 +420,7 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
 
       {/* 4. Bottom Court Preview Card (Appears when single court pin is clicked) */}
       {selectedCourt && (
-        <div className="absolute bottom-20 sm:bottom-24 left-3 right-3 sm:left-auto sm:right-6 sm:w-[420px] z-30 animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="absolute bottom-24 sm:bottom-28 left-3 right-3 sm:left-auto sm:right-6 sm:w-[420px] z-30 animate-in fade-in slide-in-from-bottom-4 duration-200">
           <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-slate-200 p-4 sm:p-5 relative">
             {/* Close button */}
             <button

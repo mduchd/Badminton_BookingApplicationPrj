@@ -63,7 +63,7 @@ export const OwnerDashboardView: React.FC = () => {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Doanh thu ghi nhận</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-[#168039] text-white flex items-center justify-center">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
@@ -80,7 +80,7 @@ export const OwnerDashboardView: React.FC = () => {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Lượt đặt đã xác nhận</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-slate-800 text-white flex items-center justify-center">
               <Calendar className="w-4 h-4" />
             </div>
           </div>
@@ -96,7 +96,7 @@ export const OwnerDashboardView: React.FC = () => {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Tỷ lệ lấp đầy (Occupancy)</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-[#e5a92c] text-white flex items-center justify-center">
               <Activity className="w-4 h-4" />
             </div>
           </div>
@@ -112,7 +112,7 @@ export const OwnerDashboardView: React.FC = () => {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Sân con vận hành</span>
-            <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-slate-700 text-white flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>

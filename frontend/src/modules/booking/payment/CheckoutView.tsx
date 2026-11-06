@@ -230,17 +230,17 @@ export const CheckoutView: React.FC = () => {
                 {/* Transfer Info */}
                 <div className="space-y-2 text-xs w-full">
                   <div>
-                    <span className="text-slate-500 block">Ngân hàng thụ hưởng:</span>
+                    <span className="text-slate-700 font-semibold block">Ngân hàng thụ hưởng:</span>
                     <strong className="text-slate-900 text-sm">MBBank (Ngân hàng Quân Đội)</strong>
                   </div>
                   <div>
-                    <span className="text-slate-500 block">Số tài khoản:</span>
+                    <span className="text-slate-700 font-semibold block">Số tài khoản:</span>
                     <div className="flex items-center gap-2">
                       <strong className="font-mono text-sm text-slate-900">0388998877</strong>
                       <button
                         type="button"
                         onClick={() => handleCopy('0388998877', 'Số tài khoản')}
-                        className="p-1 text-slate-500 hover:text-emerald-700 cursor-pointer"
+                        className="p-1 text-slate-600 hover:text-emerald-700 cursor-pointer"
                         title="Sao chép"
                       >
                         <Copy className="w-3.5 h-3.5" />
@@ -248,13 +248,13 @@ export const CheckoutView: React.FC = () => {
                     </div>
                   </div>
                   <div>
-                    <span className="text-slate-500 block">Số tiền chính xác:</span>
+                    <span className="text-slate-700 font-semibold block">Số tiền chính xác:</span>
                     <strong className="text-base text-[#168039] font-black">
                       {booking.totalAmount.toLocaleString('vi-VN')} đ
                     </strong>
                   </div>
                   <div>
-                    <span className="text-slate-500 block">Nội dung chuyển khoản (bắt buộc):</span>
+                    <span className="text-slate-700 font-semibold block">Nội dung chuyển khoản (bắt buộc):</span>
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-1 rounded bg-amber-100 text-amber-900 font-mono font-bold text-xs">
                         {booking.bookingCode}
@@ -262,7 +262,7 @@ export const CheckoutView: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleCopy(booking.bookingCode, 'Nội dung CK')}
-                        className="p-1 text-slate-500 hover:text-emerald-700 cursor-pointer"
+                        className="p-1 text-slate-600 hover:text-emerald-700 cursor-pointer"
                         title="Sao chép"
                       >
                         <Copy className="w-3.5 h-3.5" />
@@ -272,7 +272,7 @@ export const CheckoutView: React.FC = () => {
                 </div>
               </div>
 
-              <p className="text-[11px] text-slate-500 text-center">
+              <p className="text-[11px] text-slate-600 font-medium text-center">
                 Vui lòng giữ nguyên nội dung chuyển khoản để hệ thống tự động xác nhận đơn trong 10-30 giây.
               </p>
             </div>

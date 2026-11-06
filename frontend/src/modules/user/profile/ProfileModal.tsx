@@ -104,9 +104,9 @@ END:VCALENDAR`
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overlay-enter">
-      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden modal-enter">
+      <div className="relative w-full max-w-lg max-h-[min(90vh,700px)] flex flex-col bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden modal-enter">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
           <div className="flex items-center gap-3">
             <img
               src={user.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
@@ -128,7 +128,7 @@ END:VCALENDAR`
         </div>
 
         {/* Tab switch */}
-        <div className="flex border-b border-slate-100 px-6 pt-2 bg-white">
+        <div className="flex border-b border-slate-100 px-6 pt-2 bg-white shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab('info')}
@@ -157,7 +157,7 @@ END:VCALENDAR`
         </div>
 
         {/* Body */}
-        <div className="p-6">
+        <div className="p-6 flex-1 overflow-y-auto">
           {activeTab === 'info' ? (
             <form onSubmit={handleSaveInfo} className="space-y-4">
               <div>

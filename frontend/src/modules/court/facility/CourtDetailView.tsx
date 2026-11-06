@@ -64,7 +64,7 @@ export const CourtDetailView: React.FC = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-4 sm:py-6 space-y-6">
+    <div className="max-w-5xl mx-auto px-4 py-4 sm:py-6 space-y-6 pb-24 lg:pb-8">
       {/* Top Bar Navigation */}
       <div className="flex items-center justify-between gap-3">
         <button
@@ -99,7 +99,7 @@ export const CourtDetailView: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate(`/courts/${facility.id}/book`)}
-            className="px-4 py-2.5 rounded-xl bg-[#168039] hover:bg-[#136c30] text-white text-xs sm:text-sm font-bold transition-colors cursor-pointer flex items-center gap-2"
+            className="hidden sm:flex px-4 py-2.5 rounded-xl bg-[#168039] hover:bg-[#136c30] text-white text-xs sm:text-sm font-bold transition-colors cursor-pointer items-center gap-2"
           >
             <Calendar className="w-4 h-4" />
             <span>Đặt sân ngay</span>
@@ -364,6 +364,24 @@ export const CourtDetailView: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Sticky Mobile Bottom Booking Bar (Chỉ hiển thị trên mobile < lg) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-4 py-3 flex items-center justify-between pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg">
+        <div>
+          <span className="text-[11px] font-medium text-slate-500 block">Giá từ</span>
+          <span className="text-base font-black text-[#168039]">
+            {facility.pricePerHour.toLocaleString('vi-VN')} đ<span className="text-xs font-semibold text-slate-600">/h</span>
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate(`/courts/${facility.id}/book`)}
+          className="px-5 py-2.5 rounded-xl bg-[#168039] hover:bg-[#136c30] text-white text-xs sm:text-sm font-bold transition-colors cursor-pointer flex items-center gap-2"
+        >
+          <Calendar className="w-4 h-4" />
+          <span>Xem lịch & Đặt sân</span>
+        </button>
       </div>
     </div>
   )

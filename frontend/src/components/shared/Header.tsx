@@ -238,7 +238,7 @@ export const Header: React.FC<HeaderProps> = ({
         </svg>
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-3.5 flex items-center justify-between gap-4">
+      <div className="relative max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-4">
         {/* Left side: Brand Logo at the far left */}
         <div className="flex items-center gap-3 flex-shrink-0">
           <div
@@ -251,16 +251,16 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Right side: AI Chat, Notifications, and User Profile / Auth buttons */}
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
           {/* AI Chat button (Ẩn trên các trang quản trị Chủ sân & Admin) */}
           {!hideAIChat && onOpenAIChat && (
             <button
               type="button"
               onClick={onOpenAIChat}
-              className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/15 hover:bg-white/25 active:scale-90 text-white flex items-center justify-center transition-all duration-200 cursor-pointer"
+              className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/15 hover:bg-white/25 active:scale-90 text-white flex items-center justify-center transition-all duration-200 cursor-pointer"
               title="Chat trợ lý AI"
             >
-              <MessageCircle className="w-5 h-5 text-white" />
+              <MessageCircle className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white" />
             </button>
           )}
 
@@ -300,7 +300,7 @@ export const Header: React.FC<HeaderProps> = ({
                     'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
                   }
                   alt={currentUser.fullName}
-                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover ring-2 ring-white/90 "
+                  className="w-9 h-9 sm:w-11 sm:h-11 rounded-full object-cover ring-2 ring-white/90"
                 />
               </div>
             </div>
@@ -309,7 +309,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => onOpenAuth('login')}
-                className="px-4 py-2 rounded-full bg-white hover:bg-slate-100 active:scale-95 text-slate-900 text-sm font-black transition-all duration-200 cursor-pointer"
+                className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white hover:bg-slate-100 active:scale-95 text-slate-900 text-xs sm:text-sm font-black transition-all duration-200 cursor-pointer"
               >
                 Đăng nhập
               </button>

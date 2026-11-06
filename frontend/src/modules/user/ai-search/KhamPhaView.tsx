@@ -75,6 +75,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
   const [areaMode, setAreaMode] = useState<'radius' | 'city'>('radius')
   const [selectedRadius, setSelectedRadius] = useState('20km')
   const [selectedSport, setSelectedSport] = useState('all')
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false)
 
   // Date selection
   const [selectedDay, setSelectedDay] = useState('06')
@@ -200,9 +201,26 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
       </div>
 
       {/* 2. Main Two-Column Layout (Left: Bộ lọc | Right: Ngày tổ chức & Sessions) */}
+      {/* Mobile Filter Toggle Bar (chỉ hiển thị trên mobile/tablet < lg) */}
+      <div className="lg:hidden flex items-center justify-between bg-white rounded-2xl border border-slate-200 p-3 sm:p-3.5 shadow-2xs">
+        <div className="flex items-center gap-2">
+          <SlidersHorizontal className="w-4 h-4 text-[#1b7a42]" />
+          <span className="text-xs font-bold text-slate-900">
+            Bộ lọc ({selectedSport !== 'all' ? '1 môn' : 'Tất cả'} - {selectedRadius})
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
+          className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#1b7a42] text-xs font-bold transition-colors cursor-pointer"
+        >
+          {isMobileFilterOpen ? 'Thu gọn bộ lọc' : 'Tùy chỉnh bộ lọc'}
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
         {/* Left Column: BỘ LỌC (Sidebar Filter) */}
-        <aside className="lg:col-span-4 bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs p-5 sm:p-6 space-y-5 h-fit">
+        <aside className={`lg:col-span-4 bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs p-5 sm:p-6 space-y-5 h-fit ${isMobileFilterOpen ? 'block' : 'hidden lg:block'}`}>
           {/* Header */}
           <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
             <div className="flex items-center gap-2 text-slate-900 font-extrabold text-base">

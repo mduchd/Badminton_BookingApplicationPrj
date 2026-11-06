@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
+  ArrowLeft,
   Calendar,
   Info,
   ShieldCheck,
@@ -86,6 +87,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
   ]
   const activeSection: ActiveAccountSection =
     sectionParam && validSections.includes(sectionParam) ? sectionParam : 'bookings'
+  const isSectionSelected = Boolean(sectionParam && validSections.includes(sectionParam))
 
   const setActiveSection = (section: ActiveAccountSection) => {
     setSearchParams(
@@ -241,7 +243,7 @@ END:VCALENDAR`
   return (
     <div className="w-full min-h-[calc(100vh-64px)] flex flex-col md:flex-row bg-[#f8fafc] text-slate-900">
       {/* ================= LEFT SIDEBAR (Reference inspired) ================= */}
-      <aside className="w-full md:w-80 lg:w-[360px] shrink-0 bg-[#eef8f2] border-r border-emerald-200/60 flex flex-col">
+      <aside className={`w-full md:w-80 lg:w-[360px] shrink-0 bg-[#eef8f2] border-r border-emerald-200/60 flex flex-col ${isSectionSelected ? 'hidden md:flex' : 'flex'}`}>
         {/* 1. Top Green User Profile & Membership Card */}
         <div className="bg-[#168039] p-4 sm:p-5 text-white flex flex-col gap-3">
           {/* User Profile Row */}
@@ -541,10 +543,19 @@ END:VCALENDAR`
       </aside>
 
       {/* ================= RIGHT MAIN PANEL ================= */}
-      <main className="flex-1 bg-[#f8fafc] min-h-[calc(100vh-64px)] flex flex-col relative">
+      <main className={`flex-1 bg-[#f8fafc] min-h-[calc(100vh-64px)] flex flex-col relative ${isSectionSelected ? 'flex' : 'hidden md:flex'}`}>
         {/* Top Header Bar across the Right Main Panel */}
         <div className="bg-[#168039] text-white h-14 sm:h-16 px-4 sm:px-8 flex items-center justify-between relative shrink-0">
-          <div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate(ROUTES.ACCOUNT)}
+              className="md:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold transition-colors cursor-pointer mr-2"
+              title="Quay lại danh mục"
+            >
+              <ArrowLeft className="w-4 h-4 text-white" />
+              <span>Menu</span>
+            </button>
             <h1 className="text-base sm:text-lg font-extrabold tracking-normal text-white">
               {activeSection === 'bookings' && 'Danh sách sân đã đặt'}
               {activeSection === 'profile' && 'Cập nhật thông tin cá nhân'}
@@ -557,7 +568,7 @@ END:VCALENDAR`
               {activeSection === 'version' && 'Thông tin phiên bản SmashCourt'}
             </h1>
           </div>
-                  </div>
+        </div>
 
         {/* Sub-bar Filter for Bookings Section */}
         {activeSection === 'bookings' && (

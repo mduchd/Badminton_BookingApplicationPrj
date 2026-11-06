@@ -232,7 +232,7 @@ export const CourtBookingGridView: React.FC<CourtBookingGridViewProps> = ({
   const activeDateItem = dateOptions.find((d) => d.date === selectedDate) || dateOptions[0]
 
   return (
-    <div className="w-full pb-28 select-none">
+    <div className="w-full pb-36 sm:pb-28 select-none">
       {/* UNIFIED SEAMLESS WORKPLACE: Single cohesive layout without fragmented floating cards */}
       <div className="w-full bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
         {/* 1. Header Bar: Clean, professional top bar */}
@@ -467,7 +467,7 @@ export const CourtBookingGridView: React.FC<CourtBookingGridViewProps> = ({
       </div>
 
       {/* 5. BOTTOM ACTION BAR: Edge-to-edge floating bar with golden continue button like Alobo */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-3 sm:px-6 py-3">
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-3 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg">
         <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3">
           {/* Left Summary */}
           <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
@@ -527,8 +527,8 @@ export const CourtBookingGridView: React.FC<CourtBookingGridViewProps> = ({
       {/* 6. MODAL: View yards & Price list popup */}
       {isPriceModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-lg bg-white rounded-2xl border border-slate-200 p-5 space-y-4 max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="w-full max-w-lg bg-white rounded-2xl border border-slate-200 max-h-[min(90vh,700px)] flex flex-col overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 shrink-0">
               <h2 className="text-base font-black text-slate-900">
                 Bảng giá & Danh sách sân: {facility.name}
               </h2>
@@ -541,46 +541,49 @@ export const CourtBookingGridView: React.FC<CourtBookingGridViewProps> = ({
               </button>
             </div>
 
-            {/* SubCourts list */}
-            <div>
-              <h3 className="text-xs font-bold text-slate-500 mb-2">Các sân khả dụng</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {facility.subCourts.map((c) => (
-                  <div key={c.id} className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs">
-                    <strong className="text-slate-900 block">{c.name}</strong>
-                    <span className="text-slate-500">
-                      Loại: {c.courtType === 'vip' ? 'Sân VIP' : c.courtType === 'training' ? 'Sân tập' : 'Tiêu chuẩn BWF'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Price rules */}
-            <div>
-              <h3 className="text-xs font-bold text-slate-500 mb-2">Bảng giá niêm yết</h3>
-              <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
-                {priceRules.map((r) => (
-                  <div key={r.id} className="p-2.5 flex items-center justify-between text-xs bg-white hover:bg-slate-50">
-                    <div>
-                      <strong className="text-slate-900 block">{r.name}</strong>
-                      <span className="text-slate-500">{r.startTime} - {r.endTime}</span>
+            {/* SubCourts list & rules in scrollable body */}
+            <div className="p-4 sm:p-5 flex-1 overflow-y-auto space-y-4">
+              <div>
+                <h3 className="text-xs font-bold text-slate-700 mb-2">Các sân khả dụng</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {facility.subCourts.map((c) => (
+                    <div key={c.id} className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs">
+                      <strong className="text-slate-900 block">{c.name}</strong>
+                      <span className="text-slate-600 font-medium">
+                        Loại: {c.courtType === 'vip' ? 'Sân VIP' : c.courtType === 'training' ? 'Sân tập' : 'Tiêu chuẩn BWF'}
+                      </span>
                     </div>
-                    <span className="font-black text-[#168039]">
-                      {r.pricePerHour.toLocaleString('vi-VN')} đ / giờ
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-bold text-slate-700 mb-2">Bảng giá niêm yết</h3>
+                <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+                  {priceRules.map((r) => (
+                    <div key={r.id} className="p-2.5 flex items-center justify-between text-xs bg-white hover:bg-slate-50">
+                      <div>
+                        <strong className="text-slate-900 block">{r.name}</strong>
+                        <span className="text-slate-600 font-medium">{r.startTime} - {r.endTime}</span>
+                      </div>
+                      <span className="font-black text-[#168039]">
+                        {r.pricePerHour.toLocaleString('vi-VN')} đ / giờ
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setIsPriceModalOpen(false)}
-              className="w-full py-2.5 rounded-xl bg-[#168039] hover:bg-[#136c30] text-white font-bold text-xs cursor-pointer transition-colors"
-            >
-              Đã hiểu, quay lại đặt sân
-            </button>
+            <div className="p-4 sm:p-5 border-t border-slate-100 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsPriceModalOpen(false)}
+                className="w-full py-2.5 rounded-xl bg-[#168039] hover:bg-[#136c30] text-white font-bold text-xs cursor-pointer transition-colors"
+              >
+                Đã hiểu, quay lại đặt sân
+              </button>
+            </div>
           </div>
         </div>
       )}

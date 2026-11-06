@@ -622,7 +622,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
             </div>
 
             {/* 6. Bottom Sticky CTA Footer */}
-            <div className="p-3 border-t border-slate-200 bg-white flex items-center justify-between gap-3 flex-shrink-0">
+            <div className="p-3 border-t border-slate-200 bg-white flex items-center justify-between gap-3 flex-shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <div>
                 <span className="text-[11px] text-slate-600 block">Giá chỉ từ:</span>
                 <span className="text-sm sm:text-base font-bold text-[#1b7a42]">
