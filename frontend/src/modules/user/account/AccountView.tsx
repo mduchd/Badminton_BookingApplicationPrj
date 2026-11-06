@@ -241,9 +241,9 @@ END:VCALENDAR`
   }
 
   return (
-    <div className="w-full min-h-[calc(100vh-64px)] flex flex-col md:flex-row bg-[#f8fafc] text-slate-900">
+    <div className="w-full max-w-full overflow-x-hidden min-h-[calc(100vh-64px)] flex flex-col md:flex-row bg-[#f8fafc] text-slate-900">
       {/* ================= LEFT SIDEBAR (Reference inspired) ================= */}
-      <aside className={`w-full md:w-80 lg:w-[360px] shrink-0 bg-[#eef8f2] border-r border-emerald-200/60 flex flex-col ${isSectionSelected ? 'hidden md:flex' : 'flex'}`}>
+      <aside className={`w-full md:w-80 lg:w-[360px] max-w-full shrink-0 bg-[#eef8f2] border-r border-emerald-200/60 flex flex-col ${isSectionSelected ? 'hidden md:flex' : 'flex'}`}>
         {/* 1. Top Green User Profile & Membership Card */}
         <div className="bg-[#168039] p-4 sm:p-5 text-white flex flex-col gap-3">
           {/* User Profile Row */}
@@ -543,20 +543,20 @@ END:VCALENDAR`
       </aside>
 
       {/* ================= RIGHT MAIN PANEL ================= */}
-      <main className={`flex-1 bg-[#f8fafc] min-h-[calc(100vh-64px)] flex flex-col relative ${isSectionSelected ? 'flex' : 'hidden md:flex'}`}>
+      <main className={`flex-1 w-full max-w-full overflow-x-hidden bg-[#f8fafc] min-h-[calc(100vh-64px)] flex flex-col relative ${isSectionSelected ? 'flex' : 'hidden md:flex'}`}>
         {/* Top Header Bar across the Right Main Panel */}
         <div className="bg-[#168039] text-white h-14 sm:h-16 px-4 sm:px-8 flex items-center justify-between relative shrink-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
               onClick={() => navigate(ROUTES.ACCOUNT)}
-              className="md:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold transition-colors cursor-pointer mr-2"
+              className="md:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold transition-colors cursor-pointer mr-2 shrink-0"
               title="Quay lại danh mục"
             >
               <ArrowLeft className="w-4 h-4 text-white" />
               <span>Menu</span>
             </button>
-            <h1 className="text-base sm:text-lg font-extrabold tracking-normal text-white">
+            <h1 className="text-base sm:text-lg font-extrabold tracking-normal text-white truncate">
               {activeSection === 'bookings' && 'Danh sách sân đã đặt'}
               {activeSection === 'profile' && 'Cập nhật thông tin cá nhân'}
               {activeSection === 'membership' && 'Hạng hội viên SmashCourt'}
@@ -574,11 +574,11 @@ END:VCALENDAR`
         {activeSection === 'bookings' && (
           <div className="px-4 sm:px-8 py-3 bg-white border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3 shrink-0">
             {/* Status Tabs */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold overflow-x-auto no-scrollbar max-w-full shrink-0">
               <button
                 type="button"
                 onClick={() => setBookingStatusFilter('all')}
-                className={`px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                   bookingStatusFilter === 'all'
                     ? 'bg-white text-[#168039] font-bold shadow-xs'
                     : 'text-slate-700 hover:text-slate-900'
@@ -589,7 +589,7 @@ END:VCALENDAR`
               <button
                 type="button"
                 onClick={() => setBookingStatusFilter('CONFIRMED')}
-                className={`px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                   bookingStatusFilter === 'CONFIRMED'
                     ? 'bg-white text-[#168039] font-bold shadow-xs'
                     : 'text-slate-700 hover:text-slate-900'
@@ -600,7 +600,7 @@ END:VCALENDAR`
               <button
                 type="button"
                 onClick={() => setBookingStatusFilter('COMPLETED')}
-                className={`px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                   bookingStatusFilter === 'COMPLETED'
                     ? 'bg-white text-[#168039] font-bold shadow-xs'
                     : 'text-slate-700 hover:text-slate-900'
@@ -611,7 +611,7 @@ END:VCALENDAR`
               <button
                 type="button"
                 onClick={() => setBookingStatusFilter('CANCELLED')}
-                className={`px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                   bookingStatusFilter === 'CANCELLED'
                     ? 'bg-white text-rose-600 font-bold shadow-xs'
                     : 'text-slate-700 hover:text-slate-900'
@@ -622,7 +622,7 @@ END:VCALENDAR`
             </div>
 
             {/* Date Filter Dropdown Button */}
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 type="button"
                 onClick={() => setDateFilterOpen(!dateFilterOpen)}
@@ -664,7 +664,7 @@ END:VCALENDAR`
         {/* Right Main Content Body */}
         <div
           key={activeSection}
-          className="p-4 sm:p-6 lg:p-8 flex-1 flex flex-col tab-slide-from-right"
+          className="p-4 sm:p-6 lg:p-8 flex-1 flex flex-col w-full max-w-full overflow-x-hidden tab-slide-from-right"
         >
           {/* 1. SECTION: RESERVED BOOKINGS */}
           {activeSection === 'bookings' && (

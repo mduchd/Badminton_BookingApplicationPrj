@@ -401,7 +401,7 @@ export function App() {
 
   return (
     <div
-      className={`min-h-screen flex flex-col bg-[#f8fafc] font-sans text-slate-900 ${
+      className={`min-h-screen flex flex-col bg-[#f8fafc] font-sans text-slate-900 w-full max-w-full overflow-x-hidden ${
         activeNavTab === 'map'
           ? 'h-screen overflow-hidden pb-0'
           : activeNavTab === 'account'
@@ -450,11 +450,11 @@ export function App() {
       )}
 
       {/* Main Container with Horizontal Slide Animation */}
-      <div className="flex-1 w-full relative z-20">
+      <div className="flex-1 w-full max-w-full overflow-x-hidden relative z-20">
         {activeNavTab === 'map' ? (
           <main
             key="map"
-            className={`w-full h-[calc(100vh-56px)] overflow-hidden ${
+            className={`w-full max-w-full h-[calc(100vh-56px)] overflow-hidden ${
               slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
             }`}
           >
@@ -469,7 +469,7 @@ export function App() {
         ) : activeNavTab === 'account' ? (
           <main
             key="account"
-            className={`w-full min-h-[calc(100vh-64px)] ${
+            className={`w-full max-w-full overflow-x-hidden min-h-[calc(100vh-64px)] ${
               slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
             }`}
           >
