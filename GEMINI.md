@@ -1,0 +1,34 @@
+# Quy định phát triển dự án Badminton Booking (TV1 & Hệ thống)
+
+## 1. Quy tắc Thiết kế Giao diện (UI/UX Rules)
+- **TUYỆT ĐỐI KHÔNG DÙNG MÀU GRADIENT:**
+  - Không sử dụng các class gradient của Tailwind CSS như `bg-gradient-to-...`, `from-...`, `via-...`, `to-...`, `bg-clip-text`.
+  - Toàn bộ giao diện phải dùng **màu phẳng (Solid Flat Colors)** rõ ràng, nhất quán và sạch sẽ (ví dụ: xanh thể thao `#1b7a42`, `#168039`, nền `#f8fafc`, `#ffffff`, chữ `#0f172a`, `#334155`, điểm nhấn vàng cam `#e5a92c`).
+- **KHÔNG TẠO CÁC TAG/BADGE KỸ THUẬT NỘI BỘ:**
+  - Tuyệt đối không đưa các tag công nghệ / developer showcase lên UI người dùng (ví dụ: `SPRING AI`, `PRO`, `DTO Validated`, `BETA`, `RBAC Protected`, `WebSocket STOMP`, v.v.).
+  - Khi triển khai component mới: Không thêm các tag này.
+  - Khi gặp component cũ đang có các tag này: Bắt buộc phải sửa và loại bỏ ngay.
+- **KHÔNG TẠO TAG/BADGE/PILL TRANG TRÍ TRÊN TIÊU ĐỀ MODAL/PANEL:**
+  - Cấm đặt các tag/pill dạng viên thuốc (như `Giữ chỗ 10 phút`, `Giao lưu & Đặt buổi chơi`, v.v.) nằm lơ lửng phía trên tiêu đề H1/H2 của modal hay panel.
+  - Tiêu đề modal/panel phải trực diện, sạch sẽ, không gắn các badge/tag phụ bên trên.
+  - Các thông tin như thời gian giữ chỗ, lưu ý phải được thể hiện qua câu văn mô tả rõ ràng ở dưới, không dùng tag/badge trang trí.
+- **CẤM TẠO CÁC TAG/BADGE TRANG TRÍ THỪA THÃI, NÚT TRÒN GIẢ LẬP:**
+  - Tuyệt đối cấm tạo các tag/badge trang trí thừa thãi, nút tròn giả lập (ví dụ: nút tròn ngôi sao đỏ, tag sao vàng gắn trên góc icon, tag hot/vip/demo trang trí không phục vụ luồng nghiệp vụ thực tế).
+  - Giao diện thanh điều hướng/header và các nút chức năng phải tối giản, chuyên nghiệp, chỉ giữ icon chức năng chuẩn, không đính kèm badge trang trí lơ lửng.
+- **TUYỆT ĐỐI KHÔNG DÙNG HIỆU ỨNG NHẤP NHÁY / XOAY LIÊN TỤC TRÊN COMPONENT:**
+  - Cấm sử dụng các class hiệu ứng nhấp nháy, nhấp nháy liên tục như `animate-pulse`, `animate-ping`, `animate-spin` (trên các icon trang trí/badge) hoặc các animation chuyển động lặp đi lặp lại trên component tĩnh.
+  - Ngoại trừ vòng quay loading thực tế khi đang chờ nạp dữ liệu (async data fetch), toàn bộ component, nhãn, tag, icon phải hiển thị tĩnh, sắc nét, không nhấp nháy gây khó chịu cho mắt người dùng.
+- **TUYỆT ĐỐI KHÔNG DÙNG SHADOW, GLOW CHO BUTTON (NÚT BẤM):**
+  - Cấm sử dụng các class đổ bóng màu, hiệu ứng phát sáng (glow), bóng tỏa hoặc đổ bóng nổi bật trên button (ví dụ: `shadow-md`, `shadow-lg`, `shadow-emerald-...`, `shadow-green-...`, `shadow-blue-...`, `hover:shadow-lg`, v.v.).
+  - Toàn bộ các nút bấm (`<button>`, action buttons, link CTA) phải thiết kế theo phong cách **phẳng (Flat Solid Button) thông thường**: nền màu phẳng đồng nhất (`bg-[#1b7a42] hover:bg-[#156335]`, `bg-emerald-600 hover:bg-emerald-700`, v.v.), tương phản tốt, chữ rõ nét, khi hover chỉ đổi tông màu nhẹ (`hover:bg-...`), **tuyệt đối không có shadow và không có glow**.
+- **BẮT BUỘC PHẢI CÓ `cursor-pointer` CHO TẤT CẢ BUTTON VÀ PHẦN TỬ CLICK:**
+  - Do cơ chế reset mặc định của Tailwind CSS, toàn bộ các thẻ `<button>`, nút bấm CTA, nút hành động, icon button, tab switchers, và các component/thẻ có sự kiện click (`onClick`) **BẮT BUỘC PHẢI CÓ** class `cursor-pointer`.
+  - Với các button có trạng thái disabled (`disabled={...}`), bắt buộc kèm `disabled:cursor-not-allowed`.
+  - Khi tạo mới hoặc chỉnh sửa bất kỳ component nào, Agent phải chủ động rà soát và thêm đầy đủ `cursor-pointer`, tuyệt đối không để sót nút bấm hiển thị con trỏ mũi tên mặc định.
+- **KHÔNG SỬ DỤNG ICON TỰ TẠO / TỰ GENERATE SVG / EMOJI THAY ICON:**
+  - Tuyệt đối không tự viết hoặc sinh các đoạn mã SVG thủ công (`<svg><path d="..." /></svg>`).
+  - Không lạm dụng emoji ký tự làm icon hệ thống.
+  - **Bắt buộc sử dụng bộ icon chính thức của dự án: `lucide-react`** (đã được cấu hình trong `package.json`) hoặc các tài nguyên icon chuẩn trong thư mục của dự án.
+- **TÊN THƯƠNG HIỆU & FILE:**
+  - Sử dụng thương hiệu riêng của đồ án: `SmashCourt` (SmashCourt Badminton Booking Platform).
+  - Không đặt tên file hay biến chứa từ khóa của website tham khảo (alobo).
