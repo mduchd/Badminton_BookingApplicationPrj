@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: badminton-booking
+
+  profiles:
+    default: local
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: 8080

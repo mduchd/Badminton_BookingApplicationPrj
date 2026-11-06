@@ -1,0 +1,5 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:badminton_booking}
+    username: ${DB_USER:badminton}
+    password: ${DB_PASSWORD:badminton_dev}
