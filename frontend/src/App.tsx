@@ -656,6 +656,9 @@ export function App() {
           isOpen={isAIChatOpen}
           onClose={() => setIsAIChatOpen(false)}
           onApplyCriteria={handleApplyCriteriaFromAI}
+          onSelectCourt={handleOpenCourtSidebar}
+          onBookCourt={handleOpenBooking}
+          currentCriteria={criteria}
         />
       )}
 

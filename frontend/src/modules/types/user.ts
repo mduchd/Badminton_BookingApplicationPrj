@@ -63,4 +63,6 @@ export interface AIMessage {
   extractedCriteria?: Partial<SearchCriteria>
   matchedCount?: number
   isError?: boolean
+  recommendedCourts?: any[]
+  followUpChips?: string[]
 }
