@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ApiResponse, BookingCreateRequest, BookingResponse, CourtAvailability } from '../types';
+import type { ApiResponse, BookingCreateRequest, BookingResponse, CourtAvailability } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 

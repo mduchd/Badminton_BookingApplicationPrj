@@ -19,7 +19,7 @@ import { AccountView } from './modules/user/account/AccountView'
 import { MyBookingsList } from './modules/booking/components/MyBookingsList'
 import { CourtBookingModal } from './modules/booking/components/CourtBookingModal'
 import { bookingApi } from './modules/booking/services/bookingApi'
-import { BookingResponse } from './modules/booking/types'
+import type { BookingResponse } from './modules/booking/types'
 
 import {
   mockCurrentUser,
@@ -180,15 +180,16 @@ export function MainApp() {
 
   // Booking action: Mở Modal Lưới Chọn Giờ Đặt Sân (TV3)
   const handleOpenBooking = (court: BadmintonCourtItem | CourtResult) => {
-    const numericCourtId = typeof court.id === 'number' ? court.id : 1
-    const courtName = 'courtName' in court && court.courtName ? court.courtName : 'Sân số 1 (Thảm Yonex)'
-    const facilityName = 'facilityName' in court && court.facilityName ? court.facilityName : court.name
+    const numericCourtId = 'courtId' in court ? Number(court.courtId) : Number(court.id)
+    const courtName = 'courtName' in court && court.courtName ? String(court.courtName) : ('name' in court ? String(court.name) : 'Sân số 1 (Thảm Yonex)')
+    const facilityName = 'facilityName' in court && court.facilityName ? String(court.facilityName) : ('name' in court ? String(court.name) : 'Cụm Sân SmashCourt')
+    const address = 'address' in court ? court.address : ''
 
     setBookingCourtInfo({
-      courtId: numericCourtId,
-      courtName: courtName,
-      facilityName: facilityName,
-      facilityAddress: court.address,
+      courtId: Number.isNaN(numericCourtId) ? 1 : numericCourtId,
+      courtName,
+      facilityName,
+      facilityAddress: address,
     })
   }
 
@@ -196,7 +197,7 @@ export function MainApp() {
   const handleBookingSuccess = (booking: BookingResponse) => {
     const bookingNotif: NotificationItem = {
       id: 'notif_bk_' + Date.now(),
-      type: 'BOOKING_CREATED',
+      type: 'BOOKING_CONFIRMED',
       title: 'Giữ chỗ sân thành công! 🏸',
       body: `Đơn #SMC-${booking.id} tại ${booking.facilityName} (${booking.courtName}) đang được giữ trong 10 phút.`,
       isRead: false,

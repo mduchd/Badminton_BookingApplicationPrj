@@ -1,5 +1,5 @@
 import React from 'react';
-import { CourtAvailability, TimeSlot } from '../types';
+import type { CourtAvailability, TimeSlot } from '../types';
 
 interface TimeSlotGridProps {
   availability?: CourtAvailability;

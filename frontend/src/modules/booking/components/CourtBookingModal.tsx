@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Calendar as CalendarIcon, MapPin } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookingApi } from '../services/bookingApi';
-import { TimeSlot, BookingResponse } from '../types';
+import type { TimeSlot, BookingResponse } from '../types';
 import { TimeSlotGrid } from './TimeSlotGrid';
 import { BookingSummaryCard } from './BookingSummaryCard';
 

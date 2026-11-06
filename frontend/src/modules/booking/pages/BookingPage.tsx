@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookingApi } from '../services/bookingApi';
-import { TimeSlot } from '../types';
+import type { TimeSlot } from '../types';
 import { TimeSlotGrid } from '../components/TimeSlotGrid';
 import { BookingSummaryCard } from '../components/BookingSummaryCard';
 import { MyBookingsList } from '../components/MyBookingsList';
@@ -84,11 +84,11 @@ export const BookingPage: React.FC = () => {
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-16">
       {/* Toast thông báo */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 animate-bounce">
+        <div className="fixed top-5 right-5 z-50">
           <div
-            className={`px-4 py-3 rounded-xl shadow-lg border text-sm font-semibold flex items-center gap-2 ${
+            className={`px-4 py-3 rounded-xl border text-sm font-semibold flex items-center gap-2 ${
               toastMessage.type === 'success'
-                ? 'bg-emerald-600 text-white border-emerald-700'
+                ? 'bg-[#1b7a42] text-white border-emerald-700'
                 : 'bg-rose-600 text-white border-rose-700'
             }`}
           >
@@ -98,15 +98,15 @@ export const BookingPage: React.FC = () => {
       )}
 
       {/* Header thanh điều hướng */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-xl shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-[#1b7a42] text-white flex items-center justify-center font-black text-xl">
               🏸
             </div>
             <div>
-              <h1 className="font-extrabold text-slate-900 text-lg leading-tight">Badminton Booking</h1>
-              <p className="text-[11px] text-slate-500 font-medium">Hệ thống đặt sân & giữ chỗ thông minh (Module TV3)</p>
+              <h1 className="font-extrabold text-slate-900 text-lg leading-tight">SmashCourt Booking</h1>
+              <p className="text-[11px] text-slate-500 font-medium">Hệ thống đặt sân & giữ chỗ thông minh</p>
             </div>
           </div>
 
@@ -120,7 +120,7 @@ export const BookingPage: React.FC = () => {
       {/* Nội dung chính */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
         {/* Bộ điều khiển chọn ngày và chọn sân con */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 mb-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-4">
             {/* Chọn Ngày */}
             <div>
@@ -133,7 +133,7 @@ export const BookingPage: React.FC = () => {
                   setSelectedDate(e.target.value);
                   setSelectedSlot(null);
                 }}
-                className="text-xs font-semibold px-3 py-2 border border-slate-300 rounded-xl bg-white shadow-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                className="text-xs font-semibold px-3 py-2 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-[#1b7a42] focus:outline-none cursor-pointer"
               />
             </div>
 
@@ -146,14 +146,15 @@ export const BookingPage: React.FC = () => {
                   { id: 2, name: 'Sân 2 (Yonex)' },
                 ].map((c) => (
                   <button
+                    type="button"
                     key={c.id}
                     onClick={() => {
                       setSelectedCourtId(c.id);
                       setSelectedSlot(null);
                     }}
-                    className={`px-3 py-2 text-xs font-bold rounded-xl border transition ${
+                    className={`px-3 py-2 text-xs font-bold rounded-xl border transition-colors cursor-pointer ${
                       selectedCourtId === c.id
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                        ? 'bg-[#1b7a42] text-white border-[#1b7a42]'
                         : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                     }`}
                   >
@@ -165,15 +166,13 @@ export const BookingPage: React.FC = () => {
           </div>
 
           <button
+            type="button"
             onClick={() => {
               refetchAvailability();
               refetchMyBookings();
             }}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-emerald-700 px-3 py-2 rounded-xl border border-slate-200 hover:border-emerald-300 transition"
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-[#1b7a42] px-3 py-2 rounded-xl border border-slate-200 hover:border-emerald-300 transition-colors cursor-pointer"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-            </svg>
             Làm mới lịch
           </button>
         </div>

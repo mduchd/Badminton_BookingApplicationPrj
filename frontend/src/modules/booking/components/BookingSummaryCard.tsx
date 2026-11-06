@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { TimeSlot } from '../types';
+import { Calendar, AlertCircle, CheckCircle2 } from 'lucide-react';
+import type { TimeSlot } from '../types';
 
 interface BookingSummaryCardProps {
   courtName?: string;
