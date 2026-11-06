@@ -41,11 +41,11 @@ export function parseUserQuery(
     lower.includes('1.15m')
   ) {
     return {
-      replyText: `🏸 **Quy định Luật Giao Cầu Hiện Đại (BWF):**
-1. **Chiều cao giới hạn:** Toàn bộ quả cầu khi tiếp xúc mặt vợt phải nằm dưới **1.15 mét** tính từ mặt sàn (thay vì dưới thắt lưng như luật cũ).
-2. **Tư thế chân:** Cả hai chân của người giao cầu và người nhận cầu phải đứng yên trong ô quy định, không được nhấc gót hay chạm vạch trước khi cầu bay đi.
-3. **Chuyển động vợt:** Vợt phải chuyển động liên tục về phía trước từ khi bắt đầu vung cho đến khi đánh trúng cầu.
-4. **Hướng phát:** Quả cầu phải bay chéo sân vào đúng ô giao cầu hợp lệ của đối thủ.`,
+      replyText: `🏸 Quy định Luật Giao Cầu Hiện Đại (BWF):
+1. Chiều cao giới hạn: Toàn bộ quả cầu khi tiếp xúc mặt vợt phải nằm dưới 1.15 mét tính từ mặt sàn (thay vì dưới thắt lưng như luật cũ).
+2. Tư thế chân: Cả hai chân của người giao cầu và người nhận cầu phải đứng yên trong ô quy định, không được nhấc gót hay chạm vạch trước khi cầu bay đi.
+3. Chuyển động vợt: Vợt phải chuyển động liên tục về phía trước từ khi bắt đầu vung cho đến khi đánh trúng cầu.
+4. Hướng phát: Quả cầu phải bay chéo sân vào đúng ô giao cầu hợp lệ của đối thủ.`,
       followUpChips: [
         'Luật tính điểm 21',
         'Vạch sân đánh đôi khác gì đánh đơn?',
@@ -61,11 +61,11 @@ export function parseUserQuery(
     lower.includes('bao nhiêu điểm')
   ) {
     return {
-      replyText: `🏆 **Hệ Thống Tính Điểm Cầu Lông (Rally Point System):**
-1. **Số ván thi đấu:** Mỗi trận đấu diễn ra theo thể thức **3 ván thắng 2**.
-2. **Điểm thắng mỗi ván:** Bên nào chạm mốc **21 điểm** trước sẽ thắng ván đó. Bất kỳ bên nào thắng pha cầu đều được tính 1 điểm và nhận quyền giao cầu tiếp theo.
-3. **Cách biệt 2 điểm (Deuce):** Nếu tỷ số hòa 20 - 20, hai bên phải thi đấu đến khi tạo cách biệt 2 điểm (ví dụ 22-20, 24-22).
-4. **Điểm chạm trần:** Điểm số tối đa là **30 điểm**. Nếu hòa 29 - 29, bên nào ghi điểm thứ 30 trước sẽ giành chiến thắng chung cuộc.`,
+      replyText: `🏆 Hệ Thống Tính Điểm Cầu Lông (Rally Point System):
+1. Số ván thi đấu: Mỗi trận đấu diễn ra theo thể thức 3 ván thắng 2.
+2. Điểm thắng mỗi ván: Bên nào chạm mốc 21 điểm trước sẽ thắng ván đó. Bất kỳ bên nào thắng pha cầu đều được tính 1 điểm và nhận quyền giao cầu tiếp theo.
+3. Cách biệt 2 điểm (Deuce): Nếu tỷ số hòa 20 - 20, hai bên phải thi đấu đến khi tạo cách biệt 2 điểm (ví dụ 22-20, 24-22).
+4. Điểm chạm trần: Điểm số tối đa là 30 điểm. Nếu hòa 29 - 29, bên nào ghi điểm thứ 30 trước sẽ giành chiến thắng chung cuộc.`,
       followUpChips: [
         'Vạch sân đánh đôi khác gì đánh đơn?',
         'Tư vấn chọn vợt 3U hay 4U',
@@ -79,10 +79,10 @@ export function parseUserQuery(
     (lower.includes('vạch') || lower.includes('ô') || lower.includes('khác gì'))
   ) {
     return {
-      replyText: `👥 **Quy định Vạch Sân Đánh Đôi vs Đánh Đơn:**
-- **Khi GIAO CẦU trong đánh đôi:** Tính theo nguyên tắc **"Ngắn và Rộng"** (sử dụng 2 đường biên ngoài cùng ở 2 bên, nhưng không tính ô biên cuối sân).
-- **Khi CẦU VÀO CUỘC trong đánh đôi:** Tính toàn bộ diện tích sân rộng nhất (tính cả 2 đường biên ngoài và vạch cuối sân).
-- **Trong đánh đơn:** Nguyên tắc **"Dài và Hẹp"** (sử dụng vạch biên trong ở 2 bên nhưng tính hết vạch cuối sân trong suốt cả trận).`,
+      replyText: `👥 Quy định Vạch Sân Đánh Đôi vs Đánh Đơn:
+- Khi GIAO CẦU trong đánh đôi: Tính theo nguyên tắc "Ngắn và Rộng" (sử dụng 2 đường biên ngoài cùng ở 2 bên, nhưng không tính ô biên cuối sân).
+- Khi CẦU VÀO CUỘC trong đánh đôi: Tính toàn bộ diện tích sân rộng nhất (tính cả 2 đường biên ngoài và vạch cuối sân).
+- Trong đánh đơn: Nguyên tắc "Dài và Hẹp" (sử dụng vạch biên trong ở 2 bên nhưng tính hết vạch cuối sân trong suốt cả trận).`,
       followUpChips: [
         'Luật giao cầu BWF',
         'Tư vấn chọn vợt chuyên đôi',
@@ -103,17 +103,17 @@ export function parseUserQuery(
     lower.includes('căng bao nhiêu lbs')
   ) {
     return {
-      replyText: `🏸 **Cẩm Nang Chọn Vợt & Căng Cước Chuẩn Từ SmashCourt:**
-1. **Trọng lượng (U):**
-   - **4U (80 - 84g):** Khuyên dùng cho 85% người chơi phong trào và người mới. Nhẹ nhàng, phản xạ thủ cầu nhanh, không gây mỏi cổ tay.
-   - **3U (85 - 89g):** Đầm tay, cần lực cổ tay khỏe để đập cầu (smash) uy lực.
-2. **Điểm cân bằng:**
-   - **Nặng đầu (> 295mm):** Chuyên công, trợ lực smash cắm sân.
-   - **Cân bằng (285 - 295mm):** Công thủ toàn diện, công thủ đều tròn trịa.
-   - **Nhẹ đầu (< 285mm):** Phản tạt nhanh, tì đè lưới và thủ cầu linh hoạt.
-3. **Mức căng cước hợp lý:**
-   - **Người mới chơi / Nữ:** Căng **9.5 - 10.2 kg** (21 - 22.5 lbs) để mặt vợt có độ đàn hồi trợ lực tốt.
-   - **Phong trào trung bình:** Căng **10.5 - 11.2 kg** (23 - 24.5 lbs).
+      replyText: `🏸 Cẩm Nang Chọn Vợt & Căng Cước Chuẩn Từ SmashCourt:
+1. Trọng lượng (U):
+   - 4U (80 - 84g): Khuyên dùng cho 85% người chơi phong trào và người mới. Nhẹ nhàng, phản xạ thủ cầu nhanh, không gây mỏi cổ tay.
+   - 3U (85 - 89g): Đầm tay, cần lực cổ tay khỏe để đập cầu (smash) uy lực.
+2. Điểm cân bằng:
+   - Nặng đầu (> 295mm): Chuyên công, trợ lực smash cắm sân.
+   - Cân bằng (285 - 295mm): Công thủ toàn diện, công thủ đều tròn trịa.
+   - Nhẹ đầu (< 285mm): Phản tạt nhanh, tì đè lưới và thủ cầu linh hoạt.
+3. Mức căng cước hợp lý:
+   - Người mới chơi / Nữ: Căng 9.5 - 10.2 kg (21 - 22.5 lbs) để mặt vợt có độ đàn hồi trợ lực tốt.
+   - Phong trào trung bình: Căng 10.5 - 11.2 kg (23 - 24.5 lbs).
    - *Lưu ý:* Căng quá căng khi cổ tay chưa đủ lực dễ gây đau khuỷu tay và đứt cước nhanh.`,
       followUpChips: [
         'Tìm sân có dịch vụ căng vợt',
@@ -136,16 +136,16 @@ export function parseUserQuery(
     lower.includes('payos')
   ) {
     return {
-      replyText: `📋 **Chính Sách Giữ Chỗ & Hoàn Hủy Sân SmashCourt:**
-1. **Khóa slot giữ chỗ 10 phút:**
-   - Khi bạn bấm xác nhận đặt sân, hệ thống sẽ tạm khóa sân trong **10 phút** để bạn chuyển khoản thanh toán qua mã VietQR / payOS an toàn.
+      replyText: `📋 Chính Sách Giữ Chỗ & Hoàn Hủy Sân SmashCourt:
+1. Khóa slot giữ chỗ 10 phút:
+   - Khi bạn bấm xác nhận đặt sân, hệ thống sẽ tạm khóa sân trong 10 phút để bạn chuyển khoản thanh toán qua mã VietQR / payOS an toàn.
    - Trong thời gian này, không ai khác có thể tranh slot của bạn.
-2. **Quy định đổi lịch & hoàn tiền:**
-   - **Trước 6 tiếng:** Hoàn tiền **100%** vào ví hoặc hỗ trợ dời lịch sang ngày khác miễn phí.
-   - **Từ 2 - 6 tiếng trước giờ chơi:** Hỗ trợ hoàn tiền **50%** hoặc chuyển nhượng ca chơi trên mục Giao lưu.
-   - **Dưới 2 tiếng:** Không áp dụng hoàn tiền để đảm bảo quyền lợi chuẩn bị của chủ sân.
-3. **Lưu lịch cá nhân (.ics & Google Calendar):**
-   - Đơn đặt xong có nút **"Thêm vào Lịch"** để tải file .ics hoặc đồng bộ vào điện thoại nhắc trước 30 phút.`,
+2. Quy định đổi lịch & hoàn tiền:
+   - Trước 6 tiếng: Hoàn tiền 100% vào ví hoặc hỗ trợ dời lịch sang ngày khác miễn phí.
+   - Từ 2 - 6 tiếng trước giờ chơi: Hỗ trợ hoàn tiền 50% hoặc chuyển nhượng ca chơi trên mục Giao lưu.
+   - Dưới 2 tiếng: Không áp dụng hoàn tiền để đảm bảo quyền lợi chuẩn bị của chủ sân.
+3. Lưu lịch cá nhân (.ics & Google Calendar):
+   - Đơn đặt xong có nút "Thêm vào Lịch" để tải file .ics hoặc đồng bộ vào điện thoại nhắc trước 30 phút.`,
       followUpChips: [
         'Đặt sân thử ngay',
         'Tìm sân ở Cầu Giấy tối nay',
@@ -337,27 +337,27 @@ export function parseUserQuery(
   // 6. BUILD NATURAL RESPONSE & CONTEXTUAL FOLLOW-UP CHIPS
   // =========================================================================
   const summaryParts: string[] = []
-  if (extracted.district) summaryParts.push(`khu vực **${extracted.district}**`)
+  if (extracted.district) summaryParts.push(`khu vực ${extracted.district}`)
   if (extracted.date) {
     const d = new Date(extracted.date)
-    summaryParts.push(`ngày **${formatDateDisplay(d)}**`)
+    summaryParts.push(`ngày ${formatDateDisplay(d)}`)
   }
   if (extracted.startTime && extracted.endTime) {
-    summaryParts.push(`khung giờ **${extracted.startTime} – ${extracted.endTime}**`)
+    summaryParts.push(`khung giờ ${extracted.startTime} – ${extracted.endTime}`)
   }
   if (extracted.maxPricePerHour) {
-    summaryParts.push(`ngân sách **dưới ${formatPrice(extracted.maxPricePerHour)}/giờ**`)
+    summaryParts.push(`ngân sách dưới ${formatPrice(extracted.maxPricePerHour)}/giờ`)
   }
   if (extracted.amenities && extracted.amenities.length > 0) {
-    summaryParts.push(`tiện ích **${extracted.amenities.join(', ')}**`)
+    summaryParts.push(`tiện ích ${extracted.amenities.join(', ')}`)
   }
 
   let replyText = ''
   if (summaryParts.length > 0) {
     replyText = `Tôi đã quét dữ liệu thực tế và lọc ra các sân phù hợp nhất theo yêu cầu (${summaryParts.join(', ')}):\n\n`
-    replyText += `Tìm thấy **${topCourts.length} cụm sân** đạt tiêu chuẩn thảm thi đấu và có sẵn sân trống. Bạn có thể bấm **Xem chi tiết** hoặc **Đặt ngay** bên dưới:`
+    replyText += `Tìm thấy ${topCourts.length} cụm sân đạt tiêu chuẩn thảm thi đấu và có sẵn sân trống. Bạn có thể bấm Xem chi tiết hoặc Đặt ngay bên dưới:`
   } else {
-    replyText = `Dưới đây là các cụm sân cầu lông tiêu chuẩn được cộng đồng lông thủ đánh giá cao nhất hôm nay. Bạn có thể bấm **Xem chi tiết** hoặc **Đặt ngay**:`
+    replyText = `Dưới đây là các cụm sân cầu lông tiêu chuẩn được cộng đồng lông thủ đánh giá cao nhất hôm nay. Bạn có thể bấm Xem chi tiết hoặc Đặt ngay:`
   }
 
   // Dynamic contextual follow-up chips

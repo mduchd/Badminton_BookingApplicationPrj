@@ -33,6 +33,26 @@ interface AIChatPanelProps {
   currentCriteria?: SearchCriteria
 }
 
+// Clean markdown bold and strip all asterisks (*)
+function renderFormattedLine(line: string, isUser: boolean) {
+  const parts = line.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      const boldText = part.slice(2, -2).replace(/\*/g, '')
+      return (
+        <strong
+          key={i}
+          className={`font-bold ${isUser ? 'text-white' : 'text-slate-900'}`}
+        >
+          {boldText}
+        </strong>
+      )
+    }
+    const cleanText = part.replace(/\*/g, '')
+    return <span key={i}>{cleanText}</span>
+  })
+}
+
 export const AIChatPanel: React.FC<AIChatPanelProps> = ({
   isOpen,
   onClose,
@@ -45,7 +65,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
     {
       id: 'msg_welcome',
       sender: 'ai',
-      text: 'Xin chào! Tôi là Trợ lý AI SmashCourt 🏸\n\nBạn có thể hỏi tôi bất kỳ điều gì:\n- **Tìm sân & đặt lịch:** "Tìm sân Cầu Giấy tối mai sau 19h, dưới 150k/h"\n- **Tư vấn trang bị:** "Người mới nên chọn vợt 3U hay 4U?"\n- **Luật thi đấu:** "Luật giao cầu 1.15m & luật tính điểm 21"\n- **Chính sách:** "Chính sách giữ chỗ 10 phút & hoàn hủy sân"',
+      text: 'Xin chào! Tôi là Trợ lý AI SmashCourt 🏸\n\nBạn có thể hỏi tôi bất kỳ điều gì:\n- Tìm sân & đặt lịch: "Tìm sân Cầu Giấy tối mai sau 19h, dưới 150k/h"\n- Tư vấn trang bị: "Người mới nên chọn vợt 3U hay 4U?"\n- Luật thi đấu: "Luật giao cầu 1.15m & luật tính điểm 21"\n- Chính sách: "Chính sách giữ chỗ 10 phút & hoàn hủy sân"',
       timestamp: 'Vừa xong',
       followUpChips: [
         'Tìm sân Cầu Giấy tối nay',
@@ -347,11 +367,10 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
               >
                 <div className="whitespace-pre-line font-normal space-y-1">
                   {msg.text.split('\n').map((line, idx) => {
-                    // Quick bold formatting helper
                     if (!line.trim()) return <div key={idx} className="h-1" />
                     return (
                       <p key={idx} className="leading-relaxed">
-                        {line}
+                        {renderFormattedLine(line, msg.sender === 'user')}
                       </p>
                     )
                   })}
