@@ -126,30 +126,36 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
   }
 
   return (
-    <div
-      className={`fixed bottom-4 right-4 z-50 bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col transition-all duration-300 ${
-        isExpanded
-          ? 'w-[calc(100vw-32px)] sm:w-[600px] h-[80vh]'
-          : 'w-[calc(100vw-32px)] sm:w-[460px] h-[580px]'
-      }`}
-    >
-      {/* Header */}
-      <div className="px-5 py-4 bg-[#1b7a42] text-white flex items-center justify-between">
+    <div className="fixed inset-0 z-50 pointer-events-none flex sm:items-end sm:justify-end items-end justify-center p-0 sm:p-4">
+      {/* Backdrop overlay */}
+      <div
+        className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs pointer-events-auto overlay-enter"
+        onClick={onClose}
+      />
+
+      {/* Floating Chat Panel with Smooth Enter Animation */}
+      <div
+        className={`relative pointer-events-auto bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col transition-all duration-300 max-sm:sheet-enter sm:panel-slide-in-right ${
+          isExpanded
+            ? 'w-full sm:w-[600px] h-[85vh] sm:h-[80vh]'
+            : 'w-full sm:w-[460px] h-[80vh] sm:h-[580px]'
+        }`}
+      >
+      {/* Header - Nền trắng đồng nhất, sạch sẽ, không dùng khối màu đặc chắn đỉnh */}
+      <div className="px-5 py-4 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-amber-300" />
-          </div>
+          <Sparkles className="w-6 h-6 text-[#1b7a42] shrink-0" />
           <div>
-            <h3 className="text-base font-black tracking-wide">Trợ lý AI tìm sân</h3>
-            <p className="text-xs text-emerald-100 font-medium">Hỗ trợ tìm kiếm & lọc sân thông minh</p>
+            <h3 className="text-base font-black text-slate-900 tracking-normal">Trợ lý AI tìm sân</h3>
+            <p className="text-xs text-slate-600 font-medium">Hỗ trợ tìm kiếm & lọc sân thông minh</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 text-white/90">
+        <div className="flex items-center gap-1 text-slate-500">
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1.5 rounded-lg hover:bg-white/20 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
             title={isExpanded ? 'Thu nhỏ' : 'Mở rộng'}
           >
             {isExpanded ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
@@ -157,7 +163,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-white/20 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
             title="Đóng chat"
           >
             <X className="w-5 h-5" />
@@ -170,11 +176,11 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex gap-2.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex gap-2.5 fade-in-item ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             {msg.sender === 'ai' && (
-              <div className="w-8 h-8 rounded-full bg-emerald-100 text-[#1b7a42] flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Bot className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-full bg-[#1b7a42] text-white flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Bot className="w-4 h-4 text-white" />
               </div>
             )}
 
@@ -184,7 +190,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
                   ? 'bg-[#1b7a42] text-white rounded-br-xs shadow-xs font-medium'
                   : msg.isError
                   ? 'bg-rose-50 border border-rose-200 text-rose-800 rounded-bl-xs'
-                  : 'bg-white border border-slate-200 text-slate-800 rounded-bl-xs shadow-xs'
+                  : 'bg-white border border-slate-200 text-slate-900 rounded-bl-xs shadow-xs'
               }`}
             >
               <p className="whitespace-pre-line">{msg.text}</p>
@@ -215,8 +221,8 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
               )}
 
               <span
-                className={`block text-[10px] mt-1.5 text-right ${
-                  msg.sender === 'user' ? 'text-emerald-100' : 'text-slate-400'
+                className={`block text-[10px] mt-1.5 text-right font-medium ${
+                  msg.sender === 'user' ? 'text-emerald-100' : 'text-slate-500'
                 }`}
               >
                 {msg.timestamp}
@@ -233,8 +239,8 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
         {isThinking && (
           <div className="flex gap-2.5 items-center text-slate-500 text-xs pl-1">
-            <div className="w-8 h-8 rounded-full bg-emerald-100 text-[#1b7a42] flex items-center justify-center">
-              <Bot className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-full bg-[#1b7a42] text-white flex items-center justify-center">
+              <Bot className="w-4 h-4 text-white" />
             </div>
             <div className="flex items-center gap-2 bg-white border border-slate-200 px-3.5 py-2.5 rounded-2xl shadow-xs">
               <span className="w-2 h-2 rounded-full bg-[#1b7a42] animate-bounce" />
@@ -288,6 +294,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
           <Send className="w-5 h-5" />
         </button>
       </form>
+      </div>
     </div>
   )
 }

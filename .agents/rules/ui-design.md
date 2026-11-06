@@ -40,3 +40,43 @@ trigger: always_on
    - Do thiết lập CSS reset của Tailwind CSS (đặc biệt bản v4), toàn bộ nút bấm (`<button>`, CTA button, icon button), tab switcher, filter tag bấm chọn, hoặc thẻ component có tương tác click (`onClick`) **BẮT BUỘC** phải có class `cursor-pointer`.
    - Đối với trạng thái vô hiệu hóa (`disabled`), bắt buộc thêm `disabled:cursor-not-allowed`.
    - Mọi thao tác sinh mã (generate code) hoặc cập nhật UI của Agent phải luôn tự động bổ sung `cursor-pointer` đầy đủ, tuyệt đối không để sót nút bấm thiếu con trỏ bàn tay tương tác.
+
+9. **Tuyệt đối không viết hoa toàn bộ (CAPSLOCK / `uppercase`) vô tội vạ:**
+   - Cấm sử dụng class `uppercase` hoặc viết hoa CAPSLOCK bừa bãi lên tiêu đề mục, danh mục sidebar, tên cụm sân, nút bấm, nhãn trường, phụ đề hay mô tả.
+   - Luôn sử dụng văn phong tự nhiên, đúng chuẩn ngữ pháp tiếng Việt: viết hoa chữ cái đầu câu (Sentence case) hoặc viết hoa chữ cái đầu từ của danh từ riêng (Title Case).
+   - Không viết all-caps cho nút bấm, tên người dùng, tên cụm sân (ví dụ: dùng "Đặt lịch", "Đặt ngay", "Khám phá buổi chơi", "Hoạt động", "Hệ thống" thay vì "ĐẶT LỊCH", "ĐẶT NGAY", "KHÁM PHÁ BUỔI CHƠI", "HOẠT ĐỘNG", "HỆ THỐNG"). Ngoại trừ các từ viết tắt kỹ thuật/quốc tế ngắn gọn như VIP, QR, OTP, ID, SMS.
+   - Tuyệt đối không chèn các chú thích song ngữ đóng mở ngoặc gượng gạo trên cùng một nhãn UI tiếng Việt (ví dụ cấm: `Hoạt động (Activities)`, `Hệ thống (System)`, `Danh sách sân đã đặt (Reserved bookings)`).
+
+10. **Chữ viết toàn hệ thống phải sắc nét, độ tương phản cao, cấm dùng text xám nhợt nhạt:**
+    - Tuyệt đối cấm sử dụng các màu chữ xám mờ, nhợt nhạt khó đọc như `text-gray-400`, `text-slate-400`, `text-zinc-400`, `text-neutral-400` cho nội dung, mô tả, giờ giấc, địa chỉ, trạng thái, phụ đề.
+    - Luôn đảm bảo độ tương phản cao, nét chữ dày dặn, sắc sảo:
+      - **Nền sáng:** Chữ chính/tiêu đề dùng `text-slate-900` hoặc `#0f172a`; chữ phụ, mô tả, địa chỉ, giờ giấc dùng `text-slate-700` hoặc `text-slate-600` (kết hợp `font-medium` để chữ sắc nét, đậm vừa phải, không gây mỏi mắt).
+      - **Placeholder và icon phụ:** Tối thiểu từ `text-slate-500` trở lên, tuyệt đối không để mờ mịt.
+      - **Nền tối:** Dùng `text-white`, `text-slate-100`, `text-slate-200` để đảm bảo độ sáng và tương phản sắc cạnh.
+      - Duy trì cấu hình làm nét font chữ (`-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility;`) trên toàn ứng dụng.
+
+11. **Tuyệt đối cấm header khối màu đậm / màu đặc (Solid Color Block Header) cho modal / popup:**
+    - Nghiêm cấm bôi một mảng màu tối hoặc màu nền đặc (ví dụ: `bg-[#1b7a42] text-white`, `bg-emerald-700`, `bg-slate-900 text-white`, v.v.) đè lên trên đỉnh của modal, dialog, sheet hay popup làm header.
+    - Toàn bộ modal/popup phải có nền sáng đồng nhất, thanh lịch (nền trắng `#ffffff` hoặc phân cách nhẹ bằng `bg-slate-50` kết hợp viền mảnh `border-b border-slate-100`).
+    - Tiêu đề modal bắt buộc dùng chữ màu tối tương phản cao (`text-slate-900 font-bold` hoặc `font-black`). Nút đóng (icon X) dùng phong cách tối giản trên nền sáng (`text-slate-400 hover:text-slate-700 hover:bg-slate-100`).
+    - Các thông tin bổ trợ như thông báo giữ chỗ, thời gian đếm ngược (countdown) phải trình bày dưới dạng thanh thông báo nhẹ (alert banner thanh lịch như `bg-amber-50 border border-amber-200 text-amber-900`) đặt bên trong nội dung modal, tuyệt đối không được bôi nguyên một khối header màu đặc to đùng che đỉnh modal.
+    - **Cấu trúc modal chống tràn màn hình (No Viewport Overflow):** Mọi modal/popup phải có `max-h-[min(90vh,700px)] flex flex-col`. Header và Footer nút hành động phải cố định bằng `shrink-0`, phần thân nội dung nằm giữa phải có `flex-1 overflow-y-auto` để đảm bảo vừa vặn trên mọi độ phân giải màn hình (laptop, tablet, mobile), không bao giờ bị cắt mất đỉnh hay che khuất nút bấm ở chân modal.
+
+12. **Luôn kiểm tra Responsive & Chống xung đột / Tràn màn hình (Responsive & Overflow Safety):**
+    - Khi rà soát UI, tạo mới hoặc chỉnh sửa bất kỳ component nào, Agent bắt buộc phải kiểm tra khả năng hiển thị tương thích trên mọi độ phân giải (Mobile 360px-430px, Tablet 768px-1024px, Laptop 1366x768px, Desktop):
+      1. **Chống tràn 2 trục (No Overflow X/Y):** Trục ngang không bao giờ xuất hiện thanh cuộn ngang ngoài ý muốn cho toàn trang (`overflow-x-hidden` hoặc kiểm soát width 100%). Trục dọc các modal/popup/drawer phải có `max-h` thông minh kèm cuộn nội bộ (`overflow-y-auto`), không bao giờ bị kéo dài vượt quá khung nhìn viewport làm mất đỉnh hoặc đáy.
+      2. **Chống va chạm / đè lấn component (No Clashing Elements):** Các thành phần cố định (`fixed`, `sticky` như Header, BottomNav, Floating Search Bar, AI button) phải có khoảng đệm bảo vệ an toàn (ví dụ: `pb-24` hoặc `pb-28` cho trang chính để BottomNav không che khuất thẻ card cuối cùng). Z-index phải được phân tầng rành mạch (`z-10` nền, `z-20` nội dung nổi, `z-40` navigation, `z-50` modal), tuyệt đối không để component đè che lấp nút bấm hoặc form nhập liệu.
+      3. **Tự co giãn & ngắt dòng an toàn (Safe Flex/Grid & Text Truncation):** Mọi văn bản động (tên sân, địa chỉ, người dùng, thời gian) phải sử dụng `truncate` hoặc `line-clamp-*` kết hợp `break-words`. Các nhóm tag, nút bấm, bộ lọc phải có `flex-wrap` hoặc chia cột responsive (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3...`), tuyệt đối không để các khối nội dung xô lệch hoặc đè chen chúc lên nhau trên màn hình hẹp.
+
+13. **Tuyệt đối không dùng nền mờ / pastel nhợt nhạt sau icon (Icon Background Containers):**
+    - Cấm tạo các khối nền mờ nhạt, loang lổ dạng pastel (như `bg-amber-50`, `bg-rose-50`, `bg-teal-50`, `bg-emerald-50`, `bg-blue-50/50`, `rounded-lg bg-...-50`) bọc phía sau icon làm giao diện manh mún, sến xẩm hoặc nhợt nhạt.
+    - Icon phải hiển thị **trực tiếp, sắc nét, đứng độc lập** trên nền của card/button mà không cần hộp bọc mờ; hoặc nếu thành phần giao diện bắt buộc yêu cầu khối nền riêng cho icon (ví dụ: avatar người dùng/bot, huy hiệu CLB) thì **bắt buộc dùng màu phẳng đặc (Solid Flat Color)** đồng nhất, rõ ràng (ví dụ: `bg-[#1b7a42] text-white`, `bg-slate-700 text-white`, `bg-slate-100 text-slate-700`), tuyệt đối không dùng nền mờ/pastel nhợt nhạt.
+    - Khi tạo component mới: Tuyệt đối không thêm hộp nền mờ sau icon.
+    - Khi rà soát/check code: Nếu phát hiện component nào đang có khối nền mờ sau icon thì phải chủ động loại bỏ hoặc cải thiện ngay.
+
+14. **Thiết kế UI đơn giản, tường minh, tuyệt đối không chồng lớp phức tạp (No Over-Nested / Layered UI):**
+    - **Cấm tạo cấu trúc chồng lớp / lồng hộp nhiều tầng (Matryoshka Boxes):** Tuyệt đối không thiết kế theo kiểu: Nền màu đậm -> Card lơ lửng bán trong suốt (`bg-white/10`, `bg-white/20`) -> Khối lồng bên trong (`rounded-xl bg-white/20`) -> Icon/logo lại nằm trong 1 squircle khác. Tránh việc xếp chồng thẻ bên trong thẻ liên tục, viền trong viền, hoặc các lớp nền màu đậm/nhạt đè lấn lên nhau gây rối mắt, manh mún và nặng nề.
+    - **Ưu tiên UI phẳng, tối giản, hiển thị trực diện (Flat & Direct UI):** Mọi thành phần thông tin (avatar, tên người dùng, nhãn trạng thái, thông tin chi tiết) phải được đặt trực diện, rõ ràng trên nền chính phẳng (nền trắng `#ffffff` hoặc nền thẻ phẳng `#f8fafc`). Phân cách bằng khoảng trắng (spacing) hợp lý hoặc viền mảnh phân chia nhẹ nhàng (`border-b border-slate-100`, `border-slate-200/80`), không dùng các khối hộp lồng nhau để phân chia.
+    - **Quy tắc thực thi cho Agent:**
+      - **Khi tạo component mới:** Bắt buộc thiết kế layout phẳng, tối giản, trực diện, không tạo các lớp lồng ghép phức tạp.
+      - **Khi rà soát / check code:** Nếu phát hiện bất kỳ component nào đang có kiểu "chồng lớp" (lồng hộp nhiều tầng, nền mờ đè trên nền màu, card trong card không cần thiết), Agent bắt buộc phải chủ động tái cấu trúc và làm phẳng (flatten) giao diện ngay theo quy tắc.

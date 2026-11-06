@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "check:ui-rules": "node scripts/check-ui-rules.mjs",
+    "build": "node scripts/check-ui-rules.mjs && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

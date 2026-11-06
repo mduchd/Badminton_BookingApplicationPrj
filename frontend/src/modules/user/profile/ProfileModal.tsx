@@ -103,8 +103,8 @@ END:VCALENDAR`
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overlay-enter">
+      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden modal-enter">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
           <div className="flex items-center gap-3">
@@ -121,7 +121,7 @@ END:VCALENDAR`
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="p-1.5 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -163,7 +163,7 @@ END:VCALENDAR`
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Họ và tên</label>
                 <div className="relative">
-                  <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <UserIcon className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
                   <input
                     type="text"
                     value={fullName}
@@ -176,12 +176,12 @@ END:VCALENDAR`
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Email đăng ký</label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
                   <input
                     type="email"
                     disabled
                     value={user.email}
-                    className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
+                    className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-medium cursor-not-allowed"
                   />
                 </div>
                 {user.provider === 'GOOGLE' && (
@@ -194,7 +194,7 @@ END:VCALENDAR`
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Số điện thoại liên hệ</label>
                 <div className="relative">
-                  <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <Phone className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
                   <input
                     type="tel"
                     value={phone}
@@ -209,8 +209,8 @@ END:VCALENDAR`
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Vai trò tài khoản</label>
                 <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
                   <Shield className="w-4 h-4 text-[#1b7a42]" />
-                  <span className="font-semibold text-slate-700">
-                    {user.role === 'COURT_OWNER' ? 'Chủ sân (Court Owner)' : 'Khách hàng (Customer)'}
+                  <span className="font-semibold text-slate-800">
+                    {user.role === 'COURT_OWNER' ? 'Chủ sân' : 'Khách hàng'}
                   </span>
                 </div>
               </div>
@@ -241,9 +241,7 @@ END:VCALENDAR`
               {/* Web Push Notification */}
               <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700 mt-0.5">
-                    <Bell className="w-4 h-4" />
-                  </div>
+                  <Bell className="w-5 h-5 text-emerald-700 mt-0.5 shrink-0" />
                   <div>
                     <h4 className="text-xs font-bold text-slate-800">Thông báo trình duyệt (FCM Web Push)</h4>
                     <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
@@ -265,9 +263,7 @@ END:VCALENDAR`
               <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50">
                 <div className="flex items-start justify-between gap-4 mb-3">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-xl bg-blue-100 text-blue-700 mt-0.5">
-                      <Calendar className="w-4 h-4" />
-                    </div>
+                    <Calendar className="w-5 h-5 text-blue-700 mt-0.5 shrink-0" />
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="text-xs font-bold text-slate-800">Đồng bộ Google Calendar</h4>

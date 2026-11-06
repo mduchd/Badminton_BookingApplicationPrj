@@ -29,6 +29,40 @@
   - Tuyệt đối không tự viết hoặc sinh các đoạn mã SVG thủ công (`<svg><path d="..." /></svg>`).
   - Không lạm dụng emoji ký tự làm icon hệ thống.
   - **Bắt buộc sử dụng bộ icon chính thức của dự án: `lucide-react`** (đã được cấu hình trong `package.json`) hoặc các tài nguyên icon chuẩn trong thư mục của dự án.
+- **TUYỆT ĐỐI KHÔNG VIẾT HOA TOÀN BỘ (CAPSLOCK / `uppercase`) VÔ TỘI VẠ:**
+  - Cấm sử dụng class `uppercase` hoặc viết hoa CAPSLOCK bừa bãi lên tiêu đề mục, danh mục sidebar, tên cụm sân, nút bấm, nhãn trường, phụ đề hay mô tả.
+  - Sử dụng văn phong tự nhiên, chuẩn mực ngữ pháp tiếng Việt: viết hoa chữ cái đầu câu (Sentence case) hoặc viết hoa chữ cái đầu từ của danh từ riêng (Title Case).
+  - Không viết all-caps cho nút bấm, tên người dùng, tên cụm sân (ví dụ: dùng "Đặt lịch", "Đặt ngay", "Khám phá buổi chơi", "Hoạt động", "Hệ thống" thay vì "ĐẶT LỊCH", "ĐẶT NGAY", "KHÁM PHÁ BUỔI CHƠI", "HOẠT ĐỘNG", "HỆ THỐNG"). Ngoại trừ các từ viết tắt kỹ thuật/quốc tế ngắn gọn như VIP, QR, OTP, ID, SMS.
+  - Tuyệt đối không chèn các chú thích song ngữ đóng mở ngoặc gượng gạo trên cùng một nhãn UI tiếng Việt (ví dụ cấm: `Hoạt động (Activities)`, `Hệ thống (System)`, `Danh sách sân đã đặt (Reserved bookings)`).
+- **CHỮ VIẾT TOÀN HỆ THỐNG PHẢI SẮC NÉT, ĐỘ TƯƠNG PHẢN CAO, CẤM DÙNG TEXT XÁM NHỢT NHẠT:**
+  - Tuyệt đối cấm sử dụng các màu chữ xám mờ, nhợt nhạt khó đọc như `text-gray-400`, `text-slate-400`, `text-zinc-400`, `text-neutral-400` cho nội dung, mô tả, giờ giấc, địa chỉ, trạng thái, phụ đề.
+  - Luôn đảm bảo độ tương phản cao, nét chữ dày dặn, sắc sảo:
+    - **Nền sáng:** Chữ chính/tiêu đề dùng `text-slate-900` hoặc `#0f172a`; chữ phụ, mô tả, địa chỉ, giờ giấc dùng `text-slate-700` hoặc `text-slate-600` (kết hợp `font-medium` để chữ sắc nét, đậm vừa phải, không gây mỏi mắt).
+    - **Placeholder và icon phụ:** Tối thiểu từ `text-slate-500` trở lên, tuyệt đối không để mờ mịt.
+    - **Nền tối:** Dùng `text-white`, `text-slate-100`, `text-slate-200` để đảm bảo độ sáng và tương phản sắc cạnh.
+    - Toàn bộ giao diện phải có cấu hình làm nét font chữ (`-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility;`).
 - **TÊN THƯƠNG HIỆU & FILE:**
   - Sử dụng thương hiệu riêng của đồ án: `SmashCourt` (SmashCourt Badminton Booking Platform).
   - Không đặt tên file hay biến chứa từ khóa của website tham khảo (alobo).
+- **TUYỆT ĐỐI CẤM HEADER KHỐI MÀU ĐẬM / MÀU ĐẶC (SOLID COLOR BLOCK HEADER) CHO MODAL / POPUP:**
+  - Nghiêm cấm bôi một mảng màu tối hoặc màu nền đặc (ví dụ: `bg-[#1b7a42] text-white`, `bg-emerald-700`, `bg-slate-900 text-white`, v.v.) đè lên trên đỉnh của modal, dialog, sheet hay popup làm header.
+  - Toàn bộ modal/popup phải có nền sáng đồng nhất, thanh lịch (nền trắng `#ffffff` hoặc phân cách nhẹ bằng `bg-slate-50` kết hợp viền mảnh `border-b border-slate-100`).
+  - Tiêu đề modal bắt buộc dùng chữ màu tối tương phản cao (`text-slate-900 font-bold` hoặc `font-black`). Nút đóng (icon X) tối giản nằm trên nền sáng (`text-slate-400 hover:text-slate-700 hover:bg-slate-100`).
+  - Các thông tin bổ trợ như thông báo giữ chỗ, thời gian đếm ngược (countdown) phải trình bày dưới dạng thanh thông báo nhẹ (alert banner thanh lịch như `bg-amber-50 border border-amber-200 text-amber-900`) đặt bên trong nội dung modal, tuyệt đối không được bôi nguyên một khối header màu đặc to đùng che đỉnh modal.
+  - **CẤU TRÚC MODAL CHỐNG TRÀN MÀN HÌNH (NO VIEWPORT OVERFLOW):** Toàn bộ modal/popup bắt buộc phải có `max-h-[min(90vh,700px)] flex flex-col`, trong đó Header và Footer nút bấm phải là `shrink-0`, phần nội dung ở giữa phải là `flex-1 overflow-y-auto`. Tuyệt đối không để modal vượt quá chiều cao màn hình trình duyệt gây mất nút đóng hoặc che khuất nút bấm thanh toán/xác nhận.
+- **LUÔN KIỂM TRA RESPONSIVE & CHỐNG XUNG ĐỘT / TRÀN MÀN HÌNH (RESPONSIVE & OVERFLOW SAFETY):**
+  - Khi rà soát UI, tạo mới hoặc chỉnh sửa bất kỳ component nào, Agent bắt buộc phải kiểm tra khả năng hiển thị trên mọi độ phân giải (Mobile 360px-430px, Tablet 768px-1024px, Laptop 1366x768px, Desktop):
+    1. **Chống tràn 2 trục (No Overflow X/Y):** Trục ngang không bao giờ xuất hiện thanh cuộn trang toàn cục ngoài ý muốn. Trục dọc các modal/popup/drawer phải có `max-h` thông minh, cuộn nội bộ, không bao giờ bị cắt mất đỉnh hay che khuất nút thao tác.
+    2. **Chống va chạm / đè lấn component (No Clashing Elements):** Các thành phần cố định (`fixed`, `sticky` như Header, BottomNav, Search Bar nổi, Floating AI) phải tính toán khoảng đệm `pb-*` và tầng lớp `z-index` cẩn thận, tuyệt đối không để BottomNav hoặc Header che lấp nội dung, nút bấm hoặc form nhập liệu.
+    3. **Tự co giãn & ngắt dòng an toàn (Safe Flex/Grid & Text Truncate):** Mọi văn bản động (tên sân, địa chỉ, người dùng) phải dùng `truncate` hoặc `line-clamp-*` kết hợp `break-words`. Các nhóm tag, nút bấm, bộ lọc phải có `flex-wrap` hoặc chia cột responsive (`grid-cols-1 sm:grid-cols-2...`), tuyệt đối không để nội dung xô lệch hoặc đè lên nhau trên màn hình hẹp.
+- **TUYỆT ĐỐI KHÔNG DÙNG NỀN MỜ / PASTEL NHỢT NHẠT SAU ICON (ICON BACKGROUND CONTAINERS):**
+  - Cấm tạo các khối nền mờ nhạt, loang lổ dạng pastel (như `bg-amber-50`, `bg-rose-50`, `bg-teal-50`, `bg-emerald-50`, `bg-blue-50/50`, `rounded-lg bg-...-50`) bọc phía sau icon làm giao diện manh mún, sến xẩm hoặc nhợt nhạt.
+  - Icon phải hiển thị **trực tiếp, sắc nét, đứng độc lập** trên nền của card/button mà không cần hộp bọc mờ; hoặc nếu thành phần giao diện bắt buộc yêu cầu khối nền riêng cho icon (ví dụ: avatar người dùng/bot, huy hiệu CLB) thì **bắt buộc dùng màu phẳng đặc (Solid Flat Color)** đồng nhất, rõ ràng (ví dụ: `bg-[#1b7a42] text-white`, `bg-slate-700 text-white`, `bg-slate-100 text-slate-700`), tuyệt đối không dùng nền mờ/pastel nhợt nhạt.
+  - Khi tạo component mới: Tuyệt đối không thêm hộp nền mờ sau icon.
+  - Khi rà soát/check code: Nếu phát hiện component nào đang có khối nền mờ sau icon thì phải chủ động loại bỏ hoặc cải thiện ngay.
+- **THIẾT KẾ UI ĐƠN GIẢN, TƯỜNG MINH, TUYỆT ĐỐI KHÔNG CHỒNG LỚP PHỨC TẠP (NO OVER-NESTED / LAYERED UI):**
+  - **Cấm tạo cấu trúc chồng lớp / lồng hộp nhiều tầng (Matryoshka Boxes):** Tuyệt đối không thiết kế theo kiểu: Nền màu đậm -> Card lơ lửng bán trong suốt (`bg-white/10`, `bg-white/20`) -> Khối lồng bên trong (`rounded-xl bg-white/20`) -> Icon/logo lại nằm trong 1 squircle khác. Tránh việc xếp chồng thẻ bên trong thẻ liên tục, viền trong viền, hoặc các lớp nền màu đậm/nhạt đè lấn lên nhau gây rối mắt, manh mún và nặng nề.
+  - **Ưu tiên UI phẳng, tối giản, hiển thị trực diện (Flat & Direct UI):** Mọi thành phần thông tin (avatar, tên người dùng, nhãn trạng thái, thông tin chi tiết) phải được đặt trực diện, rõ ràng trên nền chính phẳng (nền trắng `#ffffff` hoặc nền thẻ phẳng `#f8fafc`). Phân cách bằng khoảng trắng (spacing) hợp lý hoặc viền mảnh phân chia nhẹ nhàng (`border-b border-slate-100`, `border-slate-200/80`), không dùng các khối hộp lồng nhau để phân chia.
+  - **Quy tắc thực thi cho Agent:**
+    - **Khi tạo component mới:** Bắt buộc thiết kế layout phẳng, tối giản, trực diện, không tạo các lớp lồng ghép phức tạp.
+    - **Khi rà soát / check code:** Nếu phát hiện bất kỳ component nào đang có kiểu "chồng lớp" (lồng hộp nhiều tầng, nền mờ đè trên nền màu, card trong card không cần thiết), Agent bắt buộc phải chủ động tái cấu trúc và làm phẳng (flatten) giao diện ngay theo quy tắc.

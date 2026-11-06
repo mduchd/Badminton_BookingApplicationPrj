@@ -1,18 +1,24 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Heart, Navigation, Clock, Star } from 'lucide-react'
 import type { BadmintonCourtItem } from '../mockData'
 
 interface CourtCardItemProps {
   court: BadmintonCourtItem
-  onBook: (court: BadmintonCourtItem) => void
+  onBook?: (court: BadmintonCourtItem) => void
   onToggleFavorite?: (id: string) => void
+  onSelectCourt?: (court: BadmintonCourtItem) => void
+  index?: number
 }
 
 export const CourtCardItem: React.FC<CourtCardItemProps> = ({
   court,
   onBook,
   onToggleFavorite,
+  onSelectCourt,
+  index = 0,
 }) => {
+  const navigate = useNavigate()
   const [isFav, setIsFav] = useState(court.isFavorite ?? false)
 
   const handleFav = (e: React.MouseEvent) => {
@@ -26,17 +32,33 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
     window.open(`https://maps.google.com/?q=${encodeURIComponent(court.address)}`, '_blank')
   }
 
+  const handleCardClick = () => {
+    if (onSelectCourt) {
+      onSelectCourt(court)
+    } else if (onBook) {
+      onBook(court)
+    } else {
+      navigate(`/courts/${court.id}`)
+    }
+  }
+
+  const handleBookClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    navigate(`/courts/${court.id}/book`)
+  }
+
   return (
     <div
-      onClick={() => onBook(court)}
-      className="bg-white rounded-2xl overflow-hidden border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col group select-none"
+      onClick={handleCardClick}
+      style={{ '--stagger-delay': `${Math.min(index * 45, 450)}ms` } as React.CSSProperties}
+      className="card-enter bg-white rounded-2xl overflow-hidden border border-slate-200/80 shadow-xs hover:border-slate-300 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col group select-none"
     >
       {/* Top Image & Floating Badges */}
       <div className="relative h-44 sm:h-48 w-full overflow-hidden bg-slate-100">
         <img
           src={court.imageUrl}
           alt={court.name}
-          className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
+          className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
           loading="lazy"
         />
 
@@ -61,19 +83,19 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
           <button
             type="button"
             onClick={handleFav}
-            className="w-8 h-8 rounded-full bg-white/95 hover:bg-white text-slate-700 hover:text-rose-500 flex items-center justify-center border border-slate-200/60 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/95 hover:bg-white text-slate-700 hover:text-rose-500 flex items-center justify-center border border-slate-200/60 transition-transform duration-200 active:scale-75 cursor-pointer"
             title="Thêm vào yêu thích"
           >
             <Heart
-              className={`w-4 h-4 transition-colors ${
-                isFav ? 'fill-rose-500 text-rose-500' : 'text-slate-600'
+              className={`w-4 h-4 transition-all duration-200 ${
+                isFav ? 'fill-rose-500 text-rose-500 scale-110' : 'text-slate-600'
               }`}
             />
           </button>
           <button
             type="button"
             onClick={handleOpenMap}
-            className="w-8 h-8 rounded-full bg-white/95 hover:bg-white text-slate-700 hover:text-emerald-600 flex items-center justify-center border border-slate-200/60 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/95 hover:bg-white text-slate-700 hover:text-emerald-600 flex items-center justify-center border border-slate-200/60 transition-transform duration-200 active:scale-75 cursor-pointer"
             title="Xem chỉ đường Google Maps"
           >
             <Navigation className="w-4 h-4 text-slate-700" />
@@ -98,27 +120,24 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
             {court.name}
           </h3>
 
-          <div className="text-[11px] text-slate-500 truncate mt-0.5">
+          <div className="text-[11px] text-slate-700 font-medium truncate mt-0.5">
             <span className="text-[#ea580c] font-semibold mr-1">[{court.distance}]</span>
             <span>{court.address}</span>
           </div>
 
-          <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-1">
-            <Clock className="w-3 h-3 text-slate-400" />
+          <div className="flex items-center gap-1 text-[10px] text-slate-600 font-medium mt-1">
+            <Clock className="w-3 h-3 text-slate-500" />
             <span>{court.openHours}</span>
           </div>
         </div>
 
-        {/* Golden Yellow Action Button "ĐẶT LỊCH" */}
+        {/* Action Button "Đặt lịch" */}
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onBook(court)
-          }}
-          className="px-3.5 py-2 rounded-lg bg-[#e5a92c] hover:bg-[#d49b24] active:bg-[#c48d1c] text-white font-extrabold text-xs uppercase tracking-wide transition-colors flex-shrink-0 cursor-pointer"
+          onClick={handleBookClick}
+          className="px-3.5 py-2 rounded-lg bg-[#e5a92c] hover:bg-[#d49b24] active:bg-[#c48d1c] text-white font-bold text-xs transition-colors flex-shrink-0 cursor-pointer"
         >
-          ĐẶT LỊCH
+          Đặt lịch
         </button>
       </div>
     </div>

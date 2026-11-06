@@ -143,7 +143,7 @@ export const mockBadmintonCourts: BadmintonCourtItem[] = [
   },
   {
     id: 'court_4',
-    name: 'HANOI TOWER SPORT - 49 HAI BÀ TRƯNG',
+    name: 'Hanoi Tower Sport - 49 Hai Bà Trưng',
     logoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
     imageUrl: 'https://images.unsplash.com/photo-1521537634581-0dced2fee2ef?w=800&auto=format&fit=crop&q=80',
     distance: '1.9km',

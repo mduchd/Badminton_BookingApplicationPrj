@@ -1,4 +1,12 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import {
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 import { Activity, Flame } from 'lucide-react'
 import { Header } from './components/shared/Header'
@@ -7,15 +15,33 @@ import { CourtCardItem } from './modules/user/ai-search/CourtCardItem'
 import { SmartFilterModal } from './modules/user/ai-search/SmartFilterModal'
 import { AIChatPanel } from './modules/user/ai-search/AIChatPanel'
 import { AuthModal } from './modules/user/auth/AuthModal'
+import { authApi, authStorage } from './modules/user/auth/authApi'
 import { ProfileModal } from './modules/user/profile/ProfileModal'
 import { BookingConfirmModal } from './modules/user/ai-search/BookingConfirmModal'
 import { BottomNav } from './components/shared/BottomNav'
 import { KhamPhaView } from './modules/user/ai-search/KhamPhaView'
 import { CourtMapView } from './modules/court/search/CourtMapView'
 import { AccountView } from './modules/user/account/AccountView'
-
+import { CourtDetailView } from './modules/court/facility/CourtDetailView'
+import { CourtDetailSidebar } from './modules/court/facility/CourtDetailSidebar'
+import { CourtBookingGridView } from './modules/booking/availability/CourtBookingGridView'
+import { CheckoutView } from './modules/booking/payment/CheckoutView'
+import { BookingSuccessView } from './modules/booking/payment/BookingSuccessView'
+import { BookingHistoryView } from './modules/booking/history/BookingHistoryView'
+import { OwnerDashboardView } from './modules/court/management/OwnerDashboardView'
+import { OwnerFacilitiesView } from './modules/court/management/OwnerFacilitiesView'
+import { OwnerPricingView } from './modules/court/pricing/OwnerPricingView'
+import { OwnerBlocksView } from './modules/court/management/OwnerBlocksView'
+import { OwnerBookingsView } from './modules/court/management/OwnerBookingsView'
+import { AdminPortalView } from './modules/user/admin/AdminPortalView'
 import {
-  mockCurrentUser,
+  ROUTES,
+  getNavTabFromPath,
+  isBottomNavVisible,
+  isHeaderVisible,
+  type MainNavTab,
+} from './app/router'
+import {
   mockNotifications,
   mockBadmintonCourts,
   defaultCriteria,
@@ -23,32 +49,74 @@ import {
 } from './modules/user/mockData'
 import type { User, NotificationItem, CourtResult, SearchCriteria } from './modules/types/user'
 
+const NAV_TAB_INDEX: Record<MainNavTab, number> = {
+  home: 0,
+  map: 1,
+  khampha: 2,
+  trending: 3,
+  account: 4,
+}
+
 export function App() {
-  // Navigation View State: 'home' | 'map' | 'khampha' | 'trending' | 'account'
-  const VIEW_INDEX: Record<'home' | 'map' | 'khampha' | 'trending' | 'account', number> = {
-    home: 0,
-    map: 1,
-    khampha: 2,
-    trending: 3,
-    account: 4,
-  }
-  const [currentView, setCurrentView] = useState<'home' | 'map' | 'khampha' | 'trending' | 'account'>('home')
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+
+  const activeNavTab = getNavTabFromPath(location.pathname)
+  const showBottomNav = isBottomNavVisible(location.pathname)
+  const showHeader = isHeaderVisible(location.pathname)
+  const isManagementRoute = location.pathname.startsWith('/owner') || location.pathname.startsWith('/admin')
+  const isCourtBookView = location.pathname.includes('/book')
+  const prevTabRef = useRef<MainNavTab>(activeNavTab)
   const [slideDirection, setSlideDirection] = useState<'right' | 'left'>('right')
 
-  const handleNavigateView = (newView: 'home' | 'map' | 'khampha' | 'trending' | 'account') => {
-    if (newView === currentView) return
-    const oldIdx = VIEW_INDEX[currentView]
-    const newIdx = VIEW_INDEX[newView]
-    setSlideDirection(newIdx > oldIdx ? 'right' : 'left')
-    setCurrentView(newView)
-  }
+  useEffect(() => {
+    if (prevTabRef.current !== activeNavTab) {
+      const oldIdx = NAV_TAB_INDEX[prevTabRef.current]
+      const newIdx = NAV_TAB_INDEX[activeNavTab]
+      setSlideDirection(newIdx >= oldIdx ? 'right' : 'left')
+      prevTabRef.current = activeNavTab
+    }
+  }, [activeNavTab])
 
   // State
-  const [currentUser, setCurrentUser] = useState<User | null>(mockCurrentUser)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [notifications, setNotifications] = useState<NotificationItem[]>(mockNotifications)
   const [criteria, setCriteria] = useState<SearchCriteria>(defaultCriteria)
   const [searchTerm, setSearchTerm] = useState('')
-  const [activeTab, setActiveTab] = useState<'all' | 'map' | 'booked' | 'favorite'>('all')
+
+  // Verify and restore authenticated session on load
+  useEffect(() => {
+    const token = authStorage.getToken()
+    if (token) {
+      authApi
+        .getMe()
+        .then((user) => {
+          if (user) {
+            setCurrentUser(user)
+          }
+        })
+        .catch(() => {
+          authStorage.removeToken()
+        })
+    }
+  }, [])
+
+  const handleLogout = () => {
+    authStorage.removeToken()
+    setCurrentUser(null)
+    toast.info('Đã đăng xuất khỏi hệ thống SmashCourt')
+  }
+
+  // Sub-tab state for Home view (All / Booked / Favorites)
+  const activeTab: 'all' | 'map' | 'booked' | 'favorite' = useMemo(() => {
+    if (location.pathname === ROUTES.BOOKED) return 'booked'
+    if (location.pathname === ROUTES.FAVORITES || location.pathname === '/favorite') return 'favorite'
+    const tabParam = searchParams.get('tab')
+    if (tabParam === 'booked') return 'booked'
+    if (tabParam === 'favorite' || tabParam === 'favorites') return 'favorite'
+    return 'all'
+  }, [location.pathname, searchParams])
 
   // Modals state
   const [isAuthOpen, setIsAuthOpen] = useState(false)
@@ -57,6 +125,24 @@ export function App() {
   const [isAIChatOpen, setIsAIChatOpen] = useState(false)
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [bookingCourt, setBookingCourt] = useState<CourtResult | null>(null)
+  const [selectedCourtForSidebar, setSelectedCourtForSidebar] = useState<BadmintonCourtItem | null>(null)
+  const [isCourtSidebarOpen, setIsCourtSidebarOpen] = useState(false)
+
+  const handleOpenCourtSidebar = (court: BadmintonCourtItem) => {
+    setSelectedCourtForSidebar(court)
+    setIsCourtSidebarOpen(true)
+  }
+
+  const handleCloseCourtSidebar = () => {
+    setIsCourtSidebarOpen(false)
+  }
+
+  // Auto close AI Chat when entering management routes (Owner & Admin)
+  useEffect(() => {
+    if (isManagementRoute && isAIChatOpen) {
+      setIsAIChatOpen(false)
+    }
+  }, [isManagementRoute, isAIChatOpen])
 
   // Filtered courts based on search term, activeTab, and criteria
   const filteredCourts = useMemo(() => {
@@ -72,6 +158,9 @@ export function App() {
 
       // Tab filter (Sân đã đặt / Yêu thích)
       if (activeTab === 'favorite' && !court.isFavorite) {
+        return false
+      }
+      if (activeTab === 'booked' && court.id !== 'court_1' && court.id !== 'court_2') {
         return false
       }
 
@@ -186,36 +275,183 @@ export function App() {
     })
   }
 
+  // Handle BottomNav navigation
+  const handleSelectNavTab = (tab: MainNavTab) => {
+    switch (tab) {
+      case 'home':
+        navigate(ROUTES.HOME)
+        break
+      case 'map':
+        navigate(ROUTES.MAP)
+        break
+      case 'khampha':
+        navigate(ROUTES.KHAM_PHA)
+        break
+      case 'trending':
+        navigate(ROUTES.TRENDING)
+        break
+      case 'account':
+        navigate(ROUTES.ACCOUNT)
+        break
+    }
+  }
+
+  // Handle Home sub-tabs (All / Map / Booked / Favorite)
+  const handleSelectCourtTab = (tab: 'all' | 'map' | 'booked' | 'favorite') => {
+    if (tab === 'map') {
+      navigate(ROUTES.MAP)
+    } else if (tab === 'booked') {
+      if (activeTab === 'booked') {
+        navigate(ROUTES.HOME)
+      } else {
+        navigate(ROUTES.BOOKED)
+      }
+    } else if (tab === 'favorite') {
+      if (activeTab === 'favorite') {
+        navigate(ROUTES.HOME)
+      } else {
+        navigate(ROUTES.FAVORITES)
+      }
+    } else {
+      navigate(ROUTES.HOME)
+    }
+  }
+
+  // Home view JSX renderer
+  const renderHomeView = () => (
+    <div className="space-y-4">
+      {/* Filter reset button if active */}
+      {activeFilterCount > 0 && (
+        <div className="flex items-center justify-end text-xs text-slate-500 px-1">
+          <button
+            type="button"
+            onClick={() => {
+              setCriteria(defaultCriteria)
+              setSearchTerm('')
+              toast.info('Đã xóa bộ lọc')
+            }}
+            className="text-[#1b7a42] hover:underline font-semibold text-[11px] cursor-pointer"
+          >
+            Xóa bộ lọc ({activeFilterCount})
+          </button>
+        </div>
+      )}
+
+      {/* Sub-tab active banner (if on Booked or Favorites) */}
+      {activeTab === 'booked' && (
+        <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2 text-xs text-emerald-800">
+          <span className="font-semibold">Đang lọc: Danh sách sân đã đặt</span>
+          <button
+            type="button"
+            onClick={() => navigate(ROUTES.HOME)}
+            className="text-emerald-700 hover:text-emerald-900 font-bold underline cursor-pointer"
+          >
+            Xem tất cả
+          </button>
+        </div>
+      )}
+      {activeTab === 'favorite' && (
+        <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 text-xs text-amber-800">
+          <span className="font-semibold">Đang lọc: Sân yêu thích của bạn</span>
+          <button
+            type="button"
+            onClick={() => navigate(ROUTES.HOME)}
+            className="text-amber-700 hover:text-amber-900 font-bold underline cursor-pointer"
+          >
+            Xem tất cả
+          </button>
+        </div>
+      )}
+
+      {/* Cards Grid */}
+      {filteredCourts.length === 0 ? (
+        <div className="bg-white rounded-2xl p-12 text-center border border-slate-200/80 shadow-xs max-w-md mx-auto">
+          <Activity className="w-8 h-8 text-[#1b7a42] mx-auto mb-2" />
+          <h3 className="font-bold text-slate-800 text-sm">Không tìm thấy sân phù hợp</h3>
+          <p className="text-xs text-slate-500 mt-1 mb-4">
+            Thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc để xem tất cả sân.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchTerm('')
+              setCriteria(defaultCriteria)
+              navigate(ROUTES.HOME)
+            }}
+            className="px-4 py-2 rounded-xl bg-[#1b7a42] text-white text-xs font-bold cursor-pointer hover:bg-[#156335] transition-colors"
+          >
+            Xem tất cả sân
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+          {filteredCourts.map((court, index) => (
+            <CourtCardItem
+              key={court.id}
+              court={court}
+              index={index}
+              onSelectCourt={handleOpenCourtSidebar}
+              onBook={handleOpenBooking}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <div
       className={`min-h-screen flex flex-col bg-[#f8fafc] font-sans text-slate-900 ${
-        currentView === 'map' ? 'h-screen overflow-hidden pb-0' : 'pb-20'
+        activeNavTab === 'map'
+          ? 'h-screen overflow-hidden pb-0'
+          : activeNavTab === 'account'
+          ? 'min-h-screen pb-16 lg:pb-0'
+          : !showBottomNav
+          ? 'min-h-screen pb-0'
+          : 'pb-20'
       }`}
     >
       {/* Toast notifications */}
       <Toaster richColors position="top-right" closeButton />
 
-      {/* 1. Header with custom SmashCourt brand (hidden in map view for full-screen map experience) */}
-      {currentView !== 'map' && (
+      {/* 1. Header with custom SmashCourt brand (chỉ hiển thị ở Trang chủ để tối ưu không gian các tab và màn hình đặt sân) */}
+      {showHeader && (
         <Header
+          isHome={true}
           currentUser={currentUser}
           notifications={notifications}
           onOpenAuth={(tab = 'login') => {
             setAuthInitialTab(tab)
             setIsAuthOpen(true)
           }}
-          onOpenProfile={() => handleNavigateView('account')}
+          onOpenProfile={() => navigate(ROUTES.ACCOUNT)}
           onOpenAIChat={() => setIsAIChatOpen(true)}
           onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
           onMarkNotificationRead={handleMarkNotificationRead}
           onSimulateNewNotification={handleSimulateNewNotification}
-          onNavigateHome={() => handleNavigateView('home')}
+          onNavigateHome={() => navigate(ROUTES.HOME)}
+          hideAIChat={isManagementRoute}
         />
       )}
 
+      {/* 2. Overlapping Floating Search Bar (Home view only, fully overlays on top of Header) */}
+      {showHeader && (
+        <div className="relative z-40 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-7">
+          <CourtSearchBar
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onOpenFilter={() => setIsFilterModalOpen(true)}
+            onOpenSocial={() => navigate(ROUTES.KHAM_PHA)}
+            onSelectTab={handleSelectCourtTab}
+            activeTab={activeTab}
+            activeFilterCount={activeFilterCount}
+          />
+        </div>
+      )}
+
       {/* Main Container with Horizontal Slide Animation */}
-      <div className="flex-1 w-full overflow-x-hidden">
-        {currentView === 'map' ? (
+      <div className="flex-1 w-full relative z-20">
+        {activeNavTab === 'map' ? (
           <main
             key="map"
             className={`w-full h-[calc(100vh-56px)] overflow-hidden ${
@@ -224,175 +460,168 @@ export function App() {
           >
             <CourtMapView
               courts={mockBadmintonCourts}
+              onSelectCourt={handleOpenCourtSidebar}
               onBookCourt={handleOpenBooking}
               onOpenAIChat={() => setIsAIChatOpen(true)}
-              onSwitchToList={() => {
-                handleNavigateView('home')
-                setActiveTab('all')
-              }}
+              onSwitchToList={() => navigate(ROUTES.HOME)}
             />
           </main>
-        ) : (
+        ) : activeNavTab === 'account' ? (
           <main
-            key={currentView}
-            className={`max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 space-y-6 pb-28 ${
+            key="account"
+            className={`w-full min-h-[calc(100vh-64px)] ${
               slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
             }`}
           >
-            {/* View 1: Trang chủ */}
-            {currentView === 'home' && (
-              <div className="space-y-4">
-                {/* Search Bar & Nav Pills */}
-                <CourtSearchBar
-                  searchTerm={searchTerm}
-                  onSearchChange={setSearchTerm}
-                  onOpenFilter={() => setIsFilterModalOpen(true)}
-                  onOpenAIChat={() => setIsAIChatOpen(true)}
-                  onSelectTab={(tab) => {
-                    if (tab === 'map') {
-                      handleNavigateView('map')
-                    } else {
-                      setActiveTab(tab)
-                    }
-                  }}
-                  activeTab={activeTab}
-                  activeFilterCount={activeFilterCount}
-                />
-
-                {/* Filter reset button if active */}
-                {activeFilterCount > 0 && (
-                  <div className="flex items-center justify-end text-xs text-slate-500 px-1">
-                    <button
-                      onClick={() => {
-                        setCriteria(defaultCriteria)
-                        setSearchTerm('')
-                        toast.info('Đã xóa bộ lọc')
-                      }}
-                      className="text-[#1b7a42] hover:underline font-semibold text-[11px] cursor-pointer"
-                    >
-                      Xóa bộ lọc ({activeFilterCount})
-                    </button>
-                  </div>
-                )}
-
-                {/* Cards Grid */}
-                {filteredCourts.length === 0 ? (
-                  <div className="bg-white rounded-2xl p-12 text-center border border-slate-200/80 shadow-xs max-w-md mx-auto">
-                    <Activity className="w-8 h-8 text-[#1b7a42] mx-auto mb-2" />
-                    <h3 className="font-bold text-slate-800 text-sm">Không tìm thấy sân phù hợp</h3>
-                    <p className="text-xs text-slate-500 mt-1 mb-4">
-                      Thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc để xem tất cả sân.
-                    </p>
-                    <button
-                      onClick={() => {
-                        setSearchTerm('')
-                        setCriteria(defaultCriteria)
-                        setActiveTab('all')
-                      }}
-                      className="px-4 py-2 rounded-xl bg-[#1b7a42] text-white text-xs font-bold cursor-pointer"
-                    >
-                      Xem tất cả sân
-                    </button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-                    {filteredCourts.map((court) => (
-                      <CourtCardItem
-                        key={court.id}
-                        court={court}
-                        onBook={handleOpenBooking}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* View 2: Khám phá */}
-            {currentView === 'khampha' && (
-              <KhamPhaView
-                onBookCourt={(court) => setBookingCourt(court)}
-                onOpenAIChat={() => setIsAIChatOpen(true)}
-              />
-            )}
-
-            {/* View 3: Nổi bật */}
-            {currentView === 'trending' && (
-              <div className="space-y-4">
-                <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 flex-shrink-0">
-                      <Flame className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <div>
-                      <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                        Cơ sở & Buổi chơi nổi bật hôm nay
-                      </h2>
-                      <p className="text-xs text-slate-500">
-                        Các cụm sân đạt đánh giá 4.8★ trở lên và các buổi chơi giao lưu đông thành viên nhất.
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleNavigateView('home')
-                      setActiveTab('all')
+            <Routes>
+              {/* View 4: Tài khoản (Edge-to-edge full width, không Header) */}
+              <Route
+                path={`${ROUTES.ACCOUNT}/*`}
+                element={
+                  <AccountView
+                    currentUser={currentUser}
+                    onOpenAuth={(tab = 'login') => {
+                      setAuthInitialTab(tab)
+                      setIsAuthOpen(true)
                     }}
-                    className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-[#168039] hover:bg-emerald-50 transition-colors cursor-pointer"
-                  >
-                    Xem tất cả sân →
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-                  {mockBadmintonCourts
-                    .filter((c) => (c.rating || 0) >= 4.8)
-                    .map((court) => (
-                      <CourtCardItem
-                        key={court.id}
-                        court={court}
-                        onBook={handleOpenBooking}
-                      />
-                    ))}
-                </div>
-              </div>
-            )}
-
-            {/* View 4: Tài khoản */}
-            {currentView === 'account' && (
-              <AccountView
-                currentUser={currentUser}
-                onOpenAuth={(tab = 'login') => {
-                  setAuthInitialTab(tab)
-                  setIsAuthOpen(true)
-                }}
-                onUpdateUser={(updated) => setCurrentUser(updated)}
-                onLogout={() => setCurrentUser(null)}
-                onNavigateHome={() => handleNavigateView('home')}
-                onOpenAIChat={() => setIsAIChatOpen(true)}
+                    onUpdateUser={(updated) => setCurrentUser(updated)}
+                    onLogout={handleLogout}
+                    onNavigateHome={() => navigate(ROUTES.HOME)}
+                  />
+                }
               />
-            )}
+              <Route path={ROUTES.PROFILE} element={<Navigate to={ROUTES.ACCOUNT} replace />} />
+              <Route path="*" element={<Navigate to={ROUTES.ACCOUNT} replace />} />
+            </Routes>
+          </main>
+        ) : (
+          <main
+            key={activeNavTab + (showHeader ? '-home' : '-sub')}
+            className={`${
+              isCourtBookView
+                ? 'w-full px-2 sm:px-4 lg:px-6 py-2 sm:py-3'
+                : `max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 ${
+                    showHeader ? 'pt-4 pb-6' : 'py-4 sm:py-6'
+                  }`
+            } space-y-4 ${showBottomNav ? 'pb-28' : 'pb-8'} relative z-20 ${
+              slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
+            }`}
+          >
+            <Routes>
+              {/* Home & Sub-tab routes */}
+              <Route path={ROUTES.HOME} element={renderHomeView()} />
+              <Route path={ROUTES.FAVORITES} element={renderHomeView()} />
+              <Route path="/home" element={<Navigate to={ROUTES.HOME} replace />} />
+              <Route path="/favorite" element={<Navigate to={ROUTES.FAVORITES} replace />} />
+
+              {/* Customer Booking Flow */}
+              <Route path={ROUTES.COURT_DETAIL} element={<CourtDetailView />} />
+              <Route
+                path={ROUTES.COURT_BOOK}
+                element={
+                  <CourtBookingGridView
+                    currentUser={currentUser}
+                    onOpenAuth={(tab = 'login') => {
+                      setAuthInitialTab(tab)
+                      setIsAuthOpen(true)
+                    }}
+                  />
+                }
+              />
+              <Route path={ROUTES.CHECKOUT} element={<CheckoutView />} />
+              <Route path={ROUTES.BOOKING_SUCCESS} element={<BookingSuccessView />} />
+              <Route path={ROUTES.BOOKED} element={<BookingHistoryView />} />
+
+              {/* Court Owner Portal */}
+              <Route path={ROUTES.OWNER_DASHBOARD} element={<OwnerDashboardView />} />
+              <Route path={ROUTES.OWNER_FACILITIES} element={<OwnerFacilitiesView />} />
+              <Route path={ROUTES.OWNER_PRICING} element={<OwnerPricingView />} />
+              <Route path={ROUTES.OWNER_BLOCKS} element={<OwnerBlocksView />} />
+              <Route path={ROUTES.OWNER_BOOKINGS} element={<OwnerBookingsView />} />
+
+              {/* System Admin Portal */}
+              <Route path={ROUTES.ADMIN_PORTAL} element={<AdminPortalView />} />
+
+              {/* View 2: Khám phá */}
+              <Route
+                path={ROUTES.KHAM_PHA}
+                element={
+                  <KhamPhaView
+                    currentUser={currentUser}
+                    onOpenAuth={(tab = 'login') => {
+                      setAuthInitialTab(tab)
+                      setIsAuthOpen(true)
+                    }}
+                    onBookCourt={(court) => setBookingCourt(court)}
+                    onOpenAIChat={() => setIsAIChatOpen(true)}
+                  />
+                }
+              />
+              <Route path={ROUTES.EXPLORE} element={<Navigate to={ROUTES.KHAM_PHA} replace />} />
+
+              {/* View 3: Nổi bật */}
+              <Route
+                path={ROUTES.TRENDING}
+                element={
+                  <div className="space-y-4">
+                    <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <Flame className="w-7 h-7 text-amber-600 flex-shrink-0" />
+                        <div>
+                          <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                            Cơ sở & Buổi chơi nổi bật hôm nay
+                          </h2>
+                          <p className="text-xs text-slate-500">
+                            Các cụm sân đạt đánh giá 4.8★ trở lên và các buổi chơi giao lưu đông thành viên nhất.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => navigate(ROUTES.HOME)}
+                        className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-[#168039] hover:bg-emerald-50 transition-colors cursor-pointer"
+                      >
+                        Xem tất cả sân →
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+                      {mockBadmintonCourts
+                        .filter((c) => (c.rating || 0) >= 4.8)
+                        .map((court, index) => (
+                          <CourtCardItem
+                            key={court.id}
+                            court={court}
+                            index={index}
+                            onSelectCourt={handleOpenCourtSidebar}
+                            onBook={handleOpenBooking}
+                          />
+                        ))}
+                    </div>
+                  </div>
+                }
+              />
+
+              {/* Catch all / 404 fallback */}
+              <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
+            </Routes>
           </main>
         )}
       </div>
 
-      {/* 4. Bottom Navigation Bar */}
-      <BottomNav
-        activeTab={currentView}
-        onSelectTab={(tab) => {
-          handleNavigateView(tab)
-          if (tab === 'home') {
-            setActiveTab('all')
-          }
-        }}
-        onOpenProfile={() => handleNavigateView('account')}
-        onOpenAuth={() => {
-          setAuthInitialTab('login')
-          setIsAuthOpen(true)
-        }}
-        isLoggedIn={!!currentUser}
-      />
+      {/* 4. Bottom Navigation Bar (Ẩn ở các luồng chọn lịch đặt sân, thanh toán, quản trị chủ sân/admin) */}
+      {showBottomNav && (
+        <BottomNav
+          activeTab={activeNavTab}
+          onSelectTab={handleSelectNavTab}
+          onOpenProfile={() => navigate(ROUTES.ACCOUNT)}
+          onOpenAuth={() => {
+            setAuthInitialTab('login')
+            setIsAuthOpen(true)
+          }}
+          isLoggedIn={!!currentUser}
+        />
+      )}
 
       {/* Modals for TV1 */}
 
@@ -409,17 +638,36 @@ export function App() {
         }}
       />
 
-      {/* AI Court Finder Chat Panel (Spring AI Orchestrator) */}
-      <AIChatPanel
-        isOpen={isAIChatOpen}
-        onClose={() => setIsAIChatOpen(false)}
-        onApplyCriteria={handleApplyCriteriaFromAI}
+      {/* Court Detail Sidebar (Slide-in Drawer khi ấn vào sân) */}
+      <CourtDetailSidebar
+        court={selectedCourtForSidebar}
+        isOpen={isCourtSidebarOpen}
+        onClose={handleCloseCourtSidebar}
+        onBook={handleOpenBooking}
+        onOpenAIChat={() => setIsAIChatOpen(true)}
+        onToggleFavorite={(_courtId) => {
+          // Sync favorite state if desired
+        }}
       />
+
+      {/* AI Court Finder Chat Panel (Spring AI Orchestrator) - Tuyệt đối không xuất hiện trên Chủ sân & Admin */}
+      {!isManagementRoute && (
+        <AIChatPanel
+          isOpen={isAIChatOpen}
+          onClose={() => setIsAIChatOpen(false)}
+          onApplyCriteria={handleApplyCriteriaFromAI}
+        />
+      )}
 
       {/* Booking Confirm Modal (Holding HELD & TV3 Hand-off) */}
       <BookingConfirmModal
         isOpen={!!bookingCourt}
         court={bookingCourt}
+        currentUser={currentUser}
+        onOpenAuth={(tab = 'login') => {
+          setAuthInitialTab(tab)
+          setIsAuthOpen(true)
+        }}
         onClose={() => setBookingCourt(null)}
         onConfirmBooking={handleConfirmBooking}
       />
@@ -443,7 +691,7 @@ export function App() {
           onClose={() => setIsProfileOpen(false)}
           onUpdateUser={(updated) => setCurrentUser(updated)}
           onLogout={() => {
-            setCurrentUser(null)
+            handleLogout()
             setIsProfileOpen(false)
           }}
         />

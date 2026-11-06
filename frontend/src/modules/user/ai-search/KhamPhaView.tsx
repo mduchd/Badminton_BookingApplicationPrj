@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   SlidersHorizontal,
   Compass,
@@ -24,19 +25,41 @@ import {
   Target,
   Waves,
   Layers,
+  LogIn,
 } from 'lucide-react'
-import type { CourtResult } from '../../types/user'
+import type { CourtResult, User } from '../../types/user'
 import { formatPrice } from '../../../lib/utils'
 import { mockSessions, type SessionMatch } from '../mockData'
+import { toast } from 'sonner'
 
 interface KhamPhaViewProps {
   onBookCourt: (court: CourtResult) => void
   onOpenAIChat: () => void
+  currentUser?: User | null
+  onOpenAuth?: (tab?: 'login' | 'register') => void
 }
 
-export const KhamPhaView: React.FC<KhamPhaViewProps> = ({ onBookCourt, onOpenAIChat }) => {
+export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
+  onBookCourt,
+  onOpenAIChat,
+  currentUser = null,
+  onOpenAuth,
+}) => {
   // Category tabs inside green header (using official lucide-react icons)
-  const [activeCategory, setActiveCategory] = useState('Social')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const catFromUrl = searchParams.get('category')
+  const activeCategory = catFromUrl || 'Social'
+
+  const setActiveCategory = (category: string) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('category', category)
+        return next
+      },
+      { replace: true }
+    )
+  }
   const categories = [
     { id: 'Social', label: 'Social', icon: <Sparkles className="w-3.5 h-3.5" /> },
     { id: 'SuKien', label: 'Sự kiện', icon: <Ticket className="w-3.5 h-3.5" /> },
@@ -86,6 +109,14 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({ onBookCourt, onOpenAIC
   ]
 
   const handleBookSession = (session: SessionMatch) => {
+    if (!currentUser) {
+      toast.info('Vui lòng đăng nhập để đăng ký buổi chơi giao lưu!', {
+        description: 'Đăng nhập giúp bạn nhận vé check-in và liên hệ ban tổ chức.',
+      })
+      onOpenAuth?.('login')
+      return
+    }
+
     const court: CourtResult = {
       courtId: session.id,
       facilityId: 'fac_' + session.id,
@@ -115,28 +146,47 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({ onBookCourt, onOpenAIC
       <div className="bg-[#1b7a42] text-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-emerald-600/60">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-black italic tracking-wide text-white">
-              KHÁM PHÁ BUỔI CHƠI
+            <h1 className="text-2xl sm:text-3xl font-black italic tracking-normal text-white">
+              Khám phá buổi chơi
             </h1>
           </div>
 
-          <button
-            type="button"
-            onClick={onOpenAIChat}
-            className="self-start md:self-auto px-4.5 py-2 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs sm:text-sm font-bold transition-colors flex items-center gap-2 cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4 text-amber-300" />
-            <span>Hỏi AI gợi ý buổi chơi</span>
-          </button>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <button
+              type="button"
+              onClick={onOpenAIChat}
+              className="px-4 py-2 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs sm:text-sm font-bold transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span>Hỏi AI gợi ý</span>
+            </button>
+
+            {currentUser ? (
+              <div className="px-3.5 py-1.5 rounded-full bg-white/20 text-white text-xs font-bold flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-300" />
+                <span className="truncate max-w-[120px]">{currentUser.fullName}</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onOpenAuth?.('login')}
+                className="px-3.5 py-1.5 rounded-full bg-white hover:bg-slate-100 text-[#1b7a42] text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Đăng nhập</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Category horizontal scrollable pills */}
         <div className="flex items-center gap-2.5 pt-4 overflow-x-auto no-scrollbar">
-          {categories.map((cat) => (
+          {categories.map((cat, idx) => (
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
-              className={`px-4 sm:px-4.5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${
+              style={{ '--stagger-delay': `${idx * 30}ms` } as React.CSSProperties}
+              className={`fade-in-item px-4 sm:px-4.5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-200 flex items-center gap-2 cursor-pointer active:scale-95 ${
                 activeCategory === cat.id
                   ? 'bg-white text-[#1b7a42] shadow-sm'
                   : 'bg-emerald-800/40 hover:bg-emerald-800/80 text-white border border-emerald-600/50'
@@ -175,7 +225,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({ onBookCourt, onOpenAIC
                   setSelectedRadius('20km')
                   setOnlyAvailable(false)
                 }}
-                className="px-2.5 py-1 rounded-full text-[11px] font-semibold text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-1 cursor-pointer"
+                className="px-2.5 py-1 rounded-full text-[11px] font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center gap-1 cursor-pointer"
               >
                 <RotateCcw className="w-3 h-3" />
                 <span>Đặt lại</span>
@@ -294,15 +344,16 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({ onBookCourt, onOpenAIC
 
             {/* Horizontal scrollable date pills */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {daysList.map((day) => {
+              {daysList.map((day, idx) => {
                 const isSelected = selectedDay === day.date
                 return (
                   <button
                     key={day.date}
                     onClick={() => setSelectedDay(day.date)}
-                    className={`flex flex-col items-center justify-center min-w-[50px] py-2 px-1.5 rounded-xl transition-all cursor-pointer ${
+                    style={{ '--stagger-delay': `${idx * 20}ms` } as React.CSSProperties}
+                    className={`fade-in-item flex flex-col items-center justify-center min-w-[50px] py-2 px-1.5 rounded-xl transition-all duration-200 cursor-pointer active:scale-95 ${
                       isSelected
-                        ? 'bg-[#1b7a42] text-white shadow-xs font-bold'
+                        ? 'bg-[#1b7a42] text-white shadow-xs font-bold scale-102'
                         : 'bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold border border-slate-200/60'
                     }`}
                   >
@@ -331,10 +382,11 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({ onBookCourt, onOpenAIC
 
           {/* Session Cards Grid (2 columns on tablet/desktop) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {mockSessions.map((session) => (
+            {mockSessions.map((session, idx) => (
               <div
                 key={session.id}
-                className="bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all p-4 space-y-3 flex flex-col justify-between"
+                style={{ '--stagger-delay': `${Math.min(idx * 50, 400)}ms` } as React.CSSProperties}
+                className="card-enter bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 p-4 space-y-3 flex flex-col justify-between"
               >
                 {/* Club Header */}
                 <div className="flex items-start justify-between gap-2">
@@ -372,7 +424,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({ onBookCourt, onOpenAIC
                         }`}
                       >
                         <div className="text-xs font-bold">{slot.time}</div>
-                        <div className={`text-[10px] ${slot.available ? 'text-emerald-700' : 'text-slate-400'}`}>
+                        <div className={`text-[10px] ${slot.available ? 'text-emerald-700 font-semibold' : 'text-slate-500 font-medium'}`}>
                           {slot.subtext}
                         </div>
                       </div>
@@ -383,8 +435,8 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({ onBookCourt, onOpenAIC
                 {/* Ticket & Match Detail Box */}
                 <div className="p-3 rounded-2xl border-2 border-rose-200/80 bg-rose-50/20 space-y-2.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-800">{session.detail.levelText}</span>
-                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                    <span className="font-bold text-slate-900">{session.detail.levelText}</span>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
                   </div>
 
                   {/* Live + details */}
