@@ -11,6 +11,9 @@ import {
 } from 'lucide-react'
 import type { AIMessage, SearchCriteria } from '../../types/user'
 import { formatPrice } from '../../../lib/utils'
+import { authStorage } from '../auth/authApi'
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1'
 
 interface AIChatPanelProps {
   isOpen: boolean
@@ -49,7 +52,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
   if (!isOpen) return null
 
-  const handleSendMessage = (textToSend?: string) => {
+  const handleSendMessage = async (textToSend?: string) => {
     const query = textToSend || inputValue.trim()
     if (!query) return
 
@@ -64,6 +67,52 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
     if (!textToSend) setInputValue('')
     setIsThinking(true)
 
+    // 1. Try real Backend AI Orchestrator
+    try {
+      const token = authStorage.getToken()
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
+      const res = await fetch(`${API_BASE_URL}/ai/search`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          message: query,
+          conversationId: 'conv_' + Date.now(),
+        }),
+      })
+
+      if (res.ok) {
+        const body = await res.json()
+        if (body.success && body.data) {
+          const aiData = body.data
+          const criteria = aiData.extractedCriteria || {}
+
+          const aiMsg: AIMessage = {
+            id: 'ai_' + Date.now(),
+            sender: 'ai',
+            text: aiData.reply || 'Đã phân tích yêu cầu của bạn.',
+            extractedCriteria: Object.keys(criteria).length > 0 ? (criteria as SearchCriteria) : undefined,
+            timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          }
+
+          setMessages((prev) => [...prev, aiMsg])
+          if (Object.keys(criteria).length > 0) {
+            onApplyCriteria(criteria)
+          }
+          setIsThinking(false)
+          return
+        }
+      }
+    } catch {
+      // Graceful fallback below
+    }
+
+    // 2. Client-side fallback if backend is offline or rate limited
     setTimeout(() => {
       setIsThinking(false)
 
@@ -76,6 +125,9 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
       else if (lower.includes('ba đình')) extracted.district = 'Ba Đình'
       else if (lower.includes('thanh xuân') || lower.includes('khương đình')) extracted.district = 'Thanh Xuân'
       else if (lower.includes('đống đa')) extracted.district = 'Đống Đa'
+      else if (lower.includes('quận 10') || lower.includes('q10')) extracted.district = 'Quận 10'
+      else if (lower.includes('phú nhuận')) extracted.district = 'Phú Nhuận'
+      else if (lower.includes('thủ đức')) extracted.district = 'Thủ Đức'
 
       // Time detection
       if (lower.includes('19-21') || lower.includes('19h-21h') || lower.includes('19h - 21h')) {
