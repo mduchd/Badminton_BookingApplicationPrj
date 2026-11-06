@@ -8,16 +8,18 @@ import {
   useSearchParams,
 } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
-import { Activity, Flame } from 'lucide-react'
+import { Activity, Flame, CalendarCheck } from 'lucide-react'
+import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+
 import { Header } from './components/shared/Header'
 import { CourtSearchBar } from './components/shared/CourtSearchBar'
 import { CourtCardItem } from './modules/user/ai-search/CourtCardItem'
 import { SmartFilterModal } from './modules/user/ai-search/SmartFilterModal'
 import { AIChatPanel } from './modules/user/ai-search/AIChatPanel'
+import { BookingConfirmModal } from './modules/user/ai-search/BookingConfirmModal'
 import { AuthModal } from './modules/user/auth/AuthModal'
 import { authApi, authStorage } from './modules/user/auth/authApi'
 import { ProfileModal } from './modules/user/profile/ProfileModal'
-import { BookingConfirmModal } from './modules/user/ai-search/BookingConfirmModal'
 import { BottomNav } from './components/shared/BottomNav'
 import { KhamPhaView } from './modules/user/ai-search/KhamPhaView'
 import { CourtMapView } from './modules/court/search/CourtMapView'
@@ -41,6 +43,13 @@ import {
   isHeaderVisible,
   type MainNavTab,
 } from './app/router'
+
+// TV3 Booking & Payment components
+import { MyBookingsList } from './modules/booking/components/MyBookingsList'
+import { CourtBookingModal } from './modules/booking/components/CourtBookingModal'
+import { bookingApi } from './modules/booking/services/bookingApi'
+import type { BookingResponse } from './modules/booking/types'
+
 import {
   mockNotifications,
   mockBadmintonCourts,
@@ -57,7 +66,17 @@ const NAV_TAB_INDEX: Record<MainNavTab, number> = {
   account: 4,
 }
 
-export function App() {
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+})
+
+export function MainApp() {
+  const qc = useQueryClient()
   const location = useLocation()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -144,6 +163,37 @@ export function App() {
     }
   }, [isManagementRoute, isAIChatOpen])
 
+  // Booking Modal State (TV3)
+  const [bookingCourtInfo, setBookingCourtInfo] = useState<{
+    courtId: number
+    courtName: string
+    facilityName: string
+    facilityAddress?: string
+  } | null>(null)
+
+  // Query My Bookings (TV3 Real Data)
+  const { data: myBookings = [], isLoading: isLoadingBookings } = useQuery({
+    queryKey: ['myBookings'],
+    queryFn: () => bookingApi.getMyBookings(1),
+  })
+
+  // Mutation Hủy đơn (TV3)
+  const cancelBookingMutation = useMutation({
+    mutationFn: (id: number) => bookingApi.cancelBooking(id, 1),
+    onSuccess: (b) => {
+      qc.invalidateQueries({ queryKey: ['myBookings'] })
+      qc.invalidateQueries({ queryKey: ['courtAvailability'] })
+      toast.success('Hủy đặt chỗ thành công!', {
+        description: `Đơn #SMC-${b.id} đã được hủy và khung giờ đã được giải phóng.`,
+      })
+    },
+    onError: (err: any) => {
+      toast.error('Hủy đơn không thành công', {
+        description: err.response?.data?.message || err.message,
+      })
+    },
+  })
+
   // Filtered courts based on search term, activeTab, and criteria
   const filteredCourts = useMemo(() => {
     return mockBadmintonCourts.filter((court) => {
@@ -156,7 +206,7 @@ export function App() {
         if (!matchesName && !matchesAddr && !matchesDist) return false
       }
 
-      // Tab filter (Sân đã đặt / Yêu thích)
+      // Tab filter (Yêu thích)
       if (activeTab === 'favorite' && !court.isFavorite) {
         return false
       }
@@ -208,8 +258,8 @@ export function App() {
     const newNotif: NotificationItem = {
       id: 'notif_' + Date.now(),
       type: 'BOOKING_CONFIRMED',
-      title: 'Đơn đặt sân mới đã xác nhận! 🏸',
-      body: 'Phúc Long Badminton vừa duyệt lịch chơi của bạn tối mai lúc 19:00 - 21:00.',
+      title: 'Đơn đặt sân mới đã xác nhận!',
+      body: 'Bạn vừa đặt thành công Sân 2 tại CLB Cầu Lông Cầu Giấy Pro. Giữ chỗ trong 10 phút.',
       isRead: false,
       createdAt: 'Vừa xong',
     }
@@ -219,46 +269,42 @@ export function App() {
     })
   }
 
-  // Booking action
-  const handleOpenBooking = (court: BadmintonCourtItem) => {
-    const asCourtResult: CourtResult = {
-      courtId: court.id,
-      facilityId: 'fac_' + court.id,
-      facilityName: court.name,
-      courtName: 'Sân số 1 (Thảm tiêu chuẩn BWF)',
-      address: court.address,
-      district: court.district,
-      imageUrl: court.imageUrl,
-      rating: court.rating || 4.8,
-      reviewCount: court.reviewCount || 100,
-      startTime: criteria.startTime || '19:00',
-      endTime: criteria.endTime || '21:00',
-      durationHours: 2,
-      pricePerHour: court.pricePerHour,
-      calculatedTotalPrice: court.pricePerHour * 2,
-      amenities: court.amenities,
-      availabilityCheckedAt: 'Vừa xong',
-      isAvailable: true,
-      googleMapsUrl: `https://maps.google.com/?q=${encodeURIComponent(court.address)}`,
-    }
-    setBookingCourt(asCourtResult)
+  // Booking action: Mở Modal Lưới Chọn Giờ Đặt Sân (TV3)
+  const handleOpenBooking = (court: BadmintonCourtItem | CourtResult) => {
+    const numericCourtId = 'courtId' in court ? Number(court.courtId) : Number(court.id)
+    const courtName = 'courtName' in court && court.courtName ? String(court.courtName) : ('name' in court ? String(court.name) : 'Sân số 1 (Thảm Yonex)')
+    const facilityName = 'facilityName' in court && court.facilityName ? String(court.facilityName) : ('name' in court ? String(court.name) : 'Cụm Sân SmashCourt')
+    const address = 'address' in court ? court.address : ''
+
+    setBookingCourtInfo({
+      courtId: Number.isNaN(numericCourtId) ? 1 : numericCourtId,
+      courtName,
+      facilityName,
+      facilityAddress: address,
+    })
   }
 
-  const handleConfirmBooking = (court: CourtResult) => {
+  // Sau khi tạo đơn HELD thành công
+  const handleBookingSuccess = (booking: BookingResponse) => {
     const bookingNotif: NotificationItem = {
       id: 'notif_bk_' + Date.now(),
-      type: 'PAYMENT_SUCCESS',
-      title: 'Đặt lịch thành công qua payOS! 🏸',
-      body: `Đơn tại ${court.facilityName} (${court.courtName}) khung giờ ${court.startTime}-${court.endTime} đã xác nhận.`,
+      type: 'BOOKING_CONFIRMED',
+      title: 'Giữ chỗ sân thành công! 🏸',
+      body: `Đơn #SMC-${booking.id} tại ${booking.facilityName} (${booking.courtName}) đang được giữ trong 10 phút.`,
       isRead: false,
       createdAt: 'Vừa xong',
     }
     setNotifications((prev) => [bookingNotif, ...prev])
 
-    toast.success('Đặt lịch thành công!', {
-      description: `Mã đơn #SMC-${Math.floor(1000 + Math.random() * 9000)} đã được ghi nhận. Email Brevo & Lịch Google đã đồng bộ!`,
+    toast.success('Giữ chỗ thành công (10 phút)!', {
+      description: `Mã đơn #SMC-${booking.id} đã được khóa giờ. Bạn có thể xem trong mục 'Sân đã đặt'.`,
       duration: 5000,
     })
+  }
+
+  const handleConfirmBooking = (court: CourtResult) => {
+    setBookingCourt(null)
+    handleOpenBooking(court)
   }
 
   // AI sync handlers
@@ -339,19 +385,36 @@ export function App() {
 
       {/* Sub-tab active banner (if on Booked or Favorites) */}
       {activeTab === 'booked' && (
-        <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2 text-xs text-emerald-800">
-          <span className="font-semibold">Đang lọc: Danh sách sân đã đặt</span>
-          <button
-            type="button"
-            onClick={() => navigate(ROUTES.HOME)}
-            className="text-emerald-700 hover:text-emerald-900 font-bold underline cursor-pointer"
-          >
-            Xem tất cả
-          </button>
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#1b7a42] flex items-center justify-center font-bold">
+                <CalendarCheck className="w-5 h-5 text-[#1b7a42]" />
+              </div>
+              <div>
+                <h2 className="font-bold text-slate-900 text-base">Quản lý lịch đặt sân của bạn</h2>
+                <p className="text-xs text-slate-600 font-medium">Xem các sân đang giữ chỗ (10 phút) và lịch chơi đã xác nhận</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate(ROUTES.HOME)}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-[#1b7a42] hover:bg-emerald-50 transition-colors cursor-pointer"
+            >
+              ← Đặt thêm sân mới
+            </button>
+          </div>
+
+          <MyBookingsList
+            bookings={myBookings}
+            onCancelBooking={(id) => cancelBookingMutation.mutate(id)}
+            isLoading={isLoadingBookings}
+          />
         </div>
       )}
+
       {activeTab === 'favorite' && (
-        <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 text-xs text-amber-800">
+        <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 text-xs text-amber-900">
           <span className="font-semibold">Đang lọc: Sân yêu thích của bạn</span>
           <button
             type="button"
@@ -364,49 +427,49 @@ export function App() {
       )}
 
       {/* Cards Grid */}
-      {filteredCourts.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center border border-slate-200/80 shadow-xs max-w-md mx-auto">
-          <Activity className="w-8 h-8 text-[#1b7a42] mx-auto mb-2" />
-          <h3 className="font-bold text-slate-800 text-sm">Không tìm thấy sân phù hợp</h3>
-          <p className="text-xs text-slate-500 mt-1 mb-4">
-            Thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc để xem tất cả sân.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setSearchTerm('')
-              setCriteria(defaultCriteria)
-              navigate(ROUTES.HOME)
-            }}
-            className="px-4 py-2 rounded-xl bg-[#1b7a42] text-white text-xs font-bold cursor-pointer hover:bg-[#156335] transition-colors"
-          >
-            Xem tất cả sân
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-          {filteredCourts.map((court, index) => (
-            <CourtCardItem
-              key={court.id}
-              court={court}
-              index={index}
-              onSelectCourt={handleOpenCourtSidebar}
-              onBook={handleOpenBooking}
-            />
-          ))}
-        </div>
+      {activeTab !== 'booked' && (
+        filteredCourts.length === 0 ? (
+          <div className="bg-white rounded-2xl p-12 text-center border border-slate-200/80 max-w-md mx-auto">
+            <Activity className="w-8 h-8 text-[#1b7a42] mx-auto mb-2" />
+            <h3 className="font-bold text-slate-800 text-sm">Không tìm thấy sân phù hợp</h3>
+            <p className="text-xs text-slate-600 font-medium mt-1 mb-4">
+              Thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc để xem tất cả sân.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm('')
+                setCriteria(defaultCriteria)
+                navigate(ROUTES.HOME)
+              }}
+              className="px-4 py-2 rounded-xl bg-[#1b7a42] text-white text-xs font-bold cursor-pointer hover:bg-[#156335] transition-colors"
+            >
+              Xem tất cả sân
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+            {filteredCourts.map((court, index) => (
+              <CourtCardItem
+                key={court.id}
+                court={court}
+                index={index}
+                onSelectCourt={handleOpenCourtSidebar}
+                onBook={handleOpenBooking}
+              />
+            ))}
+          </div>
+        )
       )}
     </div>
   )
 
   return (
     <div
-      className={`min-h-screen flex flex-col bg-[#f8fafc] font-sans text-slate-900 w-full max-w-full overflow-x-hidden ${
+      className={`min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 antialiased selection:bg-emerald-100 selection:text-emerald-900 ${
         activeNavTab === 'map'
-          ? 'h-screen overflow-hidden pb-0'
-          : activeNavTab === 'account'
-          ? 'min-h-screen pb-16 lg:pb-0'
-          : !showBottomNav
+          ? 'h-screen h-[100dvh] overflow-hidden p-0'
+          : isManagementRoute || isCourtBookView
           ? 'min-h-screen pb-0'
           : 'pb-20'
       }`}
@@ -623,7 +686,20 @@ export function App() {
         />
       )}
 
-      {/* Modals for TV1 */}
+      {/* Modals */}
+
+      {/* TV3 Interactive Court Booking Modal (Timeline slot grid & 10-minute hold reservation) */}
+      {bookingCourtInfo && (
+        <CourtBookingModal
+          isOpen={!!bookingCourtInfo}
+          courtId={bookingCourtInfo.courtId}
+          courtName={bookingCourtInfo.courtName}
+          facilityName={bookingCourtInfo.facilityName}
+          facilityAddress={bookingCourtInfo.facilityAddress}
+          onClose={() => setBookingCourtInfo(null)}
+          onBookingSuccess={handleBookingSuccess}
+        />
+      )}
 
       {/* Smart Filter Drawer/Modal */}
       <SmartFilterModal
@@ -700,6 +776,14 @@ export function App() {
         />
       )}
     </div>
+  )
+}
+
+export function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <MainApp />
+    </QueryClientProvider>
   )
 }
 

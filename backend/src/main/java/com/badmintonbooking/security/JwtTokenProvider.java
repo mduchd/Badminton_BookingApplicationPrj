@@ -18,7 +18,7 @@ public class JwtTokenProvider {
     @Value("${app.jwt.expiration-ms:86400000}") // 24 hours
     private long jwtExpirationMs;
 
-    public String generateToken(UUID userId, String email, String role) {
+    public String generateToken(Object userId, String email, String role) {
         long now = System.currentTimeMillis();
         long exp = now + jwtExpirationMs;
 

@@ -5,9 +5,7 @@ import com.badmintonbooking.user.auth.dto.AuthResponse;
 import com.badmintonbooking.user.auth.dto.LoginRequest;
 import com.badmintonbooking.user.auth.dto.RegisterRequest;
 import com.badmintonbooking.user.auth.dto.UserResponse;
-import com.badmintonbooking.user.model.AuthProvider;
-import com.badmintonbooking.user.model.User;
-import com.badmintonbooking.user.model.UserRole;
+import com.badmintonbooking.user.entity.User;
 import com.badmintonbooking.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -43,7 +41,7 @@ public class AuthService {
             throw new IllegalStateException("Tài khoản của bạn đang bị tạm khóa");
         }
 
-        String token = jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+        String token = jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole());
         return AuthResponse.of(token, UserResponse.fromEntity(user));
     }
 
@@ -59,13 +57,13 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setFullName(request.fullName().trim());
         user.setPhone(request.phone() != null ? request.phone().trim() : null);
-        user.setRole(request.role() != null ? request.role() : UserRole.CUSTOMER);
-        user.setProvider(AuthProvider.LOCAL);
+        user.setRole(request.role() != null ? request.role().name() : "CUSTOMER");
+        user.setProvider("LOCAL");
         user.setStatus("ACTIVE");
 
         User savedUser = userRepository.save(user);
 
-        String token = jwtTokenProvider.generateToken(savedUser.getId(), savedUser.getEmail(), savedUser.getRole().name());
+        String token = jwtTokenProvider.generateToken(savedUser.getId(), savedUser.getEmail(), savedUser.getRole());
         return AuthResponse.of(token, UserResponse.fromEntity(savedUser));
     }
 

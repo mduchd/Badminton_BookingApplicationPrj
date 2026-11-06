@@ -1,19 +1,15 @@
 package com.badmintonbooking.user.auth.dto;
 
-import com.badmintonbooking.user.model.AuthProvider;
-import com.badmintonbooking.user.model.User;
-import com.badmintonbooking.user.model.UserRole;
-
-import java.util.UUID;
+import com.badmintonbooking.user.entity.User;
 
 public record UserResponse(
-    UUID id,
+    Long id,
     String email,
     String fullName,
     String phone,
     String avatarUrl,
-    UserRole role,
-    AuthProvider provider,
+    String role,
+    String provider,
     boolean fcmEnabled,
     boolean calendarConnected,
     String calendarEmail

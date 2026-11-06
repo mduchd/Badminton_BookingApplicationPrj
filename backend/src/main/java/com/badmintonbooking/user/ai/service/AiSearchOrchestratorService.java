@@ -1,7 +1,7 @@
 package com.badmintonbooking.user.ai.service;
 
-import com.badmintonbooking.court.model.Court;
-import com.badmintonbooking.court.model.Facility;
+import com.badmintonbooking.court.entity.Court;
+import com.badmintonbooking.court.entity.Facility;
 import com.badmintonbooking.court.repository.CourtRepository;
 import com.badmintonbooking.court.repository.FacilityRepository;
 import com.badmintonbooking.user.ai.dto.AiRecommendedCourtDto;
@@ -76,7 +76,7 @@ public class AiSearchOrchestratorService {
 
             // Build dynamic match reason
             StringBuilder reason = new StringBuilder();
-            if (criteria.getDistrict() != null && fac.getDistrict().toLowerCase().contains(criteria.getDistrict().toLowerCase())) {
+            if (criteria.getDistrict() != null && fac.getDistrict() != null && fac.getDistrict().toLowerCase().contains(criteria.getDistrict().toLowerCase())) {
                 reason.append("Nằm ngay khu vực ").append(fac.getDistrict()).append(". ");
             }
             if (fac.getRating() != null && fac.getRating().doubleValue() >= 4.8) {

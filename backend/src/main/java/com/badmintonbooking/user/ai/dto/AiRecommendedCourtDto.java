@@ -1,10 +1,9 @@
 package com.badmintonbooking.user.ai.dto;
 
 import java.util.List;
-import java.util.UUID;
 
 public class AiRecommendedCourtDto {
-    private UUID facilityId;
+    private Long facilityId;
     private String facilityName;
     private String address;
     private String district;
@@ -18,7 +17,7 @@ public class AiRecommendedCourtDto {
 
     public AiRecommendedCourtDto() {}
 
-    public AiRecommendedCourtDto(UUID facilityId, String facilityName, String address, String district,
+    public AiRecommendedCourtDto(Long facilityId, String facilityName, String address, String district,
                                  String openHours, Double rating, Integer reviewCount, String imageUrl,
                                  Double minPricePerHour, List<String> amenities, String matchReason) {
         this.facilityId = facilityId;
@@ -34,8 +33,8 @@ public class AiRecommendedCourtDto {
         this.matchReason = matchReason;
     }
 
-    public UUID getFacilityId() { return facilityId; }
-    public void setFacilityId(UUID facilityId) { this.facilityId = facilityId; }
+    public Long getFacilityId() { return facilityId; }
+    public void setFacilityId(Long facilityId) { this.facilityId = facilityId; }
 
     public String getFacilityName() { return facilityName; }
     public void setFacilityName(String facilityName) { this.facilityName = facilityName; }

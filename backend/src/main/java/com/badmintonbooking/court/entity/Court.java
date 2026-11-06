@@ -1,33 +1,32 @@
-package com.badmintonbooking.court.model;
+package com.badmintonbooking.court.entity;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "courts")
 public class Court {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "facility_id", nullable = false)
+    private Long facilityId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "facility_id", nullable = false)
+    @JoinColumn(name = "facility_id", insertable = false, updatable = false)
     private Facility facility;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false)
     private String name;
 
-    @Column(name = "court_number", nullable = false)
-    private Integer courtNumber;
+    @Column(name = "court_type", nullable = false)
+    private String courtType = "STANDARD";
 
-    @Column(name = "price_per_hour", nullable = false, precision = 12, scale = 2)
-    private BigDecimal pricePerHour = BigDecimal.valueOf(100000);
-
-    @Column(nullable = false, length = 30)
-    private String status = "AVAILABLE";
+    @Column(nullable = false)
+    private String status = "ACTIVE";
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
@@ -37,8 +36,11 @@ public class Court {
 
     public Court() {}
 
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public Long getFacilityId() { return facilityId; }
+    public void setFacilityId(Long facilityId) { this.facilityId = facilityId; }
 
     public Facility getFacility() { return facility; }
     public void setFacility(Facility facility) { this.facility = facility; }
@@ -46,11 +48,8 @@ public class Court {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
-    public Integer getCourtNumber() { return courtNumber; }
-    public void setCourtNumber(Integer courtNumber) { this.courtNumber = courtNumber; }
-
-    public BigDecimal getPricePerHour() { return pricePerHour; }
-    public void setPricePerHour(BigDecimal pricePerHour) { this.pricePerHour = pricePerHour; }
+    public String getCourtType() { return courtType; }
+    public void setCourtType(String courtType) { this.courtType = courtType; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
@@ -60,4 +59,9 @@ public class Court {
 
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    @Transient
+    public BigDecimal getPricePerHour() {
+        return BigDecimal.valueOf(100000.0);
+    }
 }
