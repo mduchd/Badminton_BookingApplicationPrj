@@ -338,7 +338,7 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
           </div>
 
           {/* Sport Category Filter Chips */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+          <div className="flex items-center sm:justify-center gap-2 overflow-x-auto no-scrollbar py-1">
             {SPORT_OPTIONS.map((sport) => {
               const isActive = selectedSport === sport.id
               return (
