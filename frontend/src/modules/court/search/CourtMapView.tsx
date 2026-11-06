@@ -311,7 +311,7 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
   }
 
   return (
-    <div className="relative w-full h-full min-h-[450px] overflow-hidden bg-slate-100">
+    <div className="relative w-full h-full min-h-screen overflow-hidden bg-slate-100">
       {/* 1. Top Floating Search & Sport Category Chips */}
       <div className="absolute top-4 left-0 right-0 z-20 px-3 sm:px-6 pointer-events-none">
         <div className="max-w-2xl mx-auto space-y-2 pointer-events-auto">
@@ -416,7 +416,7 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
       </div>
 
       {/* 3. Full-screen Map Container */}
-      <div ref={mapContainerRef} className="w-full h-full min-h-[450px] z-10" />
+      <div ref={mapContainerRef} className="w-full h-full min-h-screen z-10" />
 
       {/* 4. Bottom Court Preview Card (Appears when single court pin is clicked) */}
       {selectedCourt && (

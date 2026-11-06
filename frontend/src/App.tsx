@@ -450,11 +450,11 @@ export function App() {
       )}
 
       {/* Main Container with Horizontal Slide Animation */}
-      <div className="flex-1 w-full max-w-full overflow-x-hidden relative z-20">
+      <div className={`flex-1 w-full max-w-full overflow-x-hidden relative z-20 ${activeNavTab === 'map' ? 'h-screen h-[100dvh]' : ''}`}>
         {activeNavTab === 'map' ? (
           <main
             key="map"
-            className={`w-full max-w-full h-[calc(100vh-56px)] overflow-hidden ${
+            className={`w-full max-w-full h-screen h-[100dvh] overflow-hidden ${
               slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
             }`}
           >
