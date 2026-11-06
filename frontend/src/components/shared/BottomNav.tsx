@@ -18,23 +18,23 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       aria-label="Thanh điều hướng chính"
       className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] sm:bottom-5 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-16px)] sm:w-[calc(100%-32px)] max-w-3xl lg:max-w-4xl select-none"
     >
-      {/* Floating Pill Dock Container with signature green border and deep elevation shadow */}
-      <div className="relative bg-white rounded-3xl sm:rounded-[36px] border-2 border-[#168039] shadow-[0_20px_50px_rgba(15,23,42,0.25),0_6px_18px_rgba(15,23,42,0.12)] ring-1 ring-slate-900/10 px-2 sm:px-6 md:px-8 py-1.5 sm:py-2 transition-all">
+      {/* Floating Pill Dock Container with signature green background */}
+      <div className="relative bg-[#168039] rounded-3xl sm:rounded-[36px] border-2 border-[#136c30] shadow-[0_20px_50px_rgba(22,128,57,0.35),0_6px_18px_rgba(15,23,42,0.18)] px-2 sm:px-6 md:px-8 py-1.5 sm:py-2 transition-all">
         {/* Floating Center Action Button (Khám phá) nổi bật trên thanh dock */}
         <button
           type="button"
           onClick={() => onSelectTab('khampha')}
           className={`absolute -top-5 left-1/2 -translate-x-1/2 w-14 h-14 sm:w-15 sm:h-15 rounded-full flex items-center justify-center transition-all duration-300 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] z-20 cursor-pointer active:scale-95 group ${
             activeTab === 'khampha'
-              ? 'bg-[#168039] text-white ring-4 ring-white scale-110 -translate-y-1'
-              : 'bg-[#168039] hover:bg-[#136c30] text-white ring-4 ring-white'
+              ? 'bg-white text-[#168039] ring-4 ring-[#168039] scale-110 -translate-y-1 shadow-md'
+              : 'bg-[#1b7a42] hover:bg-[#136c30] text-white ring-4 ring-[#168039]'
           }`}
           title="Khám phá buổi chơi & Lịch giao lưu"
           aria-label="Khám phá"
         >
           <Newspaper
-            className={`w-7 h-7 text-white stroke-[2.2] transition-transform duration-300 ${
-              activeTab === 'khampha' ? 'scale-110' : 'scale-100'
+            className={`w-7 h-7 stroke-[2.2] transition-transform duration-300 ${
+              activeTab === 'khampha' ? 'text-[#168039] scale-110' : 'text-white scale-100'
             }`}
           />
         </button>
@@ -48,15 +48,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               onClick={() => onSelectTab('home')}
               className={`relative flex flex-col items-center justify-center py-1.5 px-0.5 sm:px-2 rounded-2xl transition-all duration-200 cursor-pointer group active:scale-95 w-full h-[90%] ${
                 activeTab === 'home'
-                  ? 'bg-slate-100 text-[#168039] font-bold border border-slate-200/90'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                  ? 'bg-white text-[#168039] font-bold shadow-xs'
+                  : 'text-emerald-100/90 hover:text-white hover:bg-white/10'
               }`}
             >
               <div
                 className={`p-0.5 rounded-lg transition-all duration-200 flex items-center justify-center ${
                   activeTab === 'home'
                     ? 'text-[#168039]'
-                    : 'text-slate-600 group-hover:text-slate-900'
+                    : 'text-emerald-100 group-hover:text-white'
                 }`}
               >
                 <Home
@@ -71,7 +71,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 className={`text-[11px] sm:text-[13px] leading-tight transition-all duration-200 tracking-tight mt-0.5 truncate max-w-full ${
                   activeTab === 'home'
                     ? 'font-black text-[#168039]'
-                    : 'font-semibold text-slate-600 group-hover:text-slate-900'
+                    : 'font-semibold text-emerald-100/90 group-hover:text-white'
                 }`}
               >
                 Trang chủ
@@ -84,15 +84,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               onClick={() => onSelectTab('map')}
               className={`relative flex flex-col items-center justify-center py-1.5 px-0.5 sm:px-2 rounded-2xl transition-all duration-200 cursor-pointer group active:scale-95 w-full h-[90%] ${
                 activeTab === 'map'
-                  ? 'bg-slate-100 text-[#168039] font-bold border border-slate-200/90'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                  ? 'bg-white text-[#168039] font-bold shadow-xs'
+                  : 'text-emerald-100/90 hover:text-white hover:bg-white/10'
               }`}
             >
               <div
                 className={`p-0.5 rounded-lg transition-all duration-200 flex items-center justify-center ${
                   activeTab === 'map'
                     ? 'text-[#168039]'
-                    : 'text-slate-600 group-hover:text-slate-900'
+                    : 'text-emerald-100 group-hover:text-white'
                 }`}
               >
                 <MapPin
@@ -107,7 +107,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 className={`text-[11px] sm:text-[13px] leading-tight transition-all duration-200 tracking-tight mt-0.5 truncate max-w-full ${
                   activeTab === 'map'
                     ? 'font-black text-[#168039]'
-                    : 'font-semibold text-slate-600 group-hover:text-slate-900'
+                    : 'font-semibold text-emerald-100/90 group-hover:text-white'
                 }`}
               >
                 Bản đồ
@@ -123,8 +123,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               <span
                 className={`text-[11px] sm:text-[13px] leading-tight transition-all duration-300 tracking-tight truncate max-w-full ${
                   activeTab === 'khampha'
-                    ? 'text-[#168039] font-black scale-105 -translate-y-0.5'
-                    : 'text-[#168039] font-bold group-hover:font-black'
+                    ? 'text-white font-black scale-105 -translate-y-0.5'
+                    : 'text-emerald-100/90 font-bold group-hover:text-white'
                 }`}
               >
                 Khám phá
@@ -137,15 +137,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               onClick={() => onSelectTab('trending')}
               className={`relative flex flex-col items-center justify-center py-1.5 px-0.5 sm:px-2 rounded-2xl transition-all duration-200 cursor-pointer group active:scale-95 w-full h-[90%] ${
                 activeTab === 'trending'
-                  ? 'bg-slate-100 text-[#168039] font-bold border border-slate-200/90'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                  ? 'bg-white text-[#168039] font-bold shadow-xs'
+                  : 'text-emerald-100/90 hover:text-white hover:bg-white/10'
               }`}
             >
               <div
                 className={`p-0.5 rounded-lg transition-all duration-200 flex items-center justify-center ${
                   activeTab === 'trending'
                     ? 'text-[#168039]'
-                    : 'text-slate-600 group-hover:text-slate-900'
+                    : 'text-emerald-100 group-hover:text-white'
                 }`}
               >
                 <Flame
@@ -160,7 +160,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 className={`text-[11px] sm:text-[13px] leading-tight transition-all duration-200 tracking-tight mt-0.5 truncate max-w-full ${
                   activeTab === 'trending'
                     ? 'font-black text-[#168039]'
-                    : 'font-semibold text-slate-600 group-hover:text-slate-900'
+                    : 'font-semibold text-emerald-100/90 group-hover:text-white'
                 }`}
               >
                 Nổi bật
@@ -173,15 +173,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               onClick={() => onSelectTab('account')}
               className={`relative flex flex-col items-center justify-center py-1.5 px-0.5 sm:px-2 rounded-2xl transition-all duration-200 cursor-pointer group active:scale-95 w-full h-[90%] ${
                 activeTab === 'account'
-                  ? 'bg-slate-100 text-[#168039] font-bold border border-slate-200/90'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                  ? 'bg-white text-[#168039] font-bold shadow-xs'
+                  : 'text-emerald-100/90 hover:text-white hover:bg-white/10'
               }`}
             >
               <div
                 className={`p-0.5 rounded-lg transition-all duration-200 flex items-center justify-center ${
                   activeTab === 'account'
                     ? 'text-[#168039]'
-                    : 'text-slate-600 group-hover:text-slate-900'
+                    : 'text-emerald-100 group-hover:text-white'
                 }`}
               >
                 <UserIcon
@@ -196,7 +196,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 className={`text-[11px] sm:text-[13px] leading-tight transition-all duration-200 tracking-tight mt-0.5 truncate max-w-full ${
                   activeTab === 'account'
                     ? 'font-black text-[#168039]'
-                    : 'font-semibold text-slate-600 group-hover:text-slate-900'
+                    : 'font-semibold text-emerald-100/90 group-hover:text-white'
                 }`}
               >
                 Tài khoản
