@@ -58,7 +58,7 @@ public class BookingService {
     }
 
     @Transactional
-    public BookingResponse createHeldBooking(BookingCreateRequest request) {
+    public BookingResponse createHeldBooking(BookingCreateRequest request, Long customerId) {
         if (!request.startTime().isBefore(request.endTime())) {
             throw new BadRequestException("Giờ bắt đầu phải trước giờ kết thúc!");
         }
@@ -73,7 +73,6 @@ public class BookingService {
         Facility facility = facilityRepository.findById(court.getFacilityId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cụm sân"));
 
-        Long customerId = request.customerId() != null ? request.customerId() : 1L;
         if (!userRepository.existsById(customerId)) {
             throw new ResourceNotFoundException("Không tìm thấy tài khoản khách hàng với id: " + customerId);
         }
@@ -141,9 +140,12 @@ public class BookingService {
     }
 
     @Transactional(readOnly = true)
-    public BookingResponse getBookingById(Long id) {
+    public BookingResponse getBookingById(Long id, Long customerId) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt sân với id: " + id));
+        if (!booking.getCustomerId().equals(customerId)) {
+            throw new ResourceNotFoundException("Không tìm thấy đơn đặt sân");
+        }
         return toResponseWithLookups(booking);
     }
 
@@ -152,7 +154,7 @@ public class BookingService {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt sân với id: " + id));
 
-        if (customerId != null && !booking.getCustomerId().equals(customerId)) {
+        if (customerId == null || !booking.getCustomerId().equals(customerId)) {
             throw new BadRequestException("Bạn không có quyền hủy đơn đặt sân này!");
         }
 

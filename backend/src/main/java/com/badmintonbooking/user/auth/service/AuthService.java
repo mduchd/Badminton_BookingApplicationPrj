@@ -57,6 +57,9 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setFullName(request.fullName().trim());
         user.setPhone(request.phone() != null ? request.phone().trim() : null);
+        if (request.role() == com.badmintonbooking.user.model.UserRole.SYSTEM_ADMIN) {
+            throw new IllegalArgumentException("Không thể tự đăng ký quyền quản trị");
+        }
         user.setRole(request.role() != null ? request.role().name() : "CUSTOMER");
         user.setProvider("LOCAL");
         user.setStatus("ACTIVE");

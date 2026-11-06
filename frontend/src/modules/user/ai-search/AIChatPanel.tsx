@@ -21,8 +21,9 @@ import type { BadmintonCourtItem } from '../mockData'
 import { formatPrice } from '../../../lib/utils'
 import { authStorage } from '../auth/authApi'
 import { parseUserQuery } from './aiKnowledgeAndParser'
+import { API_BASE_URL as API_ROOT_URL } from '../../../lib/apiConfig'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1'
+const API_BASE_URL = `${API_ROOT_URL}/v1`
 
 interface AIChatPanelProps {
   isOpen: boolean

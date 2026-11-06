@@ -1,13 +1,19 @@
 import axios from 'axios';
 import type { ApiResponse, BookingCreateRequest, BookingResponse, CourtAvailability } from '../types';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+import { API_BASE_URL } from '../../../lib/apiConfig';
+import { authStorage } from '../../user/auth/authApi';
 
 const client = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+client.interceptors.request.use((config) => {
+  const token = authStorage.getToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
 });
 
 export const bookingApi = {

@@ -1,6 +1,7 @@
 import type { User, UserRole } from '../../types/user'
+import { API_BASE_URL } from '../../../lib/apiConfig'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1'
+const AUTH_API_URL = `${API_BASE_URL}/v1`
 const TOKEN_KEY = 'smashcourt_auth_token'
 
 export interface ApiResponse<T> {
@@ -41,7 +42,7 @@ export const authStorage = {
 
 export const authApi = {
   async login(payload: { email: string; password: string }): Promise<AuthResponseData> {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await fetch(`${AUTH_API_URL}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -67,7 +68,7 @@ export const authApi = {
     phone?: string
     role?: UserRole
   }): Promise<AuthResponseData> {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    const response = await fetch(`${AUTH_API_URL}/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -90,7 +91,7 @@ export const authApi = {
     const token = authStorage.getToken()
     if (!token) return null
 
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+    const response = await fetch(`${AUTH_API_URL}/auth/me`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
