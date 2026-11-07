@@ -219,9 +219,7 @@ export const CheckoutView: React.FC = () => {
                 {/* QR Image */}
                 <div className="w-44 h-44 rounded-xl bg-white p-2 border border-slate-200 flex items-center justify-center flex-shrink-0">
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
-                      `2|99|0988123456|SMASHCOURT|${booking.totalAmount}|0|0|${booking.bookingCode}`
-                    )}`}
+                    src={`https://img.vietqr.io/image/970418-8840185295-compact2.png?amount=${booking.totalAmount}&addInfo=${encodeURIComponent(booking.bookingCode)}&accountName=PHAM%20VIET%20TUAN`}
                     alt="VietQR payOS"
                     className="w-full h-full object-contain"
                   />
@@ -231,15 +229,19 @@ export const CheckoutView: React.FC = () => {
                 <div className="space-y-2 text-xs w-full">
                   <div>
                     <span className="text-slate-700 font-semibold block">Ngân hàng thụ hưởng:</span>
-                    <strong className="text-slate-900 text-sm">MBBank (Ngân hàng Quân Đội)</strong>
+                    <strong className="text-slate-900 text-sm">BIDV (Ngân hàng Đầu tư & Phát triển Việt Nam)</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-700 font-semibold block">Chủ tài khoản:</span>
+                    <strong className="text-slate-900 text-sm">PHAM VIET TUAN</strong>
                   </div>
                   <div>
                     <span className="text-slate-700 font-semibold block">Số tài khoản:</span>
                     <div className="flex items-center gap-2">
-                      <strong className="font-mono text-sm text-slate-900">0388998877</strong>
+                      <strong className="font-mono text-sm text-slate-900">8840185295</strong>
                       <button
                         type="button"
-                        onClick={() => handleCopy('0388998877', 'Số tài khoản')}
+                        onClick={() => handleCopy('8840185295', 'Số tài khoản')}
                         className="p-1 text-slate-600 hover:text-emerald-700 cursor-pointer"
                         title="Sao chép"
                       >
