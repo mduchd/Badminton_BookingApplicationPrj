@@ -292,6 +292,17 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                       {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   </div>
+                  {checkoutData?.checkoutUrl && checkoutData.checkoutUrl.startsWith('http') && (
+                    <a
+                      href={checkoutData.checkoutUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1b7a42] hover:text-[#156335] hover:underline cursor-pointer pt-1"
+                    >
+                      <span>Mở trang thanh toán cổng payOS</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
                 </div>
               ) : (
                 <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-200 text-xs text-slate-700 space-y-2">

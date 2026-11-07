@@ -30,3 +30,7 @@ server:
 
 booking:
   hold-duration-minutes: 10
+payos:
+  client-id: 7c48e6a8-78f3-41b8-b462-fdfebe37c142
+  api-key: f6399d82-29c9-41b5-84d5-bb4a4bf4adad
+  checksum-key: c0fc66b5c6e2fb261509784a4171f823ca01c4b196fff892832e3a4284ab130d

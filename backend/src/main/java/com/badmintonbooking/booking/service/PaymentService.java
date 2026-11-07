@@ -116,15 +116,46 @@ public class PaymentService {
         booking.setUpdatedAt(now);
         bookingRepository.save(booking);
 
-        // Sinh VietQR URL chuẩn cho payOS hoặc Mock test
-        String qrUrl = payOsHelper.generateVietQrUrl(
-                "970422", // Mã BIN ngân hàng Quân Đội (MB Bank)
-                "0987654321",
-                booking.getTotalAmount(),
-                "Thanh toan san SmashCourt #" + booking.getId()
-        );
-
         String checkoutUrl = "/booking/checkout/" + booking.getId();
+        String qrUrl = null;
+
+        // Nếu người dùng chọn payOS và đã cấu hình key -> Gọi API chính thức của payOS v2
+        if (provider == PaymentProvider.PAYOS && payOsClientId != null && !payOsClientId.isBlank()) {
+            String returnUrl = request.returnUrl() != null && !request.returnUrl().isBlank()
+                    ? request.returnUrl()
+                    : "http://localhost:5173/payment/success";
+            String cancelUrl = request.cancelUrl() != null && !request.cancelUrl().isBlank()
+                    ? request.cancelUrl()
+                    : "http://localhost:5173/payment/cancel";
+
+            String desc = "SmashCourt #" + booking.getId();
+            PayOsHelper.PayOsPaymentLinkResult payOsRes = payOsHelper.createPaymentLink(
+                    payOsClientId, payOsApiKey, payOsChecksumKey,
+                    orderCode, booking.getTotalAmount().longValue(), desc, returnUrl, cancelUrl
+            );
+
+            if (payOsRes.success()) {
+                checkoutUrl = payOsRes.checkoutUrl();
+                qrUrl = payOsRes.qrCode();
+                if (payOsRes.paymentLinkId() != null) {
+                    payment.setTransactionRef(payOsRes.paymentLinkId());
+                    paymentRepository.save(payment);
+                }
+                log.info("Khởi tạo live payOS link thành công: checkoutUrl={}, qrCode={}", checkoutUrl, qrUrl);
+            } else {
+                log.warn("Không thể tạo link live payOS ({}), sử dụng VietQR fallback", payOsRes.message());
+            }
+        }
+
+        // Fallback VietQR nếu payOS offline hoặc là mock
+        if (qrUrl == null) {
+            qrUrl = payOsHelper.generateVietQrUrl(
+                    "970422", // Mã BIN ngân hàng Quân Đội (MB Bank)
+                    "0987654321",
+                    booking.getTotalAmount(),
+                    "Thanh toan san SmashCourt #" + booking.getId()
+            );
+        }
 
         return new CheckoutResponse(
                 booking.getId(),
