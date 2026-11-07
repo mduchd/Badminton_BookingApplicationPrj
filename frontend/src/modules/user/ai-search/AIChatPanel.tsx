@@ -92,6 +92,11 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const animFrameRef = useRef<number | null>(null)
   const finalTranscriptRef = useRef<string>('')
+  const intentionalStopRef = useRef<boolean>(false)
+  const restartCountRef = useRef<number>(0)
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const SILENCE_TIMEOUT_MS = 8000
+  const MAX_AUTO_RESTARTS = 10
 
   const quickPrompts = [
     'Tìm sân Cầu Giấy tối nay sau 19h',
@@ -108,6 +113,8 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
   // Clean up all audio streams and speech recognition on unmount
   useEffect(() => {
     return () => {
+      intentionalStopRef.current = true
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
       if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach((t) => t.stop())
       if (audioCtxRef.current) {
@@ -119,7 +126,28 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
     }
   }, [])
 
+  // Reset silence timer mỗi khi có kết quả mới
+  const resetSilenceTimer = () => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
+    silenceTimerRef.current = setTimeout(() => {
+      const rawCombined = (finalTranscriptRef.current).trim()
+      if (rawCombined) {
+        handleStopVoice(true)
+      } else {
+        handleStopVoice(false)
+      }
+    }, SILENCE_TIMEOUT_MS)
+  }
+
   const handleStopVoice = (shouldSend = false) => {
+    intentionalStopRef.current = true
+    restartCountRef.current = 0
+
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current)
+      silenceTimerRef.current = null
+    }
+
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current)
       animFrameRef.current = null
@@ -150,27 +178,30 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
   const handleStartVoice = async () => {
     try {
-      // 1. Get crystal-clear microphone audio stream with noise suppression & gain control
+      intentionalStopRef.current = false
+      restartCountRef.current = 0
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
           channelCount: 1,
-          sampleRate: 48000,
+          sampleRate: { ideal: 16000, max: 48000 },
         },
       })
       mediaStreamRef.current = stream
 
-      // 2. Setup AudioContext and AnalyserNode for live Soundwave Visualizer
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
       if (AudioCtx) {
-        const audioCtx = new AudioCtx()
+        const audioCtx = new AudioCtx({ sampleRate: 16000 })
         audioCtxRef.current = audioCtx
         const source = audioCtx.createMediaStreamSource(stream)
         const analyser = audioCtx.createAnalyser()
-        analyser.fftSize = 64
-        analyser.smoothingTimeConstant = 0.8
+        analyser.fftSize = 128
+        analyser.smoothingTimeConstant = 0.75
+        analyser.minDecibels = -90
+        analyser.maxDecibels = -10
         source.connect(analyser)
         analyserRef.current = analyser
 
@@ -180,8 +211,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
           if (!analyserRef.current) return
           analyserRef.current.getByteFrequencyData(dataArray)
 
-          // Sample 7 frequency levels for the 7 soundwave bars
-          const sampleIndices = [2, 4, 7, 10, 14, 18, 22]
+          const sampleIndices = [2, 5, 9, 14, 20, 28, 36]
           const levels = sampleIndices.map((idx) => {
             const raw = dataArray[idx] || 0
             return Math.max(6, Math.min(32, Math.round((raw / 255) * 32)))
@@ -195,7 +225,6 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
       setIsListening(true)
       setLiveTranscript('')
 
-      // 3. Initialize Web Speech Recognition with immediate real-time interim streaming
       finalTranscriptRef.current = ''
       const SpeechRecognition =
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -205,9 +234,12 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
         recognition.lang = 'vi-VN'
         recognition.continuous = true
         recognition.interimResults = true
-        recognition.maxAlternatives = 3
+        recognition.maxAlternatives = 5
 
         recognition.onresult = (event: any) => {
+          resetSilenceTimer()
+          restartCountRef.current = 0
+
           let interim = ''
           let currentFinal = finalTranscriptRef.current
 
@@ -240,19 +272,41 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
           }
         }
 
+        recognition.onend = () => {
+          if (!intentionalStopRef.current && restartCountRef.current < MAX_AUTO_RESTARTS) {
+            restartCountRef.current += 1
+            try {
+              recognition.start()
+            } catch {
+              handleStopVoice(false)
+            }
+          }
+        }
+
         recognition.onerror = (event: any) => {
-          console.warn('SpeechRecognition error:', event.error)
-          if (event.error === 'not-allowed') {
+          const errType = event.error
+          console.warn('SpeechRecognition error:', errType)
+
+          if (errType === 'not-allowed' || errType === 'service-not-allowed') {
             toast.error('Vui lòng cấp quyền Microphone trên trình duyệt để nói.')
+            handleStopVoice(false)
+          } else if (errType === 'audio-capture') {
+            toast.error('Không thể thu âm. Kiểm tra microphone của bạn.')
+            handleStopVoice(false)
+          } else if (errType === 'network') {
+            toast.error('Lỗi kết nối mạng. Vui lòng kiểm tra internet.')
             handleStopVoice(false)
           }
         }
 
         recognition.start()
         recognitionRef.current = recognition
-        toast.info('Đang lắng nghe trực tiếp... Nói để chữ xuất hiện ngay!')
+        resetSilenceTimer()
+
+        toast.info('Đang lắng nghe... Nói tự nhiên, chữ sẽ xuất hiện ngay!')
       } else {
-        toast.info('Đang thu âm qua dải sóng âm thanh... Hãy nói yêu cầu của bạn!')
+        toast.info('Trình duyệt không hỗ trợ nhận diện giọng nói. Vui lòng dùng Chrome hoặc Edge.')
+        handleStopVoice(false)
       }
     } catch (err) {
       console.warn('Microphone access error:', err)
