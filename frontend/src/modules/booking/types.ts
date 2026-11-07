@@ -53,6 +53,25 @@ export interface BookingResponse {
   holdExpiresAt?: string;
   note?: string;
   createdAt: string;
+  googleCalendarUrl?: string;
+}
+
+export interface CheckoutRequest {
+  paymentMethod: 'PAYOS' | 'MOCK';
+  returnUrl?: string;
+  cancelUrl?: string;
+}
+
+export interface CheckoutResponse {
+  bookingId: number;
+  orderCode: number;
+  amount: number;
+  paymentMethod: string;
+  checkoutUrl: string;
+  qrCode?: string;
+  status: string;
+  holdExpiresAt?: string;
+  message: string;
 }
 
 export interface ApiResponse<T> {

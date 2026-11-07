@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from 'react';
+import { Calendar, ExternalLink } from 'lucide-react';
 import type { BookingResponse, BookingStatus } from '../types';
 
 interface MyBookingsListProps {
   bookings: BookingResponse[];
   onCancelBooking: (id: number) => void;
+  onPayBooking?: (booking: BookingResponse) => void;
   isLoading: boolean;
 }
 
 export const MyBookingsList: React.FC<MyBookingsListProps> = ({
   bookings,
   onCancelBooking,
+  onPayBooking,
   isLoading,
 }) => {
   const [, setTick] = useState(0);
@@ -45,7 +48,7 @@ export const MyBookingsList: React.FC<MyBookingsListProps> = ({
       case 'HELD': {
         const remaining = getRemainingHoldTime(expiresAt);
         return (
-          <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-50 text-amber-900 border border-amber-300 inline-flex items-center gap-1.5">
+          <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-50 text-amber-800 border border-amber-300 inline-flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-amber-500"></span>
             Đang giữ ({remaining})
           </span>
@@ -53,13 +56,13 @@ export const MyBookingsList: React.FC<MyBookingsListProps> = ({
       }
       case 'PENDING_PAYMENT':
         return (
-          <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-sky-50 text-sky-900 border border-sky-300">
-            Chờ thanh toán payOS
+          <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-sky-50 text-sky-800 border border-sky-300">
+            Chờ thanh toán
           </span>
         );
       case 'CONFIRMED':
         return (
-          <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-300">
+          <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300">
             Đã thanh toán / Xác nhận
           </span>
         );
@@ -71,13 +74,13 @@ export const MyBookingsList: React.FC<MyBookingsListProps> = ({
         );
       case 'CANCELLED':
         return (
-          <span className="px-2.5 py-1 text-xs font-medium rounded-lg bg-rose-50 text-rose-900 border border-rose-200">
+          <span className="px-2.5 py-1 text-xs font-medium rounded-lg bg-rose-50 text-rose-800 border border-rose-200">
             Đã hủy
           </span>
         );
       case 'EXPIRED':
         return (
-          <span className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-100 text-slate-700">
+          <span className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-100 text-slate-600">
             Hết hạn giữ chỗ
           </span>
         );
@@ -91,19 +94,19 @@ export const MyBookingsList: React.FC<MyBookingsListProps> = ({
       <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
         <div>
           <h2 className="text-base font-bold text-slate-900">Danh sách đơn đặt sân của bạn</h2>
-          <p className="text-xs text-slate-600 mt-0.5">Theo dõi thời hạn giữ chỗ và trạng thái thanh toán đơn</p>
+          <p className="text-xs text-slate-600 mt-0.5 font-medium">Theo dõi thời hạn giữ chỗ và trạng thái thanh toán đơn</p>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="text-center py-8 text-slate-600 text-xs">Đang tải lịch sử đơn...</div>
+        <div className="text-center py-8 text-slate-500 text-xs">Đang tải lịch sử đơn...</div>
       ) : bookings.length === 0 ? (
-        <div className="text-center py-8 text-slate-600 text-xs font-medium">Bạn chưa có đơn đặt sân nào.</div>
+        <div className="text-center py-8 text-slate-500 text-xs font-medium">Bạn chưa có đơn đặt sân nào.</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-slate-200 text-slate-700 bg-slate-50/70">
+              <tr className="border-b border-slate-200 text-slate-500 bg-slate-50/70">
                 <th className="py-2.5 px-3 font-semibold">Mã đơn</th>
                 <th className="py-2.5 px-3 font-semibold">Sân đấu</th>
                 <th className="py-2.5 px-3 font-semibold">Ngày chơi</th>
@@ -129,13 +132,37 @@ export const MyBookingsList: React.FC<MyBookingsListProps> = ({
                   <td className="py-3 px-3">{renderStatusBadge(b.status, b.holdExpiresAt)}</td>
                   <td className="py-3 px-3 text-right">
                     {(b.status === 'HELD' || b.status === 'PENDING_PAYMENT') && (
-                      <button
-                        type="button"
-                        onClick={() => onCancelBooking(b.id)}
-                        className="px-2.5 py-1 text-[11px] font-bold text-rose-700 hover:bg-rose-50 rounded-lg border border-rose-200 transition-colors cursor-pointer"
+                      <div className="flex items-center justify-end gap-1.5">
+                        {onPayBooking && (
+                          <button
+                            type="button"
+                            onClick={() => onPayBooking(b)}
+                            className="px-2.5 py-1 text-[11px] font-bold text-white bg-[#1b7a42] hover:bg-[#156335] rounded-lg transition-colors cursor-pointer"
+                          >
+                            Thanh toán
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => onCancelBooking(b.id)}
+                          className="px-2.5 py-1 text-[11px] font-bold text-rose-700 hover:bg-rose-50 rounded-lg border border-rose-200 transition-colors cursor-pointer"
+                        >
+                          Hủy
+                        </button>
+                      </div>
+                    )}
+                    {b.status === 'CONFIRMED' && b.googleCalendarUrl && (
+                      <a
+                        href={b.googleCalendarUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-[#1b7a42] bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-300 transition-colors cursor-pointer"
+                        title="Thêm buổi chơi vào Google Calendar"
                       >
-                        Hủy giữ chỗ
-                      </button>
+                        <Calendar className="w-3.5 h-3.5 text-[#1b7a42]" />
+                        <span>Lịch Google</span>
+                        <ExternalLink className="w-3 h-3 text-[#1b7a42]" />
+                      </a>
                     )}
                   </td>
                 </tr>

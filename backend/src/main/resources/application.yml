@@ -25,6 +25,12 @@ spring:
 
 server:
   port: ${PORT:8080}
+  tomcat:
+    basedir: ${TOMCAT_BASEDIR:target/tomcat}
 
 booking:
   hold-duration-minutes: 10
+payos:
+  client-id: ${PAYOS_CLIENT_ID:}
+  api-key: ${PAYOS_API_KEY:}
+  checksum-key: ${PAYOS_CHECKSUM_KEY:}

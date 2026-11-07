@@ -6,6 +6,7 @@ import com.badmintonbooking.booking.enums.ActiveStatus;
 import com.badmintonbooking.booking.enums.BookingStatus;
 import com.badmintonbooking.booking.repository.BookingRepository;
 import com.badmintonbooking.booking.repository.CourtOccupancyRepository;
+import com.badmintonbooking.booking.websocket.SlotEventPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,11 +24,14 @@ public class BookingExpirationScheduler {
 
     private final BookingRepository bookingRepository;
     private final CourtOccupancyRepository occupancyRepository;
+    private final SlotEventPublisher slotEventPublisher;
 
     public BookingExpirationScheduler(BookingRepository bookingRepository,
-                                      CourtOccupancyRepository occupancyRepository) {
+                                      CourtOccupancyRepository occupancyRepository,
+                                      SlotEventPublisher slotEventPublisher) {
         this.bookingRepository = bookingRepository;
         this.occupancyRepository = occupancyRepository;
+        this.slotEventPublisher = slotEventPublisher;
     }
 
     @Scheduled(fixedDelay = 30000) // Quét mỗi 30 giây
@@ -55,6 +59,17 @@ public class BookingExpirationScheduler {
                 occ.setActiveStatus(ActiveStatus.RELEASED);
                 occupancyRepository.save(occ);
             }
+
+            // Phát sự kiện WebSocket STOMP nhả slot
+            slotEventPublisher.publishSlotChange(
+                    booking.getFacilityId(),
+                    booking.getCourtId(),
+                    booking.getBookingDate(),
+                    booking.getStartTime(),
+                    booking.getEndTime(),
+                    "RELEASED",
+                    "Khung giờ đã được giải phóng do hết hạn giữ chỗ"
+            );
 
             log.info("Released expired booking hold: id={}, court={}", booking.getId(), booking.getCourtId());
         }

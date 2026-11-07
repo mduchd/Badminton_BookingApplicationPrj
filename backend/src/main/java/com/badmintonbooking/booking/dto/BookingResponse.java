@@ -21,5 +21,6 @@ public record BookingResponse(
     BookingStatus status,
     OffsetDateTime holdExpiresAt,
     String note,
-    OffsetDateTime createdAt
+    OffsetDateTime createdAt,
+    String googleCalendarUrl
 ) {}
