@@ -21,50 +21,11 @@ interface AdminUser {
   joinedDate: string
 }
 
-const initialAdminUsers: AdminUser[] = [
-  {
-    id: 'usr_001',
-    fullName: 'Nguyễn Văn Đức',
-    email: 'ducnguyen.dev@gmail.com',
-    role: 'SYSTEM_ADMIN',
-    phone: '0988 123 456',
-    status: 'active',
-    joinedDate: '01/10/2026',
-  },
-  {
-    id: 'usr_owner_1',
-    fullName: 'Trần Văn Long (Chủ sân)',
-    email: 'phuclong.badminton@gmail.com',
-    role: 'COURT_OWNER',
-    phone: '0912 345 678',
-    status: 'active',
-    joinedDate: '05/10/2026',
-  },
-  {
-    id: 'usr_003',
-    fullName: 'Hoàng Minh Quân',
-    email: 'quan.hoang@gmail.com',
-    role: 'CUSTOMER',
-    phone: '0977 654 321',
-    status: 'active',
-    joinedDate: '12/10/2026',
-  },
-  {
-    id: 'usr_004',
-    fullName: 'Lê Thu Trang',
-    email: 'thutrang.le@gmail.com',
-    role: 'CUSTOMER',
-    phone: '0933 222 111',
-    status: 'locked',
-    joinedDate: '15/10/2026',
-  },
-]
-
 export const AdminPortalView: React.FC = () => {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'facilities' | 'users'>('facilities')
   const [facilities, setFacilities] = useState<Facility[]>(appStore.getFacilities())
-  const [users, setUsers] = useState<AdminUser[]>(initialAdminUsers)
+  const [users, setUsers] = useState<AdminUser[]>([])
 
   // Moderation action
   const toggleApproveFacility = (id: string) => {

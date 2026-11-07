@@ -31,6 +31,7 @@ export interface CourtDetailSidebarProps {
   onClose: () => void
   onBook?: (court: BadmintonCourtItem) => void
   onOpenAIChat?: () => void
+  onOpenOwnerChat?: (court: BadmintonCourtItem) => void
   onToggleFavorite?: (courtId: string) => void
 }
 
@@ -56,6 +57,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
   onClose,
   onBook,
   onOpenAIChat,
+  onOpenOwnerChat,
   onToggleFavorite,
 }) => {
   const navigate = useNavigate()
@@ -134,7 +136,9 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
   }
 
   const handleStartChat = () => {
-    if (onOpenAIChat) {
+    if (onOpenOwnerChat && court) {
+      onOpenOwnerChat(court)
+    } else if (onOpenAIChat) {
       onClose()
       onOpenAIChat()
     } else {
@@ -580,43 +584,12 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                         ))}
                       </div>
                       <div className="text-xs text-slate-600 font-medium mt-0.5">
-                        Dựa trên {court.reviewCount || 100} lượt đánh giá thực tế
+                        Dựa trên {court.reviewCount || 100} lượt đánh giá
                       </div>
                     </div>
                   </div>
 
-                  {/* List of sample verified reviews */}
-                  <div className="space-y-2.5">
-                    <div className="p-3 border border-slate-200 rounded-xl space-y-1.5 hover:border-slate-300 hover:-translate-y-0.5 transition-all duration-200 fade-in-item" style={{ '--stagger-delay': '50ms' } as React.CSSProperties}>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-slate-900">Anh Tuấn (Cầu Lông Văn Quán)</span>
-                        <span className="text-slate-500 font-medium">2 ngày trước</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className="w-3 h-3 fill-[#e5a92c] text-[#e5a92c]" />
-                        ))}
-                      </div>
-                      <p className="text-xs text-slate-700 leading-relaxed font-normal">
-                        Sân thảm mới, độ bám rất tốt, ánh sáng vừa vặn không bị lóa. Chủ sân vui tính và hỗ trợ nhiệt tình!
-                      </p>
-                    </div>
-
-                    <div className="p-3 border border-slate-200 rounded-xl space-y-1.5 hover:border-slate-300 hover:-translate-y-0.5 transition-all duration-200 fade-in-item" style={{ '--stagger-delay': '100ms' } as React.CSSProperties}>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-slate-900">Minh Trang</span>
-                        <span className="text-slate-500 font-medium">1 tuần trước</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className="w-3 h-3 fill-[#e5a92c] text-[#e5a92c]" />
-                        ))}
-                      </div>
-                      <p className="text-xs text-slate-700 leading-relaxed font-normal">
-                        Bãi xe rộng để được ô tô thoải mái. Phòng tắm sạch sẽ, nước nóng lạnh hoạt động tốt. Rất đáng tiền!
-                      </p>
-                    </div>
-                  </div>
+                  <p className="text-xs text-slate-500">Chưa có nội dung đánh giá.</p>
                 </div>
               )}
             </div>

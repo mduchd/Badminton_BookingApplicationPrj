@@ -69,16 +69,5 @@ VALUES
         'LOCAL',
         'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
         'ACTIVE'
-    ),
-    (
-        'c0000000-0000-0000-0000-000000000003',
-        'minhtri.dev@gmail.com',
-        '$2a$10$wE39yTszrVdhyvT6qB/uP.vI3fEhyc7O9x70qN7gT7lGkQz24yL1y',
-        'Nguyễn Minh Trí',
-        '0988123456',
-        'CUSTOMER',
-        'LOCAL',
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        'ACTIVE'
     )
 ON CONFLICT (email) DO NOTHING;

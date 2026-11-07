@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { MessageCircle } from 'lucide-react'
+import { toast } from 'sonner'
 import type { User, NotificationItem } from '../../modules/types/user'
 import { NotificationBell } from '../../modules/user/notification/NotificationBell'
 import { AppLogo } from './AppLogo'
@@ -9,13 +10,12 @@ interface HeaderProps {
   notifications: NotificationItem[]
   onOpenAuth: (initialTab?: 'login' | 'register') => void
   onOpenProfile: () => void
-  onOpenAIChat?: () => void
+  onOpenOwnerChat?: () => void
   onMarkAllNotificationsRead: () => void
   onMarkNotificationRead: (id: string) => void
   onSimulateNewNotification: () => void
   onNavigateHome?: () => void
   isHome?: boolean
-  hideAIChat?: boolean
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -23,13 +23,12 @@ export const Header: React.FC<HeaderProps> = ({
   notifications,
   onOpenAuth,
   onOpenProfile,
-  onOpenAIChat,
+  onOpenOwnerChat,
   onMarkAllNotificationsRead,
   onMarkNotificationRead,
   onSimulateNewNotification,
   onNavigateHome,
   isHome = false,
-  hideAIChat = false,
 }) => {
   const [isScrolled, setIsScrolled] = useState(false)
 
@@ -250,19 +249,18 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Right side: AI Chat, Notifications, and User Profile / Auth buttons */}
+        {/* Right side: Chat with Owner, Notifications, and User Profile / Auth buttons */}
         <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-          {/* AI Chat button (Ẩn trên các trang quản trị Chủ sân & Admin) */}
-          {!hideAIChat && onOpenAIChat && (
-            <button
-              type="button"
-              onClick={onOpenAIChat}
-              className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/15 hover:bg-white/25 active:scale-90 text-white flex items-center justify-center transition-all duration-200 cursor-pointer"
-              title="Chat trợ lý AI"
-            >
-              <MessageCircle className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white" />
-            </button>
-          )}
+          {/* Chat với chủ sân */}
+          <button
+            type="button"
+            onClick={onOpenOwnerChat || (() => toast.info('Hộp thư tin nhắn với chủ sân & ban quản lý cụm sân'))}
+            className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/15 hover:bg-white/25 active:scale-90 text-white flex items-center justify-center transition-all duration-200 cursor-pointer"
+            title="Chat & Nhắn tin với chủ sân"
+            aria-label="Chat với chủ sân"
+          >
+            <MessageCircle className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white" />
+          </button>
 
           {/* Standard Notification Bell */}
           <NotificationBell

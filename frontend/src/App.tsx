@@ -12,10 +12,13 @@ import { Activity, Flame, CalendarCheck } from 'lucide-react'
 import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { Header } from './components/shared/Header'
+import { GlobalLoadingScreen } from './components/shared/GlobalLoadingScreen'
+import { TopLoadingBar } from './components/shared/TopLoadingBar'
 import { CourtSearchBar } from './components/shared/CourtSearchBar'
 import { CourtCardItem } from './modules/user/ai-search/CourtCardItem'
 import { SmartFilterModal } from './modules/user/ai-search/SmartFilterModal'
 import { AIChatPanel } from './modules/user/ai-search/AIChatPanel'
+import { CourtContactModal } from './components/shared/CourtContactModal'
 import { BookingConfirmModal } from './modules/user/ai-search/BookingConfirmModal'
 import { AuthModal } from './modules/user/auth/AuthModal'
 import { authApi, authStorage } from './modules/user/auth/authApi'
@@ -52,7 +55,6 @@ import { bookingApi } from './modules/booking/services/bookingApi'
 import type { BookingResponse } from './modules/booking/types'
 
 import {
-  mockNotifications,
   mockBadmintonCourts,
   defaultCriteria,
   type BadmintonCourtItem,
@@ -101,7 +103,7 @@ export function MainApp() {
 
   // State
   const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [notifications, setNotifications] = useState<NotificationItem[]>(mockNotifications)
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [criteria, setCriteria] = useState<SearchCriteria>(defaultCriteria)
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -147,6 +149,8 @@ export function MainApp() {
   const [bookingCourt, setBookingCourt] = useState<CourtResult | null>(null)
   const [selectedCourtForSidebar, setSelectedCourtForSidebar] = useState<BadmintonCourtItem | null>(null)
   const [isCourtSidebarOpen, setIsCourtSidebarOpen] = useState(false)
+  const [isCourtContactOpen, setIsCourtContactOpen] = useState(false)
+  const [contactTargetCourt, setContactTargetCourt] = useState<BadmintonCourtItem | null>(null)
 
   const handleOpenCourtSidebar = (court: BadmintonCourtItem) => {
     setSelectedCourtForSidebar(court)
@@ -477,6 +481,9 @@ export function MainApp() {
           : 'pb-20'
       }`}
     >
+      {/* Top progress bar khi chuyển tab hoặc fetch API */}
+      <TopLoadingBar />
+
       {/* Toast notifications */}
       <Toaster richColors position="top-right" closeButton />
 
@@ -491,12 +498,14 @@ export function MainApp() {
             setIsAuthOpen(true)
           }}
           onOpenProfile={() => navigate(ROUTES.ACCOUNT)}
-          onOpenAIChat={() => setIsAIChatOpen(true)}
+          onOpenOwnerChat={() => {
+            setContactTargetCourt(null)
+            setIsCourtContactOpen(true)
+          }}
           onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
           onMarkNotificationRead={handleMarkNotificationRead}
           onSimulateNewNotification={handleSimulateNewNotification}
           onNavigateHome={() => navigate(ROUTES.HOME)}
-          hideAIChat={isManagementRoute}
         />
       )}
 
@@ -685,6 +694,8 @@ export function MainApp() {
             setAuthInitialTab('login')
             setIsAuthOpen(true)
           }}
+          onOpenAIChat={() => setIsAIChatOpen(prev => !prev)}
+          isAIChatOpen={isAIChatOpen}
           isLoggedIn={!!currentUser}
         />
       )}
@@ -737,9 +748,21 @@ export function MainApp() {
         onClose={handleCloseCourtSidebar}
         onBook={handleOpenBooking}
         onOpenAIChat={() => setIsAIChatOpen(true)}
+        onOpenOwnerChat={(court) => {
+          setContactTargetCourt(court)
+          setIsCourtContactOpen(true)
+        }}
         onToggleFavorite={(_courtId) => {
           // Sync favorite state if desired
         }}
+      />
+
+      {/* Court Contact Modal (Nhắn tin với chủ sân qua Zalo, Messenger, Hotline) */}
+      <CourtContactModal
+        isOpen={isCourtContactOpen}
+        onClose={() => setIsCourtContactOpen(false)}
+        court={contactTargetCourt}
+        allCourts={mockBadmintonCourts}
       />
 
       {/* AI Court Finder Chat Panel (Spring AI Orchestrator) - Tuyệt đối không xuất hiện trên Chủ sân & Admin */}
@@ -798,6 +821,7 @@ export function MainApp() {
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <GlobalLoadingScreen minDuration={900} />
       <MainApp />
     </QueryClientProvider>
   )

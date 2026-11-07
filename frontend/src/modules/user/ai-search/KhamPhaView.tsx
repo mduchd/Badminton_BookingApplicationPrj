@@ -78,23 +78,16 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false)
 
   // Date selection
-  const [selectedDay, setSelectedDay] = useState('06')
-  const daysList = [
-    { label: 'Hôm nay', date: '06', isToday: true },
-    { label: 'Th 7', date: '07' },
-    { label: 'CN', date: '08' },
-    { label: 'Th 2', date: '09' },
-    { label: 'Th 3', date: '10' },
-    { label: 'Th 4', date: '11' },
-    { label: 'Th 5', date: '12' },
-    { label: 'Th 6', date: '13' },
-    { label: 'Th 7', date: '14' },
-    { label: 'CN', date: '15' },
-    { label: 'Th 2', date: '16' },
-    { label: 'Th 3', date: '17' },
-    { label: 'Th 4', date: '18' },
-    { label: 'Th 5', date: '19' },
-  ]
+  const daysList = Array.from({ length: 14 }, (_, offset) => {
+    const date = new Date()
+    date.setDate(date.getDate() + offset)
+    return {
+      label: offset === 0 ? 'Hôm nay' : new Intl.DateTimeFormat('vi-VN', { weekday: 'short' }).format(date),
+      date: String(date.getDate()).padStart(2, '0'),
+      isToday: offset === 0,
+    }
+  })
+  const [selectedDay, setSelectedDay] = useState(daysList[0].date)
 
   const sportsList = [
     { id: 'all', label: 'Tất cả môn', icon: <SlidersHorizontal className="w-3.5 h-3.5" /> },
@@ -388,7 +381,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
           {/* Subheader summary */}
           <div className="flex items-center justify-between px-1">
             <div className="text-xs font-bold text-slate-800">
-              <span>168 sân - 826 buổi chơi</span>
+              <span>{mockSessions.length} buổi chơi</span>
             </div>
             <div className="flex items-center gap-2">
               <button type="button" className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-600 cursor-pointer">
@@ -402,6 +395,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
 
           {/* Session Cards Grid (2 columns on tablet/desktop) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {mockSessions.length === 0 && <p className="text-sm text-slate-500">Chưa có buổi chơi nào.</p>}
             {mockSessions.map((session, idx) => (
               <div
                 key={session.id}

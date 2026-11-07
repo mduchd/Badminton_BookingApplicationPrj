@@ -14,6 +14,7 @@ import {
   Clock,
   Calendar,
   ChevronRight,
+  Check,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { AIMessage, SearchCriteria } from '../../types/user'
@@ -21,6 +22,7 @@ import type { BadmintonCourtItem } from '../mockData'
 import { formatPrice } from '../../../lib/utils'
 import { authStorage } from '../auth/authApi'
 import { parseUserQuery } from './aiKnowledgeAndParser'
+import { optimizeVietnameseSpeech, pickBestAlternative } from './vietnameseSpeechOptimizer'
 import { API_BASE_URL as API_ROOT_URL } from '../../../lib/apiConfig'
 
 const API_BASE_URL = `${API_ROOT_URL}/v1`
@@ -81,8 +83,15 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
   const [isThinking, setIsThinking] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [isListening, setIsListening] = useState(false)
+  const [liveTranscript, setLiveTranscript] = useState('')
+  const [audioLevels, setAudioLevels] = useState<number[]>([8, 14, 24, 18, 12, 16, 10])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<any>(null)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
+  const animFrameRef = useRef<number | null>(null)
+  const finalTranscriptRef = useRef<string>('')
 
   const quickPrompts = [
     'Tìm sân Cầu Giấy tối nay sau 19h',
@@ -96,98 +105,182 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isThinking])
 
-  // Initialize Web Speech Recognition
+  // Clean up all audio streams and speech recognition on unmount
   useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-
-    if (SpeechRecognition) {
-      try {
-        const recognition = new SpeechRecognition()
-        recognition.lang = 'vi-VN'
-        recognition.continuous = false
-        recognition.interimResults = false
-
-        recognition.onstart = () => {
-          setIsListening(true)
-        }
-
-        recognition.onresult = (event: any) => {
-          const transcript = event.results[0]?.[0]?.transcript
-          if (transcript) {
-            setInputValue((prev) => (prev ? `${prev} ${transcript}` : transcript))
-            toast.success(`Đã nhận diện giọng nói: "${transcript}"`)
-          }
-        }
-
-        recognition.onerror = (event: any) => {
-          console.warn('Speech recognition error:', event.error)
-          setIsListening(false)
-          if (event.error === 'not-allowed') {
-            toast.error('Vui lòng cấp quyền truy cập Microphone trên trình duyệt để nói.')
-          }
-        }
-
-        recognition.onend = () => {
-          setIsListening(false)
-        }
-
-        recognitionRef.current = recognition
-      } catch (err) {
-        console.warn('Could not initialize SpeechRecognition:', err)
-      }
-    }
-
     return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
+      if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach((t) => t.stop())
+      if (audioCtxRef.current) {
+        try { audioCtxRef.current.close() } catch { /* ignore */ }
+      }
       if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort()
-        } catch {
-          // ignore
-        }
+        try { recognitionRef.current.abort() } catch { /* ignore */ }
       }
     }
   }, [])
 
-  if (!isOpen) return null
+  const handleStopVoice = (shouldSend = false) => {
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current)
+      animFrameRef.current = null
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop())
+      mediaStreamRef.current = null
+    }
+    if (audioCtxRef.current) {
+      try { audioCtxRef.current.close() } catch { /* ignore */ }
+      audioCtxRef.current = null
+    }
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop() } catch { /* ignore */ }
+      recognitionRef.current = null
+    }
+    setIsListening(false)
+    setAudioLevels([8, 14, 24, 18, 12, 16, 10])
+
+    const rawCombined = (finalTranscriptRef.current + ' ' + liveTranscript).trim() || inputValue.trim()
+    const textToSubmit = optimizeVietnameseSpeech(rawCombined)
+    finalTranscriptRef.current = ''
+    if (shouldSend && textToSubmit) {
+      handleSendMessage(textToSubmit)
+    }
+    setLiveTranscript('')
+  }
+
+  const handleStartVoice = async () => {
+    try {
+      // 1. Get crystal-clear microphone audio stream with noise suppression & gain control
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+          sampleRate: 48000,
+        },
+      })
+      mediaStreamRef.current = stream
+
+      // 2. Setup AudioContext and AnalyserNode for live Soundwave Visualizer
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+      if (AudioCtx) {
+        const audioCtx = new AudioCtx()
+        audioCtxRef.current = audioCtx
+        const source = audioCtx.createMediaStreamSource(stream)
+        const analyser = audioCtx.createAnalyser()
+        analyser.fftSize = 64
+        analyser.smoothingTimeConstant = 0.8
+        source.connect(analyser)
+        analyserRef.current = analyser
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount)
+
+        const updateWave = () => {
+          if (!analyserRef.current) return
+          analyserRef.current.getByteFrequencyData(dataArray)
+
+          // Sample 7 frequency levels for the 7 soundwave bars
+          const sampleIndices = [2, 4, 7, 10, 14, 18, 22]
+          const levels = sampleIndices.map((idx) => {
+            const raw = dataArray[idx] || 0
+            return Math.max(6, Math.min(32, Math.round((raw / 255) * 32)))
+          })
+          setAudioLevels(levels)
+          animFrameRef.current = requestAnimationFrame(updateWave)
+        }
+        updateWave()
+      }
+
+      setIsListening(true)
+      setLiveTranscript('')
+
+      // 3. Initialize Web Speech Recognition with immediate real-time interim streaming
+      finalTranscriptRef.current = ''
+      const SpeechRecognition =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition()
+        recognition.lang = 'vi-VN'
+        recognition.continuous = true
+        recognition.interimResults = true
+        recognition.maxAlternatives = 3
+
+        recognition.onresult = (event: any) => {
+          let interim = ''
+          let currentFinal = finalTranscriptRef.current
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const res = event.results[i]
+            const alts: Array<{ transcript: string; confidence?: number }> = []
+            for (let a = 0; a < res.length; a++) {
+              if (res[a]?.transcript) {
+                alts.push({
+                  transcript: res[a].transcript,
+                  confidence: res[a].confidence,
+                })
+              }
+            }
+            const bestPiece = pickBestAlternative(alts)
+
+            if (res.isFinal) {
+              currentFinal += bestPiece + ' '
+              finalTranscriptRef.current = currentFinal
+            } else {
+              interim += bestPiece
+            }
+          }
+
+          const rawCombined = (currentFinal + interim).trim()
+          const optimized = optimizeVietnameseSpeech(rawCombined)
+          if (optimized) {
+            setLiveTranscript(optimized)
+            setInputValue(optimized)
+          }
+        }
+
+        recognition.onerror = (event: any) => {
+          console.warn('SpeechRecognition error:', event.error)
+          if (event.error === 'not-allowed') {
+            toast.error('Vui lòng cấp quyền Microphone trên trình duyệt để nói.')
+            handleStopVoice(false)
+          }
+        }
+
+        recognition.start()
+        recognitionRef.current = recognition
+        toast.info('Đang lắng nghe trực tiếp... Nói để chữ xuất hiện ngay!')
+      } else {
+        toast.info('Đang thu âm qua dải sóng âm thanh... Hãy nói yêu cầu của bạn!')
+      }
+    } catch (err) {
+      console.warn('Microphone access error:', err)
+      toast.error('Không thể truy cập Microphone. Vui lòng cho phép quyền truy cập thiết bị!')
+      setIsListening(false)
+    }
+  }
 
   // Toggle Voice Recognition
   const handleToggleVoice = () => {
-    if (!recognitionRef.current) {
-      toast.info('Trình duyệt hiện tại chưa hỗ trợ Web Speech API. Vui lòng nhập bằng văn bản.')
-      return
-    }
-
     if (isListening) {
-      try {
-        recognitionRef.current.stop()
-      } catch {
-        // ignore
-      }
-      setIsListening(false)
+      handleStopVoice(false)
     } else {
-      try {
-        recognitionRef.current.start()
-        setIsListening(true)
-        toast.info('Đang lắng nghe... Hãy nói yêu cầu của bạn bằng tiếng Việt!')
-      } catch {
-        setIsListening(false)
-      }
+      handleStartVoice()
     }
   }
+
+  if (!isOpen) return null
+
+
 
   const handleSendMessage = async (textToSend?: string) => {
     const query = textToSend || inputValue.trim()
     if (!query) return
 
-    // Stop speech if running
-    if (isListening && recognitionRef.current) {
-      try {
-        recognitionRef.current.stop()
-      } catch {
-        // ignore
-      }
-      setIsListening(false)
+    // Stop voice if running
+    if (isListening) {
+      handleStopVoice(false)
     }
 
     const userMsg: AIMessage = {
@@ -274,76 +367,133 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 pointer-events-none flex sm:items-end sm:justify-end items-end justify-center p-0 sm:p-4">
+    <div
+      className={`fixed inset-0 z-50 pointer-events-none flex transition-all duration-300 ${
+        isExpanded
+          ? 'items-center justify-center p-0'
+          : 'sm:items-end sm:justify-end items-end justify-center p-0 sm:p-4'
+      }`}
+    >
       {/* Backdrop overlay */}
       <div
-        className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs pointer-events-auto overlay-enter"
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs pointer-events-auto overlay-enter"
         onClick={onClose}
       />
 
-      {/* Floating Chat Panel with Smooth Enter Animation */}
+      {/* Floating Chat Panel with Smooth Enter Animation & Fullscreen Mode */}
       <div
-        className={`relative pointer-events-auto bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col transition-all duration-300 max-sm:sheet-enter sm:panel-slide-in-right ${
+        className={`relative pointer-events-auto bg-white overflow-hidden flex flex-col transition-all duration-300 ${
           isExpanded
-            ? 'w-full sm:w-[680px] h-[90vh] sm:h-[84vh]'
-            : 'w-full sm:w-[500px] h-[82vh] sm:h-[620px]'
+            ? 'w-full h-full sm:w-full sm:h-full rounded-none border-0 shadow-none'
+            : 'w-full sm:w-[500px] h-[82vh] sm:h-[620px] rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 max-sm:sheet-enter sm:panel-slide-in-right'
         }`}
       >
         {/* Header - Flat, solid, high contrast */}
-        <div className="px-5 py-3.5 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-[#168039] text-white flex items-center justify-center shrink-0">
-              <Bot className="w-5 h-5 text-white" />
+        <div className="px-4 sm:px-6 py-3 sm:py-3.5 bg-white border-b border-slate-100 shrink-0">
+          <div className={`flex items-center justify-between gap-3 ${isExpanded ? 'max-w-5xl mx-auto w-full' : ''}`}>
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#168039] text-white flex items-center justify-center shrink-0">
+                <Bot className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-normal truncate">
+                  Trợ lý AI SmashCourt
+                </h3>
+                <p className="text-xs text-slate-600 font-medium truncate">
+                  Tìm sân, tư vấn trang bị & giải đáp luật chơi
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-normal truncate">
-                Trợ lý AI SmashCourt
-              </h3>
-              <p className="text-xs text-slate-600 font-medium truncate">
-                Tìm sân, tư vấn trang bị & giải đáp luật chơi
-              </p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-1 text-slate-500 shrink-0">
-            <button
-              type="button"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="p-1.5 rounded-lg hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
-              title={isExpanded ? 'Thu nhỏ' : 'Mở rộng'}
-            >
-              {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1.5 rounded-lg hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
-              title="Đóng chat"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1.5 text-slate-500 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="p-2 rounded-lg hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+                title={isExpanded ? 'Thu nhỏ cửa sổ' : 'Toàn màn hình'}
+                aria-label={isExpanded ? 'Thu nhỏ cửa sổ' : 'Toàn màn hình'}
+              >
+                {isExpanded ? <Minimize2 className="w-4.5 h-4.5" /> : <Maximize2 className="w-4.5 h-4.5" />}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-2 rounded-lg hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+                title="Đóng chat"
+                aria-label="Đóng chat"
+              >
+                <X className="w-4.5 h-4.5" />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Listening Voice Indicator Banner */}
+        {/* Real-time Voice Soundwave Visualizer Banner */}
         {isListening && (
-          <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-200/80 flex items-center justify-between gap-2 text-xs font-bold text-[#168039] shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
-              <span>Đang lắng nghe giọng nói... Hãy nói yêu cầu của bạn!</span>
+          <div className="px-4 py-3 bg-emerald-50 border-b border-emerald-200/90 shrink-0">
+            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isExpanded ? 'max-w-5xl mx-auto w-full' : ''}`}>
+              {/* Soundwave bars & live listening status */}
+              <div className="flex items-center gap-3 min-w-0">
+                {/* Dynamic Soundwave Bars reacting to actual microphone volume */}
+                <div className="flex items-center gap-1 h-9 px-2.5 py-1 bg-white rounded-xl border border-emerald-300 shrink-0 select-none">
+                  {audioLevels.map((lvl, idx) => (
+                    <div
+                      key={idx}
+                      className="w-1.5 rounded-full bg-[#168039] transition-all duration-75"
+                      style={{ height: `${Math.max(6, Math.min(30, lvl))}px` }}
+                    />
+                  ))}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-[#168039]">Đang nhận diện giọng nói:</span>
+                    <span className="text-[11px] text-slate-500 font-medium truncate">
+                      {liveTranscript ? 'Hiển thị tức thì thời gian thực' : 'Hãy nói câu lệnh (chữ sẽ hiện ngay)...'}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 min-h-[20px] flex items-center">
+                    {liveTranscript ? (
+                      <p className="text-xs sm:text-sm font-bold text-slate-900 leading-snug break-words">
+                        "{liveTranscript}"
+                        <span className="inline-block w-1.5 h-3 bg-[#168039] ml-1 align-middle" />
+                      </p>
+                    ) : (
+                      <p className="text-xs text-slate-500 italic">
+                        Đang chờ âm thanh tiếng Việt...
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => handleStopVoice(true)}
+                  className="px-3 py-1.5 rounded-lg bg-[#168039] hover:bg-[#136c30] text-white text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Hoàn tất và gửi yêu cầu"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Xong &amp; Gửi</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStopVoice(false)}
+                  className="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold cursor-pointer transition-colors"
+                  title="Hủy thu âm"
+                >
+                  Hủy
+                </button>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={handleToggleVoice}
-              className="text-xs font-bold underline cursor-pointer hover:text-emerald-800"
-            >
-              Dừng lại
-            </button>
           </div>
         )}
 
         {/* Messages Thread */}
-        <div className="flex-1 p-3.5 sm:p-4 overflow-y-auto space-y-4 bg-slate-50">
+        <div className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-4 bg-slate-50">
+          <div className={`space-y-4 ${isExpanded ? 'max-w-4xl mx-auto w-full' : ''}`}>
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -541,11 +691,12 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
           )}
 
           <div ref={messagesEndRef} />
+          </div>
         </div>
 
         {/* Bottom Quick Prompts Strip */}
-        <div className="px-3.5 py-2 border-t border-slate-100 bg-white shrink-0">
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+        <div className="px-3.5 sm:px-6 py-2 border-t border-slate-100 bg-white shrink-0">
+          <div className={`flex gap-1.5 overflow-x-auto no-scrollbar py-0.5 ${isExpanded ? 'max-w-4xl mx-auto' : ''}`}>
             {quickPrompts.map((prompt, idx) => (
               <button
                 key={idx}
@@ -565,8 +716,9 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
             e.preventDefault()
             handleSendMessage()
           }}
-          className="p-3 bg-white border-t border-slate-200 flex items-center gap-2 shrink-0"
+          className="p-3 sm:p-4 bg-white border-t border-slate-200 shrink-0"
         >
+          <div className={`flex items-center gap-2 ${isExpanded ? 'max-w-4xl mx-auto' : ''}`}>
           <button
             type="button"
             onClick={handleToggleVoice}
@@ -585,7 +737,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder={isListening ? 'Đang lắng nghe... Hãy nói yêu cầu' : 'Nhập: khu vực, giờ, hỏi luật hay chọn vợt...'}
+            placeholder={isListening ? 'Đang nói... chữ hiển thị trực tiếp ở đây' : 'Nhập: khu vực, giờ, hỏi luật hay chọn vợt...'}
             className="flex-1 px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#168039]/20 focus:border-[#168039]"
           />
 
@@ -598,6 +750,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
             <Send className="w-4 h-4" />
             <span className="hidden sm:inline">Gửi</span>
           </button>
+          </div>
         </form>
       </div>
     </div>

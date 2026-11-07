@@ -41,7 +41,7 @@ export const initialFacilities: Facility[] = mockBadmintonCourts.map((c, idx) =>
     { id: `${c.id}_c1`, facilityId: c.id, name: 'Sân 1 (Thảm tiêu chuẩn BWF)', courtType: 'standard', status: 'active' },
     { id: `${c.id}_c2`, facilityId: c.id, name: 'Sân 2 (Thảm tiêu chuẩn BWF)', courtType: 'standard', status: 'active' },
     { id: `${c.id}_c3`, facilityId: c.id, name: 'Sân 3 (Thảm cao cấp)', courtType: 'vip', status: 'active' },
-    { id: `${c.id}_c4`, facilityId: c.id, name: 'Sân 4 (Thảm tập luyện)', courtType: 'training', status: idx === 1 ? 'maintenance' : 'active' },
+    { id: `${c.id}_c4`, facilityId: c.id, name: 'Sân 4 (Thảm tập luyện)', courtType: 'training', status: 'active' },
   ],
 }))
 
@@ -75,87 +75,9 @@ export const initialPriceRules: PriceRule[] = [
   },
 ]
 
-export const initialMaintenanceBlocks: MaintenanceBlock[] = [
-  {
-    id: 'blk_1',
-    facilityId: 'court_1',
-    courtId: 'court_1_c4',
-    courtName: 'Sân 4 (Thảm tập luyện)',
-    date: new Date().toISOString().split('T')[0],
-    startTime: '13:00',
-    endTime: '17:00',
-    reason: 'Bảo dưỡng định kỳ sàn thảm & thay bóng đèn led',
-    createdAt: new Date().toISOString(),
-  },
-]
+export const initialMaintenanceBlocks: MaintenanceBlock[] = []
 
-export const initialBookings: BookingOrder[] = [
-  {
-    id: 'bk_1001',
-    bookingCode: 'SC-82914',
-    facilityId: 'court_1',
-    facilityName: 'CLB Cầu Lông Phúc Long',
-    facilityAddress: '460 Trần Quý Cáp, Văn Chương, Đống Đa, Hà Nội',
-    facilityLogo: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=120&auto=format&fit=crop&q=80',
-    slots: [
-      {
-        slotId: 'slot_1',
-        courtId: 'court_1_c2',
-        courtName: 'Sân 2 (Thảm tiêu chuẩn BWF)',
-        date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-        startTime: '19:00',
-        endTime: '20:00',
-        price: 140000,
-      },
-      {
-        slotId: 'slot_2',
-        courtId: 'court_1_c2',
-        courtName: 'Sân 2 (Thảm tiêu chuẩn BWF)',
-        date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-        startTime: '20:00',
-        endTime: '21:00',
-        price: 140000,
-      },
-    ],
-    totalAmount: 280000,
-    status: 'CONFIRMED',
-    holdExpiresAt: new Date(Date.now() + 600000).toISOString(),
-    paymentMethod: 'PAYOS',
-    paidAt: new Date().toISOString(),
-    customerName: 'Nguyễn Văn Đức',
-    customerPhone: '0988 123 456',
-    customerEmail: 'ducnguyen.dev@gmail.com',
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    id: 'bk_1002',
-    bookingCode: 'SC-55201',
-    facilityId: 'court_2',
-    facilityName: 'CLB Cầu Lông Cầu Giấy Star Arena',
-    facilityAddress: 'Số 35 Trần Thái Tông, Dịch Vọng Hậu, Cầu Giấy, Hà Nội',
-    facilityLogo: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=120&auto=format&fit=crop&q=80',
-    slots: [
-      {
-        slotId: 'slot_3',
-        courtId: 'court_2_c1',
-        courtName: 'Sân 1 (Thảm Yonex)',
-        date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-        startTime: '18:00',
-        endTime: '20:00',
-        price: 240000,
-      },
-    ],
-    totalAmount: 240000,
-    status: 'COMPLETED',
-    holdExpiresAt: new Date(Date.now() - 80000000).toISOString(),
-    paymentMethod: 'PAYOS',
-    paidAt: new Date(Date.now() - 85000000).toISOString(),
-    customerName: 'Nguyễn Văn Đức',
-    customerPhone: '0988 123 456',
-    customerEmail: 'ducnguyen.dev@gmail.com',
-    createdAt: new Date(Date.now() - 90000000).toISOString(),
-  },
-]
+export const initialBookings: BookingOrder[] = []
 
 // Storage Helper Functions
 export const appStore = {
@@ -192,7 +114,13 @@ export const appStore = {
   getBookings: (): BookingOrder[] => {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.BOOKINGS)
-      if (data) return JSON.parse(data)
+      if (data) {
+        const bookings: BookingOrder[] = JSON.parse(data)
+        return bookings.filter((booking) => !(
+          (booking.id === 'bk_1001' && booking.bookingCode === 'SC-82914') ||
+          (booking.id === 'bk_1002' && booking.bookingCode === 'SC-55201')
+        ))
+      }
     } catch {
       // fallback
     }
@@ -243,7 +171,7 @@ export const appStore = {
   getMaintenanceBlocks: (facilityId?: string): MaintenanceBlock[] => {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.MAINTENANCE_BLOCKS)
-      const list: MaintenanceBlock[] = data ? JSON.parse(data) : initialMaintenanceBlocks
+      const list: MaintenanceBlock[] = (data ? JSON.parse(data) as MaintenanceBlock[] : initialMaintenanceBlocks).filter (block => !(block.id === 'blk_1' && block.courtId === 'court_1_c4' && block.reason === 'Bảo dưỡng định kỳ sàn thảm & thay bóng đèn led'))
       return facilityId ? list.filter((b) => b.facilityId === facilityId) : list
     } catch {
       return initialMaintenanceBlocks

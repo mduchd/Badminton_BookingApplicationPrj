@@ -1,4 +1,4 @@
-import type { User, NotificationItem, SearchCriteria } from '../types/user'
+import type { SearchCriteria } from '../types/user'
 
 export interface BadmintonCourtItem {
   id: string
@@ -42,46 +42,6 @@ export interface SessionMatch {
     pricePerTicket: number
   }
 }
-
-export const mockCurrentUser: User = {
-  id: 'usr_001',
-  email: 'ducnguyen.dev@gmail.com',
-  fullName: 'ĐỨC Nguyễn',
-  avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-  role: 'CUSTOMER',
-  provider: 'GOOGLE',
-  phone: '0988 123 456',
-  fcmEnabled: true,
-  calendarConnected: true,
-  calendarEmail: 'minhtri.dev@gmail.com',
-}
-
-export const mockNotifications: NotificationItem[] = [
-  {
-    id: 'notif_1',
-    type: 'BOOKING_CONFIRMED',
-    title: 'Đặt lịch thành công!',
-    body: 'Đơn đặt sân tại CLB Cầu Lông Phúc Long (Sân 2) khung giờ 19:00 - 21:00 tối mai đã được xác nhận.',
-    isRead: false,
-    createdAt: '5 phút trước',
-  },
-  {
-    id: 'notif_2',
-    type: 'PAYMENT_SUCCESS',
-    title: 'Thanh toán payOS thành công',
-    body: 'Giao dịch 260.000đ cho mã đặt sân #SMC-9281 đã hoàn tất.',
-    isRead: false,
-    createdAt: '15 phút trước',
-  },
-  {
-    id: 'notif_3',
-    type: 'REMINDER_DUE',
-    title: 'Nhắc lịch thi đấu hôm nay',
-    body: 'Lịch chơi tại CLB Cầu Lông Cầu Giấy lúc 18:30 hôm nay. Đừng quên mang giày đế mộc nhé!',
-    isRead: true,
-    createdAt: 'Hôm qua',
-  },
-]
 
 export const mockBadmintonCourts: BadmintonCourtItem[] = [
   {
@@ -467,98 +427,7 @@ export const mockBadmintonCourts: BadmintonCourtItem[] = [
   },
 ]
 
-export const mockSessions: SessionMatch[] = [
-  {
-    id: 'ses_1',
-    clubName: 'Câu lạc bộ pickleball 175 Định Công',
-    clubLogo: 'https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?w=120&auto=format&fit=crop&q=80',
-    distance: '6,1 km',
-    schedulesToday: 9,
-    activeSlotIndex: 0,
-    slots: [
-      { time: '09:00', subtext: '3 lịch', available: true },
-      { time: '14:00', subtext: '4 lịch', available: true },
-      { time: '20:00', subtext: '0/8 chỗ', available: false },
-      { time: '21:00', subtext: '0/6 chỗ', available: false },
-    ],
-    detail: {
-      levelText: 'trên 12 tháng',
-      isLive: true,
-      timeRange: '09:00 - 12:00',
-      ticketType: 'Xé vé',
-      courtNumbers: 'Sân 3',
-      capacityText: '5/8 chỗ',
-      pricePerTicket: 50000,
-    },
-  },
-  {
-    id: 'ses_2',
-    clubName: '266 Vĩnh Hưng Sport Arena',
-    clubLogo: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=120&auto=format&fit=crop&q=80',
-    distance: '7,1 km',
-    schedulesToday: 5,
-    activeSlotIndex: 0,
-    slots: [
-      { time: '06:00', subtext: '25/32 chỗ', available: true },
-      { time: '13:00', subtext: '5/32 chỗ', available: true },
-      { time: '17:00', subtext: '2 lịch', available: true },
-      { time: '19:00', subtext: '0/16 chỗ', available: false },
-    ],
-    detail: {
-      levelText: 'trình khá',
-      isLive: true,
-      timeRange: '06:00 - 12:00',
-      ticketType: 'Xé vé',
-      courtNumbers: 'Sân 1 - 2 - 3 - 4',
-      capacityText: '25/32 chỗ',
-      pricePerTicket: 60000,
-    },
-  },
-  {
-    id: 'ses_3',
-    clubName: 'Phúc Long Badminton - 460 Trần Quý Cáp',
-    clubLogo: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=120&auto=format&fit=crop&q=80',
-    distance: '1,8 km',
-    schedulesToday: 12,
-    activeSlotIndex: 0,
-    slots: [
-      { time: '18:00', subtext: '4/8 chỗ', available: true },
-      { time: '19:30', subtext: '6/8 chỗ', available: true },
-      { time: '21:00', subtext: '0/8 chỗ', available: false },
-    ],
-    detail: {
-      levelText: 'Giao lưu cầu lông BWF',
-      isLive: true,
-      timeRange: '19:00 - 21:00',
-      ticketType: 'Vé ca tối',
-      courtNumbers: 'Sân số 2',
-      capacityText: '4/6 chỗ',
-      pricePerTicket: 70000,
-    },
-  },
-  {
-    id: 'ses_4',
-    clubName: 'CLB Cầu Lông Cầu Giấy Star Arena',
-    clubLogo: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=120&auto=format&fit=crop&q=80',
-    distance: '3,2 km',
-    schedulesToday: 8,
-    activeSlotIndex: 0,
-    slots: [
-      { time: '17:30', subtext: '2/8 chỗ', available: true },
-      { time: '19:00', subtext: '5/8 chỗ', available: true },
-      { time: '20:30', subtext: '0/8 chỗ', available: false },
-    ],
-    detail: {
-      levelText: 'Trình trung bình - khá',
-      isLive: true,
-      timeRange: '19:00 - 21:00',
-      ticketType: 'Vé ngày',
-      courtNumbers: 'Sân 3 & 4',
-      capacityText: '5/8 chỗ',
-      pricePerTicket: 65000,
-    },
-  },
-]
+export const mockSessions: SessionMatch[] = []
 
 export const defaultCriteria: SearchCriteria = {
   locationText: 'Hà Nội',

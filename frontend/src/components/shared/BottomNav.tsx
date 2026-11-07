@@ -1,30 +1,35 @@
 import React from 'react'
-import { Home, MapPin, Newspaper, Flame, User as UserIcon } from 'lucide-react'
+import { Home, MapPin, Newspaper, Flame, User as UserIcon, Bot } from 'lucide-react'
 
 export interface BottomNavProps {
   activeTab: 'home' | 'map' | 'khampha' | 'trending' | 'account' | string
   onSelectTab: (tab: 'home' | 'map' | 'khampha' | 'trending' | 'account') => void
   onOpenProfile?: () => void
   onOpenAuth?: () => void
+  onOpenAIChat?: () => void
+  isAIChatOpen?: boolean
   isLoggedIn?: boolean
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
   activeTab,
   onSelectTab,
+  onOpenAIChat,
+  isAIChatOpen = false,
 }) => {
   return (
     <nav
       aria-label="Thanh điều hướng chính"
       className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] sm:bottom-5 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-16px)] sm:w-[calc(100%-32px)] max-w-3xl lg:max-w-4xl select-none"
     >
-      {/* Floating Pill Dock Container with signature green border and deep elevation shadow */}
+      {/* Floating Pill Dock Container with signature green border */}
       <div className="relative bg-white rounded-3xl sm:rounded-[36px] border-2 border-[#168039] shadow-[0_20px_50px_rgba(15,23,42,0.25),0_6px_18px_rgba(15,23,42,0.12)] hover:shadow-[0_28px_70px_rgba(15,23,42,0.35),0_10px_28px_rgba(15,23,42,0.18)] ring-1 ring-slate-900/10 px-2 sm:px-6 md:px-8 py-1.5 transition-all duration-300">
-        {/* Floating Center Action Button (Khám phá) nổi bật trên thanh dock */}
+        
+        {/* 1. Floating Center Action Button (Khám phá) nổi bật ở chính giữa dock theo đúng thiết kế cũ */}
         <button
           type="button"
           onClick={() => onSelectTab('khampha')}
-          className={`absolute -top-5 left-1/2 -translate-x-1/2 w-14 h-14 sm:w-15 sm:h-15 rounded-full flex items-center justify-center transform-gpu will-change-transform transition-all duration-300 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] z-20 cursor-pointer active:scale-95 group hover:scale-115 hover:-translate-y-2 hover:shadow-[0_12px_24px_rgba(22,128,57,0.35)] ${
+          className={`absolute -top-5 left-1/2 -translate-x-1/2 w-14 h-14 sm:w-15 sm:h-15 rounded-full flex items-center justify-center transform-gpu will-change-transform transition-all duration-300 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] z-20 cursor-pointer active:scale-95 group hover:scale-115 hover:-translate-y-2 ${
             activeTab === 'khampha'
               ? 'bg-[#168039] text-white ring-4 ring-white scale-110 -translate-y-1'
               : 'bg-[#168039] hover:bg-[#136c30] text-white ring-4 ring-white'
@@ -39,9 +44,28 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           />
         </button>
 
-        {/* 5-Column Navigation Bar */}
+        {/* 2. Dock-Attached AI Capsule: Nút Trợ lý AI gắn liền trực tiếp trên mép dock (neo cùng thanh điều hướng) */}
+        {onOpenAIChat && (
+          <button
+            type="button"
+            onClick={onOpenAIChat}
+            className={`absolute -top-3.5 right-3 sm:right-6 z-20 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full text-xs font-bold transition-all duration-200 flex items-center gap-1.5 border-2 border-white ring-1 ring-slate-900/10 cursor-pointer active:scale-95 ${
+              isAIChatOpen
+                ? 'bg-[#136c30] text-white ring-2 ring-emerald-500'
+                : 'bg-[#168039] hover:bg-[#136c30] text-white'
+            }`}
+            title="Trợ lý AI tìm sân & tư vấn"
+            aria-label="Mở Trợ lý AI"
+          >
+            <Bot className="w-3.5 h-3.5 text-emerald-100 shrink-0" />
+            <span className="text-[11px] sm:text-xs tracking-tight">Hỏi AI</span>
+          </button>
+        )}
+
+        {/* 3. 5-Column Navigation Bar (Đầy đủ 100% 5 vị trí cũ: Trang chủ, Bản đồ, Khám phá, Nổi bật, Tài khoản) */}
         <div className="h-[66px] sm:h-[70px] relative flex items-center">
           <div className="h-full w-full grid grid-cols-5 relative z-10 gap-1 sm:gap-2 items-center">
+            
             {/* 1. Trang chủ */}
             <button
               type="button"
