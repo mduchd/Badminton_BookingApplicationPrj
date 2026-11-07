@@ -44,7 +44,11 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
 
   const handleBookClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    navigate(`/courts/${court.id}/book`)
+    if (onBook) {
+      onBook(court)
+    } else {
+      navigate(`/courts/${court.id}/book`)
+    }
   }
 
   return (

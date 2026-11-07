@@ -255,11 +255,11 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onOpenOwnerChat || (() => toast.info('Hộp thư tin nhắn với chủ sân & ban quản lý cụm sân'))}
-            className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/15 hover:bg-white/25 active:scale-90 text-white flex items-center justify-center transition-all duration-200 cursor-pointer"
+            className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
             title="Chat & Nhắn tin với chủ sân"
             aria-label="Chat với chủ sân"
           >
-            <MessageCircle className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white" />
+            <MessageCircle className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-white" />
           </button>
 
           {/* Standard Notification Bell */}
@@ -307,14 +307,14 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => onOpenAuth('login')}
-                className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white hover:bg-slate-100 active:scale-95 text-slate-900 text-xs sm:text-sm font-black transition-all duration-200 cursor-pointer"
+                className="h-9 sm:h-10 px-4 sm:px-5 rounded-full bg-white hover:bg-slate-100 active:scale-95 text-slate-900 border-2 border-white text-xs sm:text-sm font-black transition-colors cursor-pointer inline-flex items-center justify-center shrink-0"
               >
                 Đăng nhập
               </button>
               <button
                 type="button"
                 onClick={() => onOpenAuth('register')}
-                className="hidden sm:inline-flex px-4 py-2 rounded-full bg-transparent hover:bg-white/10 active:scale-95 text-white border-2 border-white text-sm font-black transition-all duration-200 cursor-pointer"
+                className="hidden sm:inline-flex h-9 sm:h-10 px-4 sm:px-5 rounded-full bg-transparent hover:bg-white/10 active:scale-95 text-white border-2 border-white text-xs sm:text-sm font-black transition-colors cursor-pointer items-center justify-center shrink-0"
               >
                 Đăng ký
               </button>

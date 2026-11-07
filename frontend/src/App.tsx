@@ -49,7 +49,6 @@ import {
 
 // TV3 Booking & Payment components
 import { MyBookingsList } from './modules/booking/components/MyBookingsList'
-import { CourtBookingModal } from './modules/booking/components/CourtBookingModal'
 import { PaymentCheckoutModal } from './modules/booking/components/PaymentCheckoutModal'
 import { bookingApi } from './modules/booking/services/bookingApi'
 import type { BookingResponse } from './modules/booking/types'
@@ -168,14 +167,8 @@ export function MainApp() {
     }
   }, [isManagementRoute, isAIChatOpen])
 
-  // Booking Modal State (TV3)
+  // Booking Checkout Modal State (TV3)
   const [checkoutBooking, setCheckoutBooking] = useState<BookingResponse | null>(null)
-  const [bookingCourtInfo, setBookingCourtInfo] = useState<{
-    courtId: number
-    courtName: string
-    facilityName: string
-    facilityAddress?: string
-  } | null>(null)
 
   // Query My Bookings (TV3 Real Data)
   const { data: myBookings = [], isLoading: isLoadingBookings } = useQuery({
@@ -275,37 +268,15 @@ export function MainApp() {
     })
   }
 
-  // Booking action: Mở Modal Lưới Chọn Giờ Đặt Sân (TV3)
+  // Booking action: Điều hướng trực tiếp sang trang đặt sân (không dùng popup modal)
   const handleOpenBooking = (court: BadmintonCourtItem | CourtResult) => {
-    const numericCourtId = 'courtId' in court ? Number(court.courtId) : Number(court.id)
-    const courtName = 'courtName' in court && court.courtName ? String(court.courtName) : ('name' in court ? String(court.name) : 'Sân số 1 (Thảm Yonex)')
-    const facilityName = 'facilityName' in court && court.facilityName ? String(court.facilityName) : ('name' in court ? String(court.name) : 'Cụm Sân SmashCourt')
-    const address = 'address' in court ? court.address : ''
-
-    setBookingCourtInfo({
-      courtId: Number.isNaN(numericCourtId) ? 1 : numericCourtId,
-      courtName,
-      facilityName,
-      facilityAddress: address,
-    })
-  }
-
-  // Sau khi tạo đơn HELD thành công
-  const handleBookingSuccess = (booking: BookingResponse) => {
-    const bookingNotif: NotificationItem = {
-      id: 'notif_bk_' + Date.now(),
-      type: 'BOOKING_CONFIRMED',
-      title: 'Giữ chỗ sân thành công! 🏸',
-      body: `Đơn #SMC-${booking.id} tại ${booking.facilityName} (${booking.courtName}) đang được giữ trong 10 phút.`,
-      isRead: false,
-      createdAt: 'Vừa xong',
-    }
-    setNotifications((prev) => [bookingNotif, ...prev])
-
-    toast.success('Giữ chỗ thành công (10 phút)!', {
-      description: `Mã đơn #SMC-${booking.id} đã được khóa giờ. Bạn có thể xem trong mục 'Sân đã đặt'.`,
-      duration: 5000,
-    })
+    const rawId =
+      'id' in court && court.id
+        ? court.id
+        : 'courtId' in court && court.courtId
+        ? String(court.courtId)
+        : 'court_1'
+    navigate(`/courts/${rawId}/book`)
   }
 
   const handleConfirmBooking = (court: CourtResult) => {
@@ -714,19 +685,6 @@ export function MainApp() {
             qc.invalidateQueries({ queryKey: ['myBookings'] })
             qc.invalidateQueries({ queryKey: ['courtAvailability'] })
           }}
-        />
-      )}
-
-      {/* TV3 Interactive Court Booking Modal (Timeline slot grid & 10-minute hold reservation) */}
-      {bookingCourtInfo && (
-        <CourtBookingModal
-          isOpen={!!bookingCourtInfo}
-          courtId={bookingCourtInfo.courtId}
-          courtName={bookingCourtInfo.courtName}
-          facilityName={bookingCourtInfo.facilityName}
-          facilityAddress={bookingCourtInfo.facilityAddress}
-          onClose={() => setBookingCourtInfo(null)}
-          onBookingSuccess={handleBookingSuccess}
         />
       )}
 

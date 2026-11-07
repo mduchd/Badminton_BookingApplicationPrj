@@ -84,7 +84,15 @@ export const appStore = {
   getFacilities: (): Facility[] => {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.FACILITIES)
-      if (data) return JSON.parse(data)
+      if (data) {
+        const parsed: Facility[] = JSON.parse(data)
+        const existingIds = new Set(parsed.map((f) => f.id))
+        const missing = initialFacilities.filter((f) => !existingIds.has(f.id))
+        if (missing.length > 0) {
+          return [...parsed, ...missing]
+        }
+        return parsed
+      }
     } catch {
       // fallback
     }
@@ -93,7 +101,18 @@ export const appStore = {
 
   getFacilityById: (id: string): Facility | undefined => {
     const list = appStore.getFacilities()
-    return list.find((f) => f.id === id)
+    const cleanId = String(id || '').trim()
+    return (
+      list.find((f) => f.id === cleanId) ||
+      list.find((f) => f.id === `court_${cleanId}`) ||
+      list.find((f) => f.id.replace('court_', '') === cleanId) ||
+      initialFacilities.find(
+        (f) =>
+          f.id === cleanId ||
+          f.id === `court_${cleanId}` ||
+          f.id.replace('court_', '') === cleanId
+      )
+    )
   },
 
   saveFacilities: (list: Facility[]) => {

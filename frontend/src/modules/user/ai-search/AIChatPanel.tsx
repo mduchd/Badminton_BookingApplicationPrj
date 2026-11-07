@@ -422,10 +422,8 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-50 pointer-events-none flex transition-all duration-300 ${
-        isExpanded
-          ? 'items-center justify-center p-0'
-          : 'sm:items-end sm:justify-end items-end justify-center p-0 sm:p-4'
+      className={`fixed inset-0 z-50 pointer-events-none flex items-center justify-center transition-all duration-300 ${
+        isExpanded ? 'p-0' : 'p-3 sm:p-5'
       }`}
     >
       {/* Backdrop overlay */}
@@ -434,12 +432,12 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
         onClick={onClose}
       />
 
-      {/* Floating Chat Panel with Smooth Enter Animation & Fullscreen Mode */}
+      {/* Centered Floating Chat Panel with Smooth Enter Animation & Fullscreen Mode */}
       <div
         className={`relative pointer-events-auto bg-white overflow-hidden flex flex-col transition-all duration-300 ${
           isExpanded
             ? 'w-full h-full sm:w-full sm:h-full rounded-none border-0 shadow-none'
-            : 'w-full sm:w-[500px] h-[82vh] sm:h-[620px] rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 max-sm:sheet-enter sm:panel-slide-in-right'
+            : 'w-full max-w-xl sm:max-w-2xl h-[86vh] sm:h-[680px] max-h-[min(90vh,760px)] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 modal-enter'
         }`}
       >
         {/* Header - Flat, solid, high contrast */}
