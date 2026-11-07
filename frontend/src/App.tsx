@@ -47,6 +47,7 @@ import {
 // TV3 Booking & Payment components
 import { MyBookingsList } from './modules/booking/components/MyBookingsList'
 import { CourtBookingModal } from './modules/booking/components/CourtBookingModal'
+import { PaymentCheckoutModal } from './modules/booking/components/PaymentCheckoutModal'
 import { bookingApi } from './modules/booking/services/bookingApi'
 import type { BookingResponse } from './modules/booking/types'
 
@@ -164,6 +165,7 @@ export function MainApp() {
   }, [isManagementRoute, isAIChatOpen])
 
   // Booking Modal State (TV3)
+  const [checkoutBooking, setCheckoutBooking] = useState<BookingResponse | null>(null)
   const [bookingCourtInfo, setBookingCourtInfo] = useState<{
     courtId: number
     courtName: string
@@ -408,6 +410,7 @@ export function MainApp() {
           <MyBookingsList
             bookings={myBookings}
             onCancelBooking={(id) => cancelBookingMutation.mutate(id)}
+            onPayBooking={(b) => setCheckoutBooking(b)}
             isLoading={isLoadingBookings}
           />
         </div>
@@ -687,6 +690,19 @@ export function MainApp() {
       )}
 
       {/* Modals */}
+
+      {/* TV3 Payment Checkout Modal (payOS & Mock) */}
+      {checkoutBooking && (
+        <PaymentCheckoutModal
+          isOpen={!!checkoutBooking}
+          booking={checkoutBooking}
+          onClose={() => setCheckoutBooking(null)}
+          onPaymentSuccess={() => {
+            qc.invalidateQueries({ queryKey: ['myBookings'] })
+            qc.invalidateQueries({ queryKey: ['courtAvailability'] })
+          }}
+        />
+      )}
 
       {/* TV3 Interactive Court Booking Modal (Timeline slot grid & 10-minute hold reservation) */}
       {bookingCourtInfo && (

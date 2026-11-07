@@ -55,6 +55,24 @@ export interface BookingResponse {
   createdAt: string;
 }
 
+export interface CheckoutRequest {
+  paymentMethod: 'PAYOS' | 'MOCK';
+  returnUrl?: string;
+  cancelUrl?: string;
+}
+
+export interface CheckoutResponse {
+  bookingId: number;
+  orderCode: number;
+  amount: number;
+  paymentMethod: string;
+  checkoutUrl: string;
+  qrCode?: string;
+  status: string;
+  holdExpiresAt?: string;
+  message: string;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   message: string;

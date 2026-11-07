@@ -1,5 +1,12 @@
 import axios from 'axios';
-import type { ApiResponse, BookingCreateRequest, BookingResponse, CourtAvailability } from '../types';
+import type {
+  ApiResponse,
+  BookingCreateRequest,
+  BookingResponse,
+  CheckoutRequest,
+  CheckoutResponse,
+  CourtAvailability,
+} from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
@@ -46,6 +53,24 @@ export const bookingApi = {
       `/bookings/${bookingId}/cancel`,
       null,
       { params: { customerId } }
+    );
+    return response.data.data;
+  },
+
+  // Khởi tạo phiên thanh toán (MOCK hoặc PAYOS)
+  async createCheckout(bookingId: number, payload: CheckoutRequest): Promise<CheckoutResponse> {
+    const response = await client.post<ApiResponse<CheckoutResponse>>(
+      `/bookings/${bookingId}/checkout`,
+      payload
+    );
+    return response.data.data;
+  },
+
+  // Giả lập thanh toán thành công (Mock test)
+  async mockPaySuccess(bookingId: number, orderCode?: number): Promise<CheckoutResponse> {
+    const response = await client.post<ApiResponse<CheckoutResponse>>(
+      '/payments/mock-success',
+      { bookingId, orderCode }
     );
     return response.data.data;
   },
