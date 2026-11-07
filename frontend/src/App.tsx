@@ -530,7 +530,7 @@ export function MainApp() {
           <main
             key="map"
             className={`w-full max-w-full h-screen h-[100dvh] overflow-hidden ${
-              slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
+              isManagementRoute ? '' : slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
             }`}
           >
             <CourtMapView
@@ -545,7 +545,7 @@ export function MainApp() {
           <main
             key="account"
             className={`w-full max-w-full overflow-x-hidden min-h-[calc(100vh-64px)] ${
-              slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
+              isManagementRoute ? '' : slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
             }`}
           >
             <Routes>
@@ -573,13 +573,15 @@ export function MainApp() {
           <main
             key={activeNavTab + (showHeader ? '-home' : '-sub')}
             className={`${
-              isCourtBookView
-                ? 'w-full px-2 sm:px-4 lg:px-6 py-2 sm:py-3'
+              isManagementRoute
+                ? 'w-full max-w-full p-0'
+                : isCourtBookView
+                ? 'w-full px-2 sm:px-4 lg:px-6 py-2 sm:py-3 space-y-4'
                 : `max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 ${
                     showHeader ? 'pt-4 pb-6' : 'py-4 sm:py-6'
-                  }`
-            } space-y-4 ${showBottomNav ? 'pb-28' : 'pb-8'} relative z-20 ${
-              slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
+                  } space-y-4`
+            } ${showBottomNav ? 'pb-28' : 'pb-8'} relative z-20 ${
+              isManagementRoute ? '' : slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
             }`}
           >
             <Routes>
