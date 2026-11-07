@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Calendar, ExternalLink } from 'lucide-react';
 import type { BookingResponse, BookingStatus } from '../types';
 
 interface MyBookingsListProps {
@@ -149,6 +150,19 @@ export const MyBookingsList: React.FC<MyBookingsListProps> = ({
                           Hủy
                         </button>
                       </div>
+                    )}
+                    {b.status === 'CONFIRMED' && b.googleCalendarUrl && (
+                      <a
+                        href={b.googleCalendarUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-[#1b7a42] bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-300 transition-colors cursor-pointer"
+                        title="Thêm buổi chơi vào Google Calendar"
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-[#1b7a42]" />
+                        <span>Lịch Google</span>
+                        <ExternalLink className="w-3 h-3 text-[#1b7a42]" />
+                      </a>
                     )}
                   </td>
                 </tr>

@@ -53,6 +53,7 @@ export interface BookingResponse {
   holdExpiresAt?: string;
   note?: string;
   createdAt: string;
+  googleCalendarUrl?: string;
 }
 
 export interface CheckoutRequest {

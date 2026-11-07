@@ -10,6 +10,7 @@ import com.badmintonbooking.booking.enums.BookingStatus;
 import com.badmintonbooking.booking.enums.OccupancyType;
 import com.badmintonbooking.booking.repository.BookingRepository;
 import com.badmintonbooking.booking.repository.CourtOccupancyRepository;
+import com.badmintonbooking.booking.websocket.SlotEventPublisher;
 import com.badmintonbooking.common.exception.BadRequestException;
 import com.badmintonbooking.common.exception.ResourceNotFoundException;
 import com.badmintonbooking.common.exception.SlotConflictException;
@@ -42,19 +43,22 @@ public class BookingService {
     private final FacilityRepository facilityRepository;
     private final UserRepository userRepository;
     private final AvailabilityService availabilityService;
+    private final SlotEventPublisher slotEventPublisher;
 
     public BookingService(BookingRepository bookingRepository,
                           CourtOccupancyRepository occupancyRepository,
                           CourtRepository courtRepository,
                           FacilityRepository facilityRepository,
                           UserRepository userRepository,
-                          AvailabilityService availabilityService) {
+                          AvailabilityService availabilityService,
+                          SlotEventPublisher slotEventPublisher) {
         this.bookingRepository = bookingRepository;
         this.occupancyRepository = occupancyRepository;
         this.courtRepository = courtRepository;
         this.facilityRepository = facilityRepository;
         this.userRepository = userRepository;
         this.availabilityService = availabilityService;
+        this.slotEventPublisher = slotEventPublisher;
     }
 
     @Transactional
@@ -130,7 +134,18 @@ public class BookingService {
         log.info("Booking HELD created successfully: id={}, court={}, price={}, expiresAt={}",
                 savedBooking.getId(), court.getId(), savedBooking.getTotalAmount(), holdExpiresAt);
 
-        return toResponse(savedBooking, court.getName(), facility.getName());
+        // Phát sự kiện WebSocket STOMP
+        slotEventPublisher.publishSlotChange(
+                facility.getId(),
+                court.getId(),
+                request.bookingDate(),
+                request.startTime(),
+                request.endTime(),
+                "HELD",
+                "Khung giờ đã được giữ chỗ"
+        );
+
+        return toResponse(savedBooking, court.getName(), facility.getName(), facility.getAddress());
     }
 
     @Transactional(readOnly = true)
@@ -175,17 +190,41 @@ public class BookingService {
             occupancyRepository.save(occ);
         }
 
+        // Phát sự kiện WebSocket STOMP nhả slot
+        slotEventPublisher.publishSlotChange(
+                booking.getFacilityId(),
+                booking.getCourtId(),
+                booking.getBookingDate(),
+                booking.getStartTime(),
+                booking.getEndTime(),
+                "RELEASED",
+                "Khung giờ đã được giải phóng do người dùng hủy đơn"
+        );
+
         log.info("Booking cancelled & occupancy released: id={}", id);
         return toResponseWithLookups(booking);
     }
 
     private BookingResponse toResponseWithLookups(Booking b) {
         String courtName = courtRepository.findById(b.getCourtId()).map(Court::getName).orElse("Sân " + b.getCourtId());
-        String facilityName = facilityRepository.findById(b.getFacilityId()).map(Facility::getName).orElse("Cụm sân " + b.getFacilityId());
-        return toResponse(b, courtName, facilityName);
+        Facility facility = facilityRepository.findById(b.getFacilityId()).orElse(null);
+        String facilityName = facility != null ? facility.getName() : "Cụm sân " + b.getFacilityId();
+        String facilityAddress = facility != null ? facility.getAddress() : null;
+        return toResponse(b, courtName, facilityName, facilityAddress);
     }
 
-    private BookingResponse toResponse(Booking b, String courtName, String facilityName) {
+    private BookingResponse toResponse(Booking b, String courtName, String facilityName, String facilityAddress) {
+        String googleCalendarUrl = GoogleCalendarHelper.buildGoogleCalendarUrl(
+                b.getId(),
+                courtName,
+                facilityName,
+                facilityAddress,
+                b.getBookingDate(),
+                b.getStartTime(),
+                b.getEndTime(),
+                b.getTotalAmount() != null ? b.getTotalAmount().toPlainString() : "0"
+        );
+
         return new BookingResponse(
                 b.getId(),
                 b.getCustomerId(),
@@ -201,7 +240,8 @@ public class BookingService {
                 b.getStatus(),
                 b.getHoldExpiresAt(),
                 b.getNote(),
-                b.getCreatedAt()
+                b.getCreatedAt(),
+                googleCalendarUrl
         );
     }
 }

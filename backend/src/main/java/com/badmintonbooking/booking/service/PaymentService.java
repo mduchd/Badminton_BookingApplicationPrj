@@ -208,7 +208,7 @@ public class PaymentService {
                     orderCode
             );
             String expectedSignature = payOsHelper.calculateHmacSha256(rawData, payOsChecksumKey);
-            if (!expectedSignature.equalsIgnoreCase(payload.signature())) {
+            if (expectedSignature == null || !expectedSignature.equalsIgnoreCase(payload.signature())) {
                 log.warn("Chữ ký Webhook payOS không khớp: expected={}, got={}", expectedSignature, payload.signature());
                 throw new BadRequestException("Chữ ký webhook payOS không hợp lệ!");
             }
@@ -233,6 +233,9 @@ public class PaymentService {
         // 4. Xử lý webhook đến trễ sau khi hold đã hết hạn (TC05)
         if (booking.getStatus() == BookingStatus.EXPIRED || booking.getStatus() == BookingStatus.CANCELLED) {
             log.warn("Webhook thanh toán tới sau khi đơn đã hết hạn: bookingId={}, status={}", booking.getId(), booking.getStatus());
+            payment.setStatus(PaymentStatus.FAILED);
+            paymentRepository.save(payment);
+
             PaymentWebhookEvent event = new PaymentWebhookEvent();
             event.setProviderEventKey(eventKey);
             event.setOrderCode(orderCode);

@@ -74,4 +74,21 @@ export const bookingApi = {
     );
     return response.data.data;
   },
+
+  // Lấy thông tin thanh toán theo bookingId
+  async getPaymentByBookingId(bookingId: number): Promise<any> {
+    const response = await client.get<ApiResponse<any>>(
+      `/payments/booking/${bookingId}`
+    );
+    return response.data.data;
+  },
 };
+
+export const getCourtAvailability = bookingApi.getCourtAvailability;
+export const createHeldBooking = bookingApi.createHeldBooking;
+export const getMyBookings = bookingApi.getMyBookings;
+export const getBookingById = bookingApi.getBookingById;
+export const cancelBooking = bookingApi.cancelBooking;
+export const createCheckout = bookingApi.createCheckout;
+export const mockPaySuccess = bookingApi.mockPaySuccess;
+export const getPaymentByBookingId = bookingApi.getPaymentByBookingId;
