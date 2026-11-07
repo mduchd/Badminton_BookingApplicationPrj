@@ -385,7 +385,7 @@ export const AdminPortalView: React.FC = () => {
   return (
     <div className="w-full min-h-screen bg-[#f8fafc] text-slate-900 pb-24">
       {/* 1. Seamless Unified Workplace Top Bar */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
@@ -1239,7 +1239,7 @@ export const AdminPortalView: React.FC = () => {
 
             {/* Modal Body */}
             <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
-              <div className="w-full h-44 rounded-2xl overflow-hidden border border-slate-200 bg-slate-100">
+              <div className="w-full h-52 rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 shrink-0">
                 <img
                   src={selectedFacility.imageUrl}
                   alt=""
