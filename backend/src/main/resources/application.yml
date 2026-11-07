@@ -34,3 +34,6 @@ payos:
   client-id: ${PAYOS_CLIENT_ID:}
   api-key: ${PAYOS_API_KEY:}
   checksum-key: ${PAYOS_CHECKSUM_KEY:}
+app:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:329281674145-bbkiipcmkff46lqraifh7fcatsg225vv.apps.googleusercontent.com}

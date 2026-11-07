@@ -41,6 +41,19 @@ export const authStorage = {
 }
 
 export const authApi = {
+  async googleLogin(credential: string): Promise<AuthResponseData> {
+    const response = await fetch(`${AUTH_API_URL}/auth/google`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential }),
+    })
+    const result: ApiResponse<AuthResponseData> = await response.json()
+    if (!response.ok || !result.success || !result.data?.accessToken) {
+      throw new Error(result.message || 'Đăng nhập Google thất bại.')
+    }
+    authStorage.setToken(result.data.accessToken)
+    return result.data
+  },
+
   async login(payload: { email: string; password: string }): Promise<AuthResponseData> {
     const response = await fetch(`${AUTH_API_URL}/auth/login`, {
       method: 'POST',

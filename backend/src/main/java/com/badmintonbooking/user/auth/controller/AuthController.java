@@ -6,6 +6,8 @@ import com.badmintonbooking.user.auth.dto.LoginRequest;
 import com.badmintonbooking.user.auth.dto.RegisterRequest;
 import com.badmintonbooking.user.auth.dto.UserResponse;
 import com.badmintonbooking.user.auth.service.AuthService;
+import com.badmintonbooking.user.auth.service.GoogleTokenVerifier;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,9 +18,22 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final GoogleTokenVerifier googleTokenVerifier;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, GoogleTokenVerifier googleTokenVerifier) {
         this.authService = authService;
+        this.googleTokenVerifier = googleTokenVerifier;
+    }
+
+    public record GoogleLoginRequest(@NotBlank String credential) {}
+
+    @PostMapping("/google")
+    public ResponseEntity<ApiResponse<AuthResponse>> google(@Valid @RequestBody GoogleLoginRequest request) {
+        try {
+            return ResponseEntity.ok(ApiResponse.success(authService.loginWithGoogle(googleTokenVerifier.verify(request.credential())), "Đăng nhập thành công"));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(e.getMessage()));
+        }
     }
 
     @PostMapping("/login")

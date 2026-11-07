@@ -24,7 +24,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Value("${app.cors.allowed-origins:http://localhost:*,http://127.0.0.1:*}")
+    @Value("${app.cors.allowed-origins:http://localhost:*,http://127.0.0.1:*,https://smashcourt-booking.netlify.app}")
     private List<String> allowedOrigins;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
