@@ -22,11 +22,11 @@ spring:
 
   jackson:
     time-zone: Asia/Ho_Chi_Minh
-    serialization:
-      write-dates-as-timestamps: false
 
 server:
   port: 8080
+  tomcat:
+    basedir: target/tomcat
 
 booking:
   hold-duration-minutes: 10
