@@ -253,9 +253,13 @@ public class PaymentService {
         }
 
         // 3. Tra cứu Payment theo orderCode
-        Payment payment = paymentRepository.findByProviderOrderCode(orderCode)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giao dịch cho orderCode: " + orderCode));
+        Optional<Payment> paymentOpt = paymentRepository.findByProviderOrderCode(orderCode);
+        if (paymentOpt.isEmpty()) {
+            log.info("Tiếp nhận Webhook payOS cho orderCode test hoặc không tồn tại (xác thực Webhook thành công): orderCode={}", orderCode);
+            return true;
+        }
 
+        Payment payment = paymentOpt.get();
         Booking booking = bookingRepository.findById(payment.getBookingId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy booking tương ứng với thanh toán!"));
 
