@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -1217,172 +1218,173 @@ export const AdminPortalView: React.FC = () => {
       </div>
 
       {/* ==================== MODAL CHI TIẾT CỤM SÂN ==================== */}
-      {selectedFacility && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-xs">
-          <div className="relative w-full max-w-xl bg-white rounded-3xl border border-slate-200 overflow-hidden max-h-[min(90vh,700px)] flex flex-col">
-            {/* Modal Header */}
-            <div className="px-5 py-4 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
-              <div>
-                <span className="text-xs font-semibold text-[#1b7a42]">Hồ sơ Cụm sân</span>
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">
+      {selectedFacility &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-xs">
+            <div className="relative w-full max-w-xl bg-white rounded-3xl border border-slate-200 overflow-hidden max-h-[min(90vh,700px)] flex flex-col">
+              {/* Modal Header */}
+              <div className="px-5 py-4 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900">
                   {selectedFacility.name}
                 </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedFacility(null)}
-                className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <XCircle className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
-              <div className="w-full h-52 rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 shrink-0">
-                <img
-                  src={selectedFacility.imageUrl}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-600 font-semibold">Địa chỉ:</span>
-                  <span className="text-slate-900 font-bold text-right max-w-[280px]">
-                    {selectedFacility.address}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-600 font-semibold">Khu vực:</span>
-                  <span className="text-slate-900 font-bold">
-                    {selectedFacility.district}, {selectedFacility.city}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-600 font-semibold">Số lượng sân con:</span>
-                  <span className="text-slate-900 font-bold">
-                    {selectedFacility.subCourts?.length || 4} sân tiêu chuẩn BWF
-                  </span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-600 font-semibold">Giờ hoạt động:</span>
-                  <span className="text-slate-900 font-bold">
-                    {selectedFacility.openHours || '05:00 - 23:00'}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-600 font-semibold">Trạng thái duyệt:</span>
-                  <span
-                    className={`font-bold ${
-                      selectedFacility.isApproved ? 'text-emerald-700' : 'text-amber-800'
-                    }`}
-                  >
-                    {selectedFacility.isApproved ? 'Đã phê duyệt' : 'Chờ kiểm duyệt'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Tiện ích sân */}
-              <div>
-                <span className="text-xs font-bold text-slate-800 block mb-1.5">
-                  Tiện ích đã đăng ký:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedFacility.amenities?.map((item) => (
-                    <span
-                      key={item}
-                      className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200"
-                    >
-                      {item}
-                    </span>
-                  )) || (
-                    <span className="text-xs text-slate-500">Đèn BWF, Điều hòa, Bãi xe</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer Actions */}
-            <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setSelectedFacility(null)}
-                className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
-              >
-                Đóng
-              </button>
-
-              {!selectedFacility.isApproved ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setShowRejectModal(true)}
-                    className="px-4 py-2 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100 text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    Từ chối duyệt
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleApproveFacility(selectedFacility)}
-                    className="px-4 py-2 rounded-xl bg-[#1b7a42] hover:bg-[#156335] text-white text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    Phê duyệt cụm sân
-                  </button>
-                </>
-              ) : (
                 <button
                   type="button"
-                  onClick={() => handleToggleLockFacility(selectedFacility)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer border ${
-                    selectedFacility.status === 'active'
-                      ? 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
-                      : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                  }`}
+                  onClick={() => setSelectedFacility(null)}
+                  className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 >
-                  {selectedFacility.status === 'active' ? 'Tạm khóa cơ sở' : 'Mở lại hoạt động'}
+                  <XCircle className="w-5 h-5" />
                 </button>
-              )}
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
+                <div className="w-full h-52 rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 shrink-0">
+                  <img
+                    src={selectedFacility.imageUrl}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-600 font-semibold">Địa chỉ:</span>
+                    <span className="text-slate-900 font-bold text-right max-w-[280px]">
+                      {selectedFacility.address}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-600 font-semibold">Khu vực:</span>
+                    <span className="text-slate-900 font-bold">
+                      {selectedFacility.district}, {selectedFacility.city}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-600 font-semibold">Số lượng sân con:</span>
+                    <span className="text-slate-900 font-bold">
+                      {selectedFacility.subCourts?.length || 4} sân tiêu chuẩn BWF
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-600 font-semibold">Giờ hoạt động:</span>
+                    <span className="text-slate-900 font-bold">
+                      {selectedFacility.openHours || '05:00 - 23:00'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-600 font-semibold">Trạng thái duyệt:</span>
+                    <span
+                      className={`font-bold ${
+                        selectedFacility.isApproved ? 'text-emerald-700' : 'text-amber-800'
+                      }`}
+                    >
+                      {selectedFacility.isApproved ? 'Đã phê duyệt' : 'Chờ kiểm duyệt'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Tiện ích sân */}
+                <div>
+                  <span className="text-xs font-bold text-slate-800 block mb-1.5">
+                    Tiện ích đã đăng ký:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedFacility.amenities?.map((item) => (
+                      <span
+                        key={item}
+                        className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200"
+                      >
+                        {item}
+                      </span>
+                    )) || (
+                      <span className="text-xs text-slate-500">Đèn BWF, Điều hòa, Bãi xe</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer Actions */}
+              <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setSelectedFacility(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Đóng
+                </button>
+
+                {!selectedFacility.isApproved ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowRejectModal(true)}
+                      className="px-4 py-2 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100 text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      Từ chối duyệt
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApproveFacility(selectedFacility)}
+                      className="px-4 py-2 rounded-xl bg-[#1b7a42] hover:bg-[#156335] text-white text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      Phê duyệt cụm sân
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleLockFacility(selectedFacility)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer border ${
+                      selectedFacility.status === 'active'
+                        ? 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
+                        : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                    }`}
+                  >
+                    {selectedFacility.status === 'active' ? 'Tạm khóa cơ sở' : 'Mở lại hoạt động'}
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* ==================== MODAL TỪ CHỐI DUYỆT ==================== */}
-      {showRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
-            <h3 className="text-sm font-bold text-slate-900">Từ chối kiểm duyệt cơ sở</h3>
-            <p className="text-xs text-slate-600">
-              Vui lòng nhập lý do từ chối để hệ thống gửi phản hồi hướng dẫn cho chủ sân hoàn thiện hồ sơ:
-            </p>
-            <textarea
-              rows={3}
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="Ví dụ: Thiếu ảnh thực tế các sân con, giấy phép kinh doanh chưa rõ ràng..."
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-900 bg-white placeholder-slate-500 focus:outline-none focus:border-[#1b7a42]"
-            />
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowRejectModal(false)}
-                className="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                onClick={handleRejectFacility}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer"
-              >
-                Xác nhận từ chối
-              </button>
+      {showRejectModal &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+              <h3 className="text-sm font-bold text-slate-900">Từ chối kiểm duyệt cơ sở</h3>
+              <p className="text-xs text-slate-600">
+                Vui lòng nhập lý do từ chối để hệ thống gửi phản hồi hướng dẫn cho chủ sân hoàn thiện hồ sơ:
+              </p>
+              <textarea
+                rows={3}
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Ví dụ: Thiếu ảnh thực tế các sân con, giấy phép kinh doanh chưa rõ ràng..."
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-900 bg-white placeholder-slate-500 focus:outline-none focus:border-[#1b7a42]"
+              />
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowRejectModal(false)}
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRejectFacility}
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer"
+                >
+                  Xác nhận từ chối
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   )
 }

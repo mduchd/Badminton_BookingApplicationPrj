@@ -521,7 +521,7 @@ export function MainApp() {
           <main
             key="map"
             className={`w-full max-w-full h-screen h-[100dvh] overflow-hidden ${
-              slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
+              isManagementRoute ? '' : slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
             }`}
           >
             <CourtMapView
@@ -536,7 +536,7 @@ export function MainApp() {
           <main
             key="account"
             className={`w-full max-w-full overflow-x-hidden min-h-[calc(100vh-64px)] ${
-              slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
+              isManagementRoute ? '' : slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
             }`}
           >
             <Routes>
@@ -572,7 +572,7 @@ export function MainApp() {
                     showHeader ? 'pt-4 pb-6' : 'py-4 sm:py-6'
                   } space-y-4`
             } ${showBottomNav ? 'pb-28' : 'pb-8'} relative z-20 ${
-              slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
+              isManagementRoute ? '' : slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
             }`}
           >
             <Routes>
