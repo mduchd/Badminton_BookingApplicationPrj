@@ -32,6 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.TreeMap;
 
 @Service
 public class PaymentService {
@@ -224,14 +227,22 @@ public class PaymentService {
     @Transactional
     public boolean processPayOsWebhook(PayOsWebhookRequest payload) {
         if (payload == null || payload.data() == null) {
-            throw new BadRequestException("Dữ liệu webhook payOS không hợp lệ!");
+            log.info("Tiếp nhận ping kiểm tra Webhook payOS (health check) -> Phản hồi HTTP 200 OK.");
+            return true;
         }
 
         PayOsWebhookRequest.PayOsWebhookData data = payload.data();
         long orderCode = data.orderCode();
         String reference = data.reference() != null ? data.reference() : ("REF-" + orderCode);
 
-        // 1. Xác thực chữ ký HMAC-SHA256 (nếu đã cấu hình PAYOS_CHECKSUM_KEY)
+        // 1. Tra cứu Payment theo orderCode
+        Optional<Payment> paymentOpt = paymentRepository.findByProviderOrderCode(orderCode);
+        if (paymentOpt.isEmpty()) {
+            log.info("Tiếp nhận Webhook payOS cho orderCode test hoặc không tồn tại trong hệ thống (xác thực Webhook thành công): orderCode={}", orderCode);
+            return true;
+        }
+
+        // 2. Xác thực chữ ký HMAC-SHA256 (nếu đã cấu hình PAYOS_CHECKSUM_KEY)
         if (payOsChecksumKey != null && !payOsChecksumKey.isBlank() && payload.signature() != null) {
             String rawData = String.format("amount=%d&description=%s&orderCode=%d",
                     data.amount().longValue(),
@@ -241,21 +252,36 @@ public class PaymentService {
             String expectedSignature = payOsHelper.calculateHmacSha256(rawData, payOsChecksumKey);
             if (expectedSignature == null || !expectedSignature.equalsIgnoreCase(payload.signature())) {
                 log.warn("Chữ ký Webhook payOS không khớp: expected={}, got={}", expectedSignature, payload.signature());
-                throw new BadRequestException("Chữ ký webhook payOS không hợp lệ!");
+                Map<String, Object> dataMap = new java.util.TreeMap<>();
+                dataMap.put("accountNumber", data.accountNumber() != null ? data.accountNumber() : "");
+                dataMap.put("amount", data.amount().longValue());
+                dataMap.put("code", data.code() != null ? data.code() : "");
+                dataMap.put("currency", data.currency() != null ? data.currency() : "");
+                dataMap.put("description", data.description() != null ? data.description() : "");
+                dataMap.put("orderCode", orderCode);
+                dataMap.put("paymentLinkId", data.paymentLinkId() != null ? data.paymentLinkId() : "");
+                dataMap.put("reference", reference);
+                dataMap.put("transactionDateTime", data.transactionDateTime() != null ? data.transactionDateTime() : "");
+
+                StringBuilder sb = new StringBuilder();
+                for (Map.Entry<String, Object> entry : dataMap.entrySet()) {
+                    if (entry.getValue() != null && !entry.getValue().toString().isEmpty()) {
+                        if (sb.length() > 0) sb.append("&");
+                        sb.append(entry.getKey()).append("=").append(entry.getValue());
+                    }
+                }
+                String altSignature = payOsHelper.calculateHmacSha256(sb.toString(), payOsChecksumKey);
+                if (altSignature == null || !altSignature.equalsIgnoreCase(payload.signature())) {
+                    log.error("Xác thực chữ ký payOS thất bại: payload signature={}", payload.signature());
+                    throw new BadRequestException("Chữ ký webhook payOS không hợp lệ!");
+                }
             }
         }
 
-        // 2. Idempotency Check (TC04): chống xử lý trùng lặp khi webhook gửi lại nhiều lần
+        // 3. Idempotency Check (TC04): chống xử lý trùng lặp khi webhook gửi lại nhiều lần
         String eventKey = "PAYOS-" + orderCode + "-" + reference;
         if (webhookEventRepository.existsByProviderEventKey(eventKey)) {
             log.info("Webhook payOS lặp đã được xử lý trước đó: eventKey={}", eventKey);
-            return true;
-        }
-
-        // 3. Tra cứu Payment theo orderCode
-        Optional<Payment> paymentOpt = paymentRepository.findByProviderOrderCode(orderCode);
-        if (paymentOpt.isEmpty()) {
-            log.info("Tiếp nhận Webhook payOS cho orderCode test hoặc không tồn tại (xác thực Webhook thành công): orderCode={}", orderCode);
             return true;
         }
 

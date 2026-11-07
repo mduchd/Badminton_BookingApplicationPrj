@@ -50,9 +50,9 @@ public class PaymentController {
     /**
      * Nhận và xác thực Webhook tự động từ payOS (với HMAC-SHA256 và Idempotency)
      */
-    @PostMapping("/webhooks/payos")
+    @RequestMapping(value = "/webhooks/payos", method = {RequestMethod.POST, RequestMethod.GET})
     public ResponseEntity<Map<String, Object>> payOsWebhook(
-            @RequestBody PayOsWebhookRequest payload
+            @RequestBody(required = false) PayOsWebhookRequest payload
     ) {
         boolean processed = paymentService.processPayOsWebhook(payload);
         return ResponseEntity.ok(Map.of(
