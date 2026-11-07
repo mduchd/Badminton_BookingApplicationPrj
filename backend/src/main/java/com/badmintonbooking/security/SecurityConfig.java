@@ -46,10 +46,11 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/public/**").permitAll()
-                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                 .requestMatchers("/error").permitAll()
-                .requestMatchers("/api/bookings/**", "/api/bookings").authenticated()
-                .anyRequest().permitAll()
+                .requestMatchers("/api/bookings/**", "/api/bookings", "/api/payments/**").hasAnyRole("CUSTOMER", "COURT_OWNER", "SYSTEM_ADMIN")
+                .requestMatchers("/api/courts/**", "/api/v1/ai/**", "/api/webhooks/payos", "/ws/**", "/ws").permitAll()
+                .anyRequest().denyAll()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

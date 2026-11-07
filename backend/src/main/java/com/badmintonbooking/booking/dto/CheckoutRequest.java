@@ -7,7 +7,7 @@ public record CheckoutRequest(
 ) {
     public String getResolvedPaymentMethod() {
         if (paymentMethod == null || paymentMethod.isBlank()) {
-            return "MOCK";
+            return "PAYOS";
         }
         return paymentMethod.toUpperCase();
     }

@@ -2,7 +2,6 @@ package com.badmintonbooking.booking.service;
 
 import com.badmintonbooking.booking.dto.CheckoutRequest;
 import com.badmintonbooking.booking.dto.CheckoutResponse;
-import com.badmintonbooking.booking.dto.PayOsWebhookRequest;
 import com.badmintonbooking.booking.entity.Booking;
 import com.badmintonbooking.booking.entity.CourtOccupancy;
 import com.badmintonbooking.booking.entity.Payment;
@@ -27,10 +26,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -50,6 +54,15 @@ public class PaymentService {
     @Value("${payos.checksum-key:}")
     private String payOsChecksumKey;
 
+    @Value("${PAYOS_ENABLED:false}")
+    private boolean payOsEnabled;
+
+    @Value("${payment.mock-enabled:false}")
+    private boolean mockEnabled;
+
+    @Value("${payment.frontend-url:https://smashcourt-booking.netlify.app}")
+    private String frontendUrl;
+
     private final BookingRepository bookingRepository;
     private final CourtOccupancyRepository occupancyRepository;
     private final PaymentRepository paymentRepository;
@@ -58,6 +71,7 @@ public class PaymentService {
     private final FacilityRepository facilityRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PayOsHelper payOsHelper;
+    private final Environment environment;
 
     public PaymentService(BookingRepository bookingRepository,
                           CourtOccupancyRepository occupancyRepository,
@@ -66,7 +80,7 @@ public class PaymentService {
                           CourtRepository courtRepository,
                           FacilityRepository facilityRepository,
                           ApplicationEventPublisher eventPublisher,
-                          PayOsHelper payOsHelper) {
+                          PayOsHelper payOsHelper, Environment environment) {
         this.bookingRepository = bookingRepository;
         this.occupancyRepository = occupancyRepository;
         this.paymentRepository = paymentRepository;
@@ -75,12 +89,12 @@ public class PaymentService {
         this.facilityRepository = facilityRepository;
         this.eventPublisher = eventPublisher;
         this.payOsHelper = payOsHelper;
+        this.environment = environment;
     }
 
     @Transactional
-    public CheckoutResponse createCheckout(Long bookingId, CheckoutRequest request) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt sân #" + bookingId));
+    public CheckoutResponse createCheckout(Long bookingId, CheckoutRequest request, Long customerId) {
+        Booking booking = ownedBooking(bookingId, customerId);
 
         if (booking.getStatus() == BookingStatus.CONFIRMED || booking.getStatus() == BookingStatus.COMPLETED) {
             throw new BadRequestException("Đơn đặt sân này đã được thanh toán xác nhận thành công!");
@@ -98,12 +112,24 @@ public class PaymentService {
         }
 
         String method = request.getResolvedPaymentMethod();
+        if (!method.equals("PAYOS") && !method.equals("MOCK")) throw new BadRequestException("Phương thức thanh toán không hợp lệ");
+        if (method.equals("MOCK") && !mockAllowed()) throw new BadRequestException("Thanh toán thử nghiệm không khả dụng");
         PaymentProvider provider = method.equals("PAYOS") ? PaymentProvider.PAYOS : PaymentProvider.MOCK;
+        if (provider == PaymentProvider.PAYOS && (!payOsEnabled || isBlank(payOsClientId) || isBlank(payOsApiKey) || isBlank(payOsChecksumKey))) {
+            throw new BadRequestException("Thanh toán trực tuyến tạm thời chưa khả dụng");
+        }
 
         // Sinh orderCode ngẫu nhiên duy nhất (dương 9-10 chữ số)
         long orderCode = (System.currentTimeMillis() % 1000000000L) + (long) (Math.random() * 1000);
 
-        Payment payment = paymentRepository.findByBookingId(bookingId).orElseGet(() -> {
+        Optional<Payment> existing = paymentRepository.findByBookingId(bookingId);
+        if (existing.isPresent() && existing.get().getStatus() == PaymentStatus.PENDING) {
+            throw new BadRequestException("Đơn đã có phiên thanh toán đang chờ. Vui lòng hoàn tất phiên đã mở.");
+        }
+        if (existing.isPresent() && existing.get().getStatus() == PaymentStatus.SUCCESS) {
+            throw new BadRequestException("Đơn này đã thanh toán.");
+        }
+        Payment payment = existing.orElseGet(() -> {
             Payment p = new Payment();
             p.setBookingId(bookingId);
             return p;
@@ -122,42 +148,23 @@ public class PaymentService {
         String checkoutUrl = "/booking/checkout/" + booking.getId();
         String qrUrl = null;
 
-        // Nếu người dùng chọn payOS và đã cấu hình key -> Gọi API chính thức của payOS v2
-        if (provider == PaymentProvider.PAYOS && payOsClientId != null && !payOsClientId.isBlank()) {
-            String returnUrl = request.returnUrl() != null && !request.returnUrl().isBlank()
-                    ? request.returnUrl()
-                    : "http://localhost:5173/payment/success";
-            String cancelUrl = request.cancelUrl() != null && !request.cancelUrl().isBlank()
-                    ? request.cancelUrl()
-                    : "http://localhost:5173/payment/cancel";
-
+        if (provider == PaymentProvider.PAYOS) {
+            // Redirect destinations are controlled by the server, not the caller.
+            String returnUrl = frontendUrl + "/payment/success";
+            String cancelUrl = frontendUrl + "/payment/cancel";
             String desc = "SmashCourt #" + booking.getId();
             PayOsHelper.PayOsPaymentLinkResult payOsRes = payOsHelper.createPaymentLink(
                     payOsClientId, payOsApiKey, payOsChecksumKey,
-                    orderCode, booking.getTotalAmount().longValue(), desc, returnUrl, cancelUrl
-            );
-
-            if (payOsRes.success()) {
-                checkoutUrl = payOsRes.checkoutUrl();
-                qrUrl = payOsRes.qrCode();
-                if (payOsRes.paymentLinkId() != null) {
-                    payment.setTransactionRef(payOsRes.paymentLinkId());
-                    paymentRepository.save(payment);
-                }
-                log.info("Khởi tạo live payOS link thành công: checkoutUrl={}, qrCode={}", checkoutUrl, qrUrl);
-            } else {
-                log.warn("Không thể tạo link live payOS ({}), sử dụng VietQR fallback", payOsRes.message());
+                    orderCode, booking.getTotalAmount().longValueExact(), desc, returnUrl, cancelUrl);
+            if (!payOsRes.success() || isBlank(payOsRes.checkoutUrl()) || !payOsRes.checkoutUrl().startsWith("https://")) {
+                throw new BadRequestException("Không thể tạo phiên thanh toán. Vui lòng thử lại sau.");
             }
-        }
-
-        // Fallback VietQR nếu payOS offline hoặc là mock
-        if (qrUrl == null) {
-            qrUrl = payOsHelper.generateVietQrUrl(
-                    "970422", // Mã BIN ngân hàng Quân Đội (MB Bank)
-                    "0987654321",
-                    booking.getTotalAmount(),
-                    "Thanh toan san SmashCourt #" + booking.getId()
-            );
+            checkoutUrl = payOsRes.checkoutUrl();
+            qrUrl = payOsRes.qrCode();
+            if (!isBlank(payOsRes.paymentLinkId())) {
+                payment.setTransactionRef(payOsRes.paymentLinkId());
+                paymentRepository.save(payment);
+            }
         }
 
         return new CheckoutResponse(
@@ -174,9 +181,9 @@ public class PaymentService {
     }
 
     @Transactional
-    public CheckoutResponse processMockSuccess(Long bookingId, Long orderCode) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt sân #" + bookingId));
+    public CheckoutResponse processMockSuccess(Long bookingId, Long orderCode, Long customerId) {
+        if (!mockAllowed()) throw new BadRequestException("Thanh toán thử nghiệm không khả dụng");
+        Booking booking = ownedBooking(bookingId, customerId);
 
         if (booking.getStatus() == BookingStatus.CONFIRMED) {
             return toCheckoutResponse(booking, orderCode, "Đơn đã được xác nhận thanh toán trước đó.");
@@ -225,65 +232,60 @@ public class PaymentService {
     }
 
     @Transactional
-    public boolean processPayOsWebhook(PayOsWebhookRequest payload) {
-        if (payload == null || payload.data() == null) {
-            log.info("Tiếp nhận ping kiểm tra Webhook payOS (health check) -> Phản hồi HTTP 200 OK.");
-            return true;
+    public boolean processPayOsWebhook(Map<String, Object> payload) {
+        if (!payOsEnabled) throw new BadRequestException("Thanh toán payOS chưa được kích hoạt");
+        if (isBlank(payOsChecksumKey)) throw new BadRequestException("Webhook thanh toán chưa được cấu hình");
+        if (payload == null || !(payload.get("data") instanceof Map<?, ?> rawData)
+                || !(payload.get("signature") instanceof String signature) || signature.isBlank()) {
+            throw new BadRequestException("Webhook thanh toán không hợp lệ");
         }
-
-        PayOsWebhookRequest.PayOsWebhookData data = payload.data();
-        long orderCode = data.orderCode();
-        String reference = data.reference() != null ? data.reference() : ("REF-" + orderCode);
-
-        // 1. Tra cứu Payment theo orderCode
+        TreeMap<String, String> fields = new TreeMap<>();
+        for (var entry : rawData.entrySet()) {
+            if (!(entry.getKey() instanceof String key)) throw new BadRequestException("Webhook không hợp lệ");
+            Object value = entry.getValue();
+            if (value instanceof Map || value instanceof List) throw new BadRequestException("Webhook không hợp lệ");
+            String text = value == null ? "" : value.toString();
+            fields.put(key, (text.equals("null") || text.equals("undefined")) ? "" : text);
+        }
+        String signed = fields.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue())
+                .collect(java.util.stream.Collectors.joining("&"));
+        String expected = payOsHelper.calculateHmacSha256(signed, payOsChecksumKey);
+        if (isBlank(expected) || !MessageDigest.isEqual(expected.toLowerCase(java.util.Locale.ROOT).getBytes(StandardCharsets.US_ASCII),
+                signature.toLowerCase(java.util.Locale.ROOT).getBytes(StandardCharsets.US_ASCII))) {
+            throw new BadRequestException("Chữ ký webhook payOS không hợp lệ");
+        }
+        // Only signed successful transactions can alter bookings.
+        if (!Boolean.TRUE.equals(payload.get("success")) || !"00".equals(fields.get("code"))) return true;
+        final long orderCode;
+        final BigDecimal amount;
+        try {
+            orderCode = Long.parseLong(fields.getOrDefault("orderCode", ""));
+            amount = new BigDecimal(fields.getOrDefault("amount", ""));
+        } catch (NumberFormatException e) {
+            throw new BadRequestException("Thông tin giao dịch không hợp lệ");
+        }
+        String reference = fields.getOrDefault("reference", "");
+        if (reference.isBlank()) throw new BadRequestException("Thiếu mã giao dịch");
         Optional<Payment> paymentOpt = paymentRepository.findByProviderOrderCode(orderCode);
-        if (paymentOpt.isEmpty()) {
-            log.info("Tiếp nhận Webhook payOS cho orderCode test hoặc không tồn tại trong hệ thống (xác thực Webhook thành công): orderCode={}", orderCode);
-            return true;
+        // payOS sends signed sample payloads to verify webhook setup.
+        if (paymentOpt.isEmpty()) return true;
+        Payment existingPayment = paymentOpt.get();
+        if (existingPayment.getProvider() != PaymentProvider.PAYOS || existingPayment.getAmount() == null
+                || existingPayment.getAmount().compareTo(amount) != 0 || !"VND".equals(fields.get("currency"))) {
+            throw new BadRequestException("Thông tin thanh toán không khớp");
         }
-
-        // 2. Xác thực chữ ký HMAC-SHA256 (nếu đã cấu hình PAYOS_CHECKSUM_KEY)
-        if (payOsChecksumKey != null && !payOsChecksumKey.isBlank() && payload.signature() != null) {
-            String rawData = String.format("amount=%d&description=%s&orderCode=%d",
-                    data.amount().longValue(),
-                    data.description() != null ? data.description() : "",
-                    orderCode
-            );
-            String expectedSignature = payOsHelper.calculateHmacSha256(rawData, payOsChecksumKey);
-            if (expectedSignature == null || !expectedSignature.equalsIgnoreCase(payload.signature())) {
-                log.warn("Chữ ký Webhook payOS không khớp: expected={}, got={}", expectedSignature, payload.signature());
-                Map<String, Object> dataMap = new java.util.TreeMap<>();
-                dataMap.put("accountNumber", data.accountNumber() != null ? data.accountNumber() : "");
-                dataMap.put("amount", data.amount().longValue());
-                dataMap.put("code", data.code() != null ? data.code() : "");
-                dataMap.put("currency", data.currency() != null ? data.currency() : "");
-                dataMap.put("description", data.description() != null ? data.description() : "");
-                dataMap.put("orderCode", orderCode);
-                dataMap.put("paymentLinkId", data.paymentLinkId() != null ? data.paymentLinkId() : "");
-                dataMap.put("reference", reference);
-                dataMap.put("transactionDateTime", data.transactionDateTime() != null ? data.transactionDateTime() : "");
-
-                StringBuilder sb = new StringBuilder();
-                for (Map.Entry<String, Object> entry : dataMap.entrySet()) {
-                    if (entry.getValue() != null && !entry.getValue().toString().isEmpty()) {
-                        if (sb.length() > 0) sb.append("&");
-                        sb.append(entry.getKey()).append("=").append(entry.getValue());
-                    }
-                }
-                String altSignature = payOsHelper.calculateHmacSha256(sb.toString(), payOsChecksumKey);
-                if (altSignature == null || !altSignature.equalsIgnoreCase(payload.signature())) {
-                    log.error("Xác thực chữ ký payOS thất bại: payload signature={}", payload.signature());
-                    throw new BadRequestException("Chữ ký webhook payOS không hợp lệ!");
-                }
-            }
+        if (existingPayment.getStatus() == PaymentStatus.SUCCESS) return true;
+        if (existingPayment.getTransactionRef() != null && !existingPayment.getTransactionRef().equals(fields.get("paymentLinkId"))) {
+            throw new BadRequestException("Mã liên kết thanh toán không khớp");
         }
-
         // 3. Idempotency Check (TC04): chống xử lý trùng lặp khi webhook gửi lại nhiều lần
         String eventKey = "PAYOS-" + orderCode + "-" + reference;
         if (webhookEventRepository.existsByProviderEventKey(eventKey)) {
             log.info("Webhook payOS lặp đã được xử lý trước đó: eventKey={}", eventKey);
             return true;
         }
+
+        if (existingPayment.getStatus() != PaymentStatus.PENDING) throw new BadRequestException("Giao dịch không còn hiệu lực");
 
         Payment payment = paymentOpt.get();
         Booking booking = bookingRepository.findById(payment.getBookingId())
@@ -292,7 +294,8 @@ public class PaymentService {
         OffsetDateTime now = OffsetDateTime.now();
 
         // 4. Xử lý webhook đến trễ sau khi hold đã hết hạn (TC05)
-        if (booking.getStatus() == BookingStatus.EXPIRED || booking.getStatus() == BookingStatus.CANCELLED) {
+        if ((booking.getStatus() != BookingStatus.HELD && booking.getStatus() != BookingStatus.PENDING_PAYMENT)
+                || (booking.getHoldExpiresAt() != null && booking.getHoldExpiresAt().isBefore(now))) {
             log.warn("Webhook thanh toán tới sau khi đơn đã hết hạn: bookingId={}, status={}", booking.getId(), booking.getStatus());
             payment.setStatus(PaymentStatus.FAILED);
             paymentRepository.save(payment);
@@ -339,10 +342,24 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
-    public Payment getPaymentByBookingId(Long bookingId) {
+    public Payment getPaymentByBookingId(Long bookingId, Long customerId) {
+        ownedBooking(bookingId, customerId);
         return paymentRepository.findByBookingId(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giao dịch cho đơn #" + bookingId));
     }
+
+    private Booking ownedBooking(Long bookingId, Long customerId) {
+        Booking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt sân"));
+        if (customerId == null || !customerId.equals(booking.getCustomerId())) {
+            throw new ResourceNotFoundException("Không tìm thấy đơn đặt sân");
+        }
+        return booking;
+    }
+
+    private boolean mockAllowed() { return mockEnabled && !environment.acceptsProfiles(Profiles.of("prod")); }
+
+    private static boolean isBlank(String value) { return value == null || value.isBlank(); }
 
     private void publishConfirmedEvent(Booking booking, Long orderCode, String paymentMethod) {
         String courtName = courtRepository.findById(booking.getCourtId()).map(Court::getName).orElse("Sân đấu");

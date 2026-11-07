@@ -103,7 +103,8 @@ public class AuthService {
         }
         String email = jwtTokenProvider.getEmailFromToken(token);
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng"));
+                .filter(account -> "ACTIVE".equalsIgnoreCase(account.getStatus()))
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng hoặc tài khoản bị khóa"));
         return UserResponse.fromEntity(user);
     }
 }
