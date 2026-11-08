@@ -35,6 +35,15 @@ export interface AdminDashboardMetrics {
   bookingsByDistrict: Record<string, number>
 }
 
+export interface AloBookingFacilityProfile {
+  facilityId: number
+  alobookingCode: string
+  publishedCourtCount: number | null
+  publicContact: string | null
+  bookingUrl: string | null
+  bookingSourceUrl: string | null
+}
+
 export interface AdminFacilityItem {
   id: number | string
   ownerId?: number | string
@@ -51,7 +60,8 @@ export interface AdminFacilityItem {
   status: 'ACTIVE' | 'PENDING_APPROVAL' | 'PAUSED' | 'REJECTED' | string
   isApproved: boolean
   subCourtCount: number
-  imageUrl?: string
+  imageUrl?: string | null
+  logoUrl?: string | null
   createdAt?: string
 }
 
@@ -102,6 +112,11 @@ export const adminApi = {
   },
 
   // 2. Facilities
+  async getAloBookingProfiles(): Promise<AloBookingFacilityProfile[]> {
+    const res = await client.get('/v1/admin/facilities/alobooking-profiles')
+    return res.data.data
+  },
+
   async getFacilities(params?: { search?: string; status?: string; district?: string }): Promise<AdminFacilityItem[]> {
     const res = await client.get('/v1/admin/facilities', { params })
     return res.data.data

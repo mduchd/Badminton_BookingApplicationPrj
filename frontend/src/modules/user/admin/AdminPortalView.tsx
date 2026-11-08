@@ -26,6 +26,7 @@ import {
   adminApi,
   type AdminDashboardMetrics,
   type AdminFacilityItem,
+  type AloBookingFacilityProfile,
   type AdminUserItem,
   type AdminTransaction,
   type AdminSystemSettings,
@@ -39,6 +40,7 @@ export const AdminPortalView: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false)
 
   const [facilities, setFacilities] = useState<Facility[]>([])
+  const [aloProfiles, setAloProfiles] = useState<Record<string, AloBookingFacilityProfile>>({})
   const [metrics, setMetrics] = useState<AdminDashboardMetrics | null>(null)
   const [transactions, setTransactions] = useState<AdminTransaction[]>([])
   const [settings, setSettings] = useState<AdminSystemSettings>({
@@ -77,15 +79,17 @@ export const AdminPortalView: React.FC = () => {
   const [txStatusFilter, setTxStatusFilter] = useState<string>('ALL')
 
   // Selected Facility Modal
-  const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null)
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null)
+  const selectedFacility = facilities.find((facility) => facility.id === selectedFacilityId)
+  const selectedAloProfile = selectedFacility ? aloProfiles[selectedFacility.id] : undefined
   const [rejectionReason, setRejectionReason] = useState<string>('')
   const [showRejectModal, setShowRejectModal] = useState<boolean>(false)
   const [newAmenityInput, setNewAmenityInput] = useState<string>('')
 
   const toFacility = (f: AdminFacilityItem): Facility => ({
-    id: String(f.id), name: f.name, logoUrl: '', imageUrl: f.imageUrl || '', galleryImages: [],
+    id: String(f.id), name: f.name, logoUrl: f.logoUrl || '', imageUrl: f.imageUrl || '', galleryImages: [],
     distance: '', address: f.address || '', district: f.district || '', city: f.city || '',
-    openHours: `${f.openTime || ''} - ${f.closeTime || ''}`, rating: 0, reviewCount: 0,
+    openHours: f.openTime && f.closeTime ? `${f.openTime.slice(0, 5)} – ${f.closeTime.slice(0, 5)}` : '', rating: 0, reviewCount: 0,
     pricePerHour: 0, amenities: [], latitude: 0, longitude: 0, phone: f.ownerPhone || '',
     description: '', ownerId: String(f.ownerId || ''), isApproved: f.isApproved,
     status: f.status === 'ACTIVE' ? 'active' : 'paused',
@@ -113,7 +117,28 @@ export const AdminPortalView: React.FC = () => {
     }
   }
 
-  useEffect(() => { void loadDashboardData() }, [])
+  useEffect(() => {
+    void loadDashboardData()
+    void adminApi.getAloBookingProfiles()
+      .then((profiles) => setAloProfiles(Object.fromEntries(profiles.map((profile) => [String(profile.facilityId), profile]))))
+      .catch(() => toast.error('Không thể tải thông tin công khai của cụm sân.'))
+  }, [])
+
+  useEffect(() => {
+    if (activeTab !== 'facilities') return
+    let active = true
+    const refreshFacilities = () => {
+      void adminApi.getFacilities()
+        .then((items) => { if (active) setFacilities(items.map(toFacility)) })
+        .catch(() => { if (active) toast.error('Không thể làm mới danh sách cụm sân.') })
+    }
+    refreshFacilities()
+    window.addEventListener('focus', refreshFacilities)
+    return () => {
+      active = false
+      window.removeEventListener('focus', refreshFacilities)
+    }
+  }, [activeTab])
 
   // Moderation Handlers
   const handleApproveFacility = async (fac: Facility) => {
@@ -131,7 +156,7 @@ export const AdminPortalView: React.FC = () => {
     })
     setFacilities(updated)
     toast.success(`Đã phê duyệt cụm sân: ${fac.name}`)
-    setSelectedFacility(null)
+    setSelectedFacilityId(null)
     loadDashboardData()
   }
 
@@ -153,7 +178,7 @@ export const AdminPortalView: React.FC = () => {
     setFacilities(updated)
     toast.info(`Đã từ chối kiểm duyệt cụm sân: ${selectedFacility.name}`)
     setShowRejectModal(false)
-    setSelectedFacility(null)
+    setSelectedFacilityId(null)
     setRejectionReason('')
     loadDashboardData()
   }
@@ -655,56 +680,76 @@ export const AdminPortalView: React.FC = () => {
             </div>
 
             {/* Facilities Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
-                <thead>
+            <div className="md:overflow-x-auto" role="region" aria-label="Danh sách cụm sân">
+              <table className="block w-full text-left text-xs sm:text-sm md:table md:min-w-[58rem]">
+                <thead className="hidden md:table-header-group">
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
-                    <th className="p-3.5">Cụm sân</th>
-                    <th className="p-3.5">Khu vực</th>
-                    <th className="p-3.5">Quy mô</th>
-                    <th className="p-3.5">Giờ mở cửa</th>
-                    <th className="p-3.5">Kiểm duyệt</th>
-                    <th className="p-3.5">Vận hành</th>
+                    <th className="whitespace-nowrap p-3.5">Cụm sân</th>
+                    <th className="whitespace-nowrap p-3.5">Khu vực</th>
+                    <th className="whitespace-nowrap p-3.5">Quy mô</th>
+                    <th className="whitespace-nowrap p-3.5">Giờ mở cửa</th>
+                    <th className="whitespace-nowrap p-3.5">Kiểm duyệt</th>
+                    <th className="whitespace-nowrap p-3.5">Vận hành</th>
                     <th className="p-3.5 text-right">Thao tác</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="block divide-y divide-slate-100 md:table-row-group">
+                  {filteredFacilities.length === 0 && (
+                    <tr className="block md:table-row">
+                      <td colSpan={7} className="block px-4 py-8 text-center text-sm text-slate-600 md:table-cell">
+                        Không tìm thấy cụm sân phù hợp với bộ lọc.
+                      </td>
+                    </tr>
+                  )}
                   {filteredFacilities.map((fac) => (
-                    <tr key={fac.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="p-3.5">
-                        <div className="flex items-center gap-3">
+                    <tr key={fac.id} className="grid grid-cols-2 gap-x-3 gap-y-2 p-4 transition-colors hover:bg-slate-50/50 md:table-row md:p-0">
+                      <td className="col-span-2 min-w-0 md:p-3.5">
+                        <div className="flex min-w-0 items-center gap-3">
                           <div className="w-11 h-11 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex-shrink-0">
                             <img
-                              src={fac.imageUrl}
+                              src={fac.logoUrl || fac.imageUrl || '/images/logos/badminton-club-logo.svg'}
+                              loading="lazy"
+                              onError={(event) => {
+                                event.currentTarget.onerror = null
+                                if (!event.currentTarget.src.endsWith('/images/logos/badminton-club-logo.svg')) {
+                                  event.currentTarget.src = '/images/logos/badminton-club-logo.svg'
+                                }
+                              }}
                               alt=""
                               className="w-full h-full object-cover"
                             />
                           </div>
                           <div>
-                            <strong className="text-slate-900 block font-bold text-xs sm:text-sm">
+                            <strong className="block break-words text-sm font-bold text-slate-900">
                               {fac.name}
                             </strong>
                             <span className="text-[11px] text-slate-600 font-medium">
-                              Hotline: {fac.phone || '0912 345 678'}
+                              {aloProfiles[fac.id]?.publicContact?.split('|')[0].trim() || (fac.phone && fac.phone !== 'N/A' ? fac.phone : 'Chưa có liên hệ')}
                             </span>
                           </div>
                         </div>
                       </td>
-                      <td className="p-3.5 font-medium text-slate-700">
+                      <td className="col-span-2 min-w-0 font-medium text-slate-700 md:p-3.5">
                         <div>{fac.district}, {fac.city}</div>
-                        <span className="text-[11px] text-slate-500 line-clamp-1 max-w-[200px]">
+                        <span className="block break-words text-[11px] text-slate-600 md:max-w-[200px]">
                           {fac.address}
                         </span>
                       </td>
-                      <td className="p-3.5 font-bold text-slate-900">
-                        {fac.subCourts?.length || 4} sân
+                      <td className="min-w-0 font-bold text-slate-900 md:p-3.5">
+                        {fac.subCourts.length} sân đã cấu hình
+                        {aloProfiles[fac.id]?.publishedCourtCount != null && (
+                          <span className="block text-[11px] font-medium text-slate-600">
+                            Công bố {aloProfiles[fac.id].publishedCourtCount} sân
+                          </span>
+                        )}
                       </td>
-                      <td className="p-3.5 text-slate-700 font-medium">
-                        {fac.openHours || '05:00 - 23:00'}
+                      <td className="whitespace-nowrap font-medium tabular-nums text-slate-700 md:p-3.5">
+                        <span className="block text-[11px] text-slate-600 md:hidden">Giờ mở cửa</span>
+                        {fac.openHours || 'Chưa cập nhật'}
                       </td>
-                      <td className="p-3.5">
+                      <td className="min-w-0 md:p-3.5">
                         <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+                          className={`inline-flex w-fit items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-bold leading-none ${
                             fac.isApproved
                               ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
                               : 'bg-amber-50 text-amber-900 border-amber-200'
@@ -713,9 +758,9 @@ export const AdminPortalView: React.FC = () => {
                           {fac.isApproved ? 'Đã duyệt' : 'Chờ kiểm duyệt'}
                         </span>
                       </td>
-                      <td className="p-3.5">
+                      <td className="min-w-0 md:p-3.5">
                         <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+                          className={`inline-flex w-fit items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-bold leading-none ${
                             fac.status === 'active'
                               ? 'bg-blue-50 text-blue-900 border-blue-200'
                               : 'bg-rose-50 text-rose-900 border-rose-200'
@@ -724,10 +769,10 @@ export const AdminPortalView: React.FC = () => {
                           {fac.status === 'active' ? 'Đang mở' : 'Đang khóa'}
                         </span>
                       </td>
-                      <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
+                      <td className="col-span-2 space-x-1.5 whitespace-nowrap border-t border-slate-100 pt-2 text-right md:border-0 md:p-3.5">
                         <button
                           type="button"
-                          onClick={() => setSelectedFacility(fac)}
+                          onClick={() => setSelectedFacilityId(fac.id)}
                           className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
                           title="Xem chi tiết"
                         >
@@ -850,7 +895,7 @@ export const AdminPortalView: React.FC = () => {
                       </td>
                       <td className="p-3.5">
                         <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+                          className={`inline-flex w-fit items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-bold leading-none ${
                             u.status === 'ACTIVE' || u.status === 'active'
                               ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
                               : 'bg-rose-50 text-rose-900 border-rose-200'
@@ -977,7 +1022,7 @@ export const AdminPortalView: React.FC = () => {
                       </td>
                       <td className="p-3.5 text-right">
                         <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+                          className={`inline-flex w-fit items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-bold leading-none ${
                             tx.status === 'SUCCESS'
                               ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
                               : tx.status === 'PENDING'
@@ -1156,7 +1201,7 @@ export const AdminPortalView: React.FC = () => {
                 </h2>
                 <button
                   type="button"
-                  onClick={() => setSelectedFacility(null)}
+                  onClick={() => setSelectedFacilityId(null)}
                   className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   <XCircle className="w-5 h-5" />
@@ -1167,7 +1212,7 @@ export const AdminPortalView: React.FC = () => {
               <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
                 <div className="w-full h-52 rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 shrink-0">
                   <img
-                    src={selectedFacility.imageUrl}
+                    src={selectedFacility.imageUrl || selectedFacility.logoUrl || '/images/logos/badminton-club-logo.svg'}
                     alt=""
                     className="w-full h-full object-cover"
                   />
@@ -1189,13 +1234,13 @@ export const AdminPortalView: React.FC = () => {
                   <div className="flex justify-between py-1.5 border-b border-slate-100">
                     <span className="text-slate-600 font-semibold">Số lượng sân con:</span>
                     <span className="text-slate-900 font-bold">
-                      {selectedFacility.subCourts?.length || 4} sân tiêu chuẩn BWF
+                      {selectedFacility.subCourts.length} sân đã cấu hình
                     </span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100">
                     <span className="text-slate-600 font-semibold">Giờ hoạt động:</span>
                     <span className="text-slate-900 font-bold">
-                      {selectedFacility.openHours || '05:00 - 23:00'}
+                      {selectedFacility.openHours || 'Chưa cập nhật'}
                     </span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100">
@@ -1209,6 +1254,32 @@ export const AdminPortalView: React.FC = () => {
                     </span>
                   </div>
                 </div>
+
+                {selectedAloProfile && (
+                  <section className="space-y-2 rounded-xl border border-slate-200 p-3 text-xs" aria-label="Thông tin công khai của cụm sân">
+                    <h3 className="font-bold text-slate-900">Thông tin công khai của cụm sân</h3>
+                    <p className="break-words">Mã cụm sân {selectedAloProfile.alobookingCode}</p>
+                    <p>Số sân công bố {selectedAloProfile.publishedCourtCount ?? 'chưa có dữ liệu'}</p>
+                    <div>
+                      <p className="font-semibold">Liên hệ công khai</p>
+                      {selectedAloProfile.publicContact ? (
+                        <ul className="mt-1 space-y-1 text-slate-700">
+                          {selectedAloProfile.publicContact.split('|').map((contact, index) => (
+                            <li key={index} className="break-words">{contact.trim()}</li>
+                          ))}
+                        </ul>
+                      ) : <p>Chưa có thông tin liên hệ.</p>}
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {selectedAloProfile.bookingUrl ? (
+                        <a className="font-semibold text-emerald-700 underline" href={selectedAloProfile.bookingUrl} target="_blank" rel="noreferrer">Mở trang đặt sân</a>
+                      ) : <p>Chưa xác minh được liên kết đặt sân.</p>}
+                      {selectedAloProfile.bookingSourceUrl && (
+                        <a className="text-slate-700 underline" href={selectedAloProfile.bookingSourceUrl} target="_blank" rel="noreferrer">Bài viết nguồn</a>
+                      )}
+                    </div>
+                  </section>
+                )}
 
                 {/* Tiện ích sân */}
                 <div>
@@ -1234,7 +1305,7 @@ export const AdminPortalView: React.FC = () => {
               <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2.5 shrink-0">
                 <button
                   type="button"
-                  onClick={() => setSelectedFacility(null)}
+                  onClick={() => setSelectedFacilityId(null)}
                   className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
                 >
                   Đóng

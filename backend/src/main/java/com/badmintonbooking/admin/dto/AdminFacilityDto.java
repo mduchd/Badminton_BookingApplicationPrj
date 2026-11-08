@@ -14,6 +14,8 @@ public record AdminFacilityDto(
         String district,
         String ward,
         String address,
+        String imageUrl,
+        String logoUrl,
         LocalTime openTime,
         LocalTime closeTime,
         String status,
