@@ -1,6 +1,8 @@
 package com.badmintonbooking.admin.controller;
 
 import com.badmintonbooking.admin.dto.*;
+import com.badmintonbooking.admin.entity.AloBookingFacilityProfile;
+import com.badmintonbooking.admin.repository.AloBookingFacilityProfileRepository;
 import com.badmintonbooking.admin.service.AdminService;
 import com.badmintonbooking.common.dto.ApiResponse;
 import jakarta.validation.Valid;
@@ -15,8 +17,11 @@ public class AdminController {
 
     private final AdminService adminService;
 
-    public AdminController(AdminService adminService) {
+    private final AloBookingFacilityProfileRepository profiles;
+
+    public AdminController(AdminService adminService, AloBookingFacilityProfileRepository profiles) {
         this.adminService = adminService;
+        this.profiles = profiles;
     }
 
     /**
@@ -39,6 +44,11 @@ public class AdminController {
     ) {
         List<AdminFacilityDto> facilities = adminService.getFacilities(search, status, district);
         return ResponseEntity.ok(ApiResponse.ok(facilities, "Lấy danh sách cụm sân thành công"));
+    }
+
+    @GetMapping("/facilities/alobooking-profiles")
+    public ApiResponse<List<AloBookingFacilityProfile>> getAloBookingProfiles() {
+        return ApiResponse.ok(profiles.findAll(), "Lấy hồ sơ công khai AloBooking thành công");
     }
 
     /**
