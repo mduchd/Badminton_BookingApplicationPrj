@@ -568,7 +568,7 @@ export function MainApp() {
               <Route
                 path={ROUTES.COURT_BOOK}
                 element={
-                  <CourtBookingGridView onBook={openBookingForCourt} />
+                  <CourtBookingGridView onBook={openBookingForCourt} currentUser={currentUser} onOpenAuth={(tab = 'login') => { setAuthInitialTab(tab); setIsAuthOpen(true) }} />
                 }
               />
               <Route path={ROUTES.CHECKOUT} element={authLoading ? null : currentUser ? <CheckoutView userId={currentUser.id} /> : <Navigate to={ROUTES.ACCOUNT} replace />} />
