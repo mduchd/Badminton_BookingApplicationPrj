@@ -1,7 +1,6 @@
 package com.badmintonbooking.court.entity;
 
 import jakarta.persistence.*;
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -60,8 +59,4 @@ public class Court {
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
 
-    @Transient
-    public BigDecimal getPricePerHour() {
-        return BigDecimal.valueOf(100000.0);
-    }
 }

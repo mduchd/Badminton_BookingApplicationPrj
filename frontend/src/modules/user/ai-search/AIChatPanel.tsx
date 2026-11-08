@@ -10,19 +10,19 @@ import {
   Mic,
   MicOff,
   MapPin,
-  Star,
   Clock,
   Calendar,
-  ChevronRight,
+  Check,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { AIMessage, SearchCriteria } from '../../types/user'
 import type { BadmintonCourtItem } from '../mockData'
 import { formatPrice } from '../../../lib/utils'
 import { authStorage } from '../auth/authApi'
-import { parseUserQuery } from './aiKnowledgeAndParser'
+import { optimizeVietnameseSpeech, pickBestAlternative } from './vietnameseSpeechOptimizer'
+import { API_BASE_URL as API_ROOT_URL } from '../../../lib/apiConfig'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1'
+const API_BASE_URL = `${API_ROOT_URL}/v1`
 
 interface AIChatPanelProps {
   isOpen: boolean
@@ -57,8 +57,6 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
   isOpen,
   onClose,
   onApplyCriteria,
-  onSelectCourt,
-  onBookCourt,
   currentCriteria,
 }) => {
   const [messages, setMessages] = useState<AIMessage[]>([
@@ -80,8 +78,20 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
   const [isThinking, setIsThinking] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [isListening, setIsListening] = useState(false)
+  const [liveTranscript, setLiveTranscript] = useState('')
+  const [audioLevels, setAudioLevels] = useState<number[]>([8, 14, 24, 18, 12, 16, 10])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<any>(null)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
+  const animFrameRef = useRef<number | null>(null)
+  const finalTranscriptRef = useRef<string>('')
+  const intentionalStopRef = useRef<boolean>(false)
+  const restartCountRef = useRef<number>(0)
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const SILENCE_TIMEOUT_MS = 8000
+  const MAX_AUTO_RESTARTS = 10
 
   const quickPrompts = [
     'Tìm sân Cầu Giấy tối nay sau 19h',
@@ -95,98 +105,231 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isThinking])
 
-  // Initialize Web Speech Recognition
+  // Clean up all audio streams and speech recognition on unmount
   useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-
-    if (SpeechRecognition) {
-      try {
-        const recognition = new SpeechRecognition()
-        recognition.lang = 'vi-VN'
-        recognition.continuous = false
-        recognition.interimResults = false
-
-        recognition.onstart = () => {
-          setIsListening(true)
-        }
-
-        recognition.onresult = (event: any) => {
-          const transcript = event.results[0]?.[0]?.transcript
-          if (transcript) {
-            setInputValue((prev) => (prev ? `${prev} ${transcript}` : transcript))
-            toast.success(`Đã nhận diện giọng nói: "${transcript}"`)
-          }
-        }
-
-        recognition.onerror = (event: any) => {
-          console.warn('Speech recognition error:', event.error)
-          setIsListening(false)
-          if (event.error === 'not-allowed') {
-            toast.error('Vui lòng cấp quyền truy cập Microphone trên trình duyệt để nói.')
-          }
-        }
-
-        recognition.onend = () => {
-          setIsListening(false)
-        }
-
-        recognitionRef.current = recognition
-      } catch (err) {
-        console.warn('Could not initialize SpeechRecognition:', err)
-      }
-    }
-
     return () => {
+      intentionalStopRef.current = true
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
+      if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach((t) => t.stop())
+      if (audioCtxRef.current) {
+        try { audioCtxRef.current.close() } catch { /* ignore */ }
+      }
       if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort()
-        } catch {
-          // ignore
-        }
+        try { recognitionRef.current.abort() } catch { /* ignore */ }
       }
     }
   }, [])
 
-  if (!isOpen) return null
+  // Reset silence timer mỗi khi có kết quả mới
+  const resetSilenceTimer = () => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
+    silenceTimerRef.current = setTimeout(() => {
+      const rawCombined = (finalTranscriptRef.current).trim()
+      if (rawCombined) {
+        handleStopVoice(true)
+      } else {
+        handleStopVoice(false)
+      }
+    }, SILENCE_TIMEOUT_MS)
+  }
+
+  const handleStopVoice = (shouldSend = false) => {
+    intentionalStopRef.current = true
+    restartCountRef.current = 0
+
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current)
+      silenceTimerRef.current = null
+    }
+
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current)
+      animFrameRef.current = null
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop())
+      mediaStreamRef.current = null
+    }
+    if (audioCtxRef.current) {
+      try { audioCtxRef.current.close() } catch { /* ignore */ }
+      audioCtxRef.current = null
+    }
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop() } catch { /* ignore */ }
+      recognitionRef.current = null
+    }
+    setIsListening(false)
+    setAudioLevels([8, 14, 24, 18, 12, 16, 10])
+
+    const rawCombined = (finalTranscriptRef.current + ' ' + liveTranscript).trim() || inputValue.trim()
+    const textToSubmit = optimizeVietnameseSpeech(rawCombined)
+    finalTranscriptRef.current = ''
+    if (shouldSend && textToSubmit) {
+      handleSendMessage(textToSubmit)
+    }
+    setLiveTranscript('')
+  }
+
+  const handleStartVoice = async () => {
+    try {
+      intentionalStopRef.current = false
+      restartCountRef.current = 0
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+          sampleRate: { ideal: 16000, max: 48000 },
+        },
+      })
+      mediaStreamRef.current = stream
+
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+      if (AudioCtx) {
+        const audioCtx = new AudioCtx({ sampleRate: 16000 })
+        audioCtxRef.current = audioCtx
+        const source = audioCtx.createMediaStreamSource(stream)
+        const analyser = audioCtx.createAnalyser()
+        analyser.fftSize = 128
+        analyser.smoothingTimeConstant = 0.75
+        analyser.minDecibels = -90
+        analyser.maxDecibels = -10
+        source.connect(analyser)
+        analyserRef.current = analyser
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount)
+
+        const updateWave = () => {
+          if (!analyserRef.current) return
+          analyserRef.current.getByteFrequencyData(dataArray)
+
+          const sampleIndices = [2, 5, 9, 14, 20, 28, 36]
+          const levels = sampleIndices.map((idx) => {
+            const raw = dataArray[idx] || 0
+            return Math.max(6, Math.min(32, Math.round((raw / 255) * 32)))
+          })
+          setAudioLevels(levels)
+          animFrameRef.current = requestAnimationFrame(updateWave)
+        }
+        updateWave()
+      }
+
+      setIsListening(true)
+      setLiveTranscript('')
+
+      finalTranscriptRef.current = ''
+      const SpeechRecognition =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition()
+        recognition.lang = 'vi-VN'
+        recognition.continuous = true
+        recognition.interimResults = true
+        recognition.maxAlternatives = 5
+
+        recognition.onresult = (event: any) => {
+          resetSilenceTimer()
+          restartCountRef.current = 0
+
+          let interim = ''
+          let currentFinal = finalTranscriptRef.current
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const res = event.results[i]
+            const alts: Array<{ transcript: string; confidence?: number }> = []
+            for (let a = 0; a < res.length; a++) {
+              if (res[a]?.transcript) {
+                alts.push({
+                  transcript: res[a].transcript,
+                  confidence: res[a].confidence,
+                })
+              }
+            }
+            const bestPiece = pickBestAlternative(alts)
+
+            if (res.isFinal) {
+              currentFinal += bestPiece + ' '
+              finalTranscriptRef.current = currentFinal
+            } else {
+              interim += bestPiece
+            }
+          }
+
+          const rawCombined = (currentFinal + interim).trim()
+          const optimized = optimizeVietnameseSpeech(rawCombined)
+          if (optimized) {
+            setLiveTranscript(optimized)
+            setInputValue(optimized)
+          }
+        }
+
+        recognition.onend = () => {
+          if (!intentionalStopRef.current && restartCountRef.current < MAX_AUTO_RESTARTS) {
+            restartCountRef.current += 1
+            try {
+              recognition.start()
+            } catch {
+              handleStopVoice(false)
+            }
+          }
+        }
+
+        recognition.onerror = (event: any) => {
+          const errType = event.error
+          console.warn('SpeechRecognition error:', errType)
+
+          if (errType === 'not-allowed' || errType === 'service-not-allowed') {
+            toast.error('Vui lòng cấp quyền Microphone trên trình duyệt để nói.')
+            handleStopVoice(false)
+          } else if (errType === 'audio-capture') {
+            toast.error('Không thể thu âm. Kiểm tra microphone của bạn.')
+            handleStopVoice(false)
+          } else if (errType === 'network') {
+            toast.error('Lỗi kết nối mạng. Vui lòng kiểm tra internet.')
+            handleStopVoice(false)
+          }
+        }
+
+        recognition.start()
+        recognitionRef.current = recognition
+        resetSilenceTimer()
+
+        toast.info('Đang lắng nghe... Nói tự nhiên, chữ sẽ xuất hiện ngay!')
+      } else {
+        toast.info('Trình duyệt không hỗ trợ nhận diện giọng nói. Vui lòng dùng Chrome hoặc Edge.')
+        handleStopVoice(false)
+      }
+    } catch (err) {
+      console.warn('Microphone access error:', err)
+      toast.error('Không thể truy cập Microphone. Vui lòng cho phép quyền truy cập thiết bị!')
+      setIsListening(false)
+    }
+  }
 
   // Toggle Voice Recognition
   const handleToggleVoice = () => {
-    if (!recognitionRef.current) {
-      toast.info('Trình duyệt hiện tại chưa hỗ trợ Web Speech API. Vui lòng nhập bằng văn bản.')
-      return
-    }
-
     if (isListening) {
-      try {
-        recognitionRef.current.stop()
-      } catch {
-        // ignore
-      }
-      setIsListening(false)
+      handleStopVoice(false)
     } else {
-      try {
-        recognitionRef.current.start()
-        setIsListening(true)
-        toast.info('Đang lắng nghe... Hãy nói yêu cầu của bạn bằng tiếng Việt!')
-      } catch {
-        setIsListening(false)
-      }
+      handleStartVoice()
     }
   }
+
+  if (!isOpen) return null
+
+
 
   const handleSendMessage = async (textToSend?: string) => {
     const query = textToSend || inputValue.trim()
     if (!query) return
 
-    // Stop speech if running
-    if (isListening && recognitionRef.current) {
-      try {
-        recognitionRef.current.stop()
-      } catch {
-        // ignore
-      }
-      setIsListening(false)
+    // Stop voice if running
+    if (isListening) {
+      handleStopVoice(false)
     }
 
     const userMsg: AIMessage = {
@@ -200,149 +343,177 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
     if (!textToSend) setInputValue('')
     setIsThinking(true)
 
-    // Parse with smart client-side knowledge & NLP first
-    const clientResult = parseUserQuery(query, currentCriteria)
-
-    // 1. Try real Backend AI Orchestrator
     try {
       const token = authStorage.getToken()
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      }
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
-
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
       const res = await fetch(`${API_BASE_URL}/ai/search`, {
-        method: 'POST',
-        headers,
+        method: 'POST', headers,
         body: JSON.stringify({
           message: query,
-          conversationId: 'conv_' + Date.now(),
-          currentCriteria,
+          currentCriteria: currentCriteria ? {
+            district: currentCriteria.district || null,
+            startTime: currentCriteria.startTime || null,
+            endTime: currentCriteria.endTime || null,
+            maxPricePerHour: currentCriteria.maxPricePerHour ?? null,
+            amenities: currentCriteria.amenities || [],
+          } : null,
         }),
       })
-
-      if (res.ok) {
-        const body = await res.json()
-        if (body.success && body.data) {
-          const aiData = body.data
-          const criteria = aiData.extractedCriteria || clientResult.extractedCriteria || {}
-
-          const aiMsg: AIMessage = {
-            id: 'ai_' + Date.now(),
-            sender: 'ai',
-            text: aiData.reply || clientResult.replyText,
-            extractedCriteria: Object.keys(criteria).length > 0 ? (criteria as SearchCriteria) : undefined,
-            recommendedCourts: clientResult.recommendedCourts,
-            followUpChips: clientResult.followUpChips,
-            timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-          }
-
-          setMessages((prev) => [...prev, aiMsg])
-          if (Object.keys(criteria).length > 0) {
-            onApplyCriteria(criteria)
-          }
-          setIsThinking(false)
-          return
-        }
+      if (!res.ok) throw new Error('Không thể xử lý yêu cầu')
+      const body = await res.json()
+      if (!body.success || !body.data) throw new Error('Không thể xử lý yêu cầu')
+      const data = body.data
+      const criteria: Partial<SearchCriteria> = {}
+      for (const key of ['district', 'startTime', 'endTime', 'maxPricePerHour', 'amenities'] as const) {
+        if (data.extractedCriteria?.[key] != null) (criteria as Record<string, unknown>)[key] = data.extractedCriteria[key]
       }
-    } catch {
-      // Graceful fallback to rich local NLP engine below
-    }
-
-    // 2. Client-side NLP fallback with 600ms latency simulation
-    setTimeout(() => {
-      setIsThinking(false)
-
-      const aiMsg: AIMessage = {
-        id: 'ai_' + Date.now(),
-        sender: 'ai',
-        text: clientResult.replyText,
-        extractedCriteria: clientResult.extractedCriteria,
-        recommendedCourts: clientResult.recommendedCourts,
-        followUpChips: clientResult.followUpChips,
+      setMessages((prev) => [...prev, {
+        id: 'ai_' + Date.now(), sender: 'ai',
+        text: data.recommendedCourts?.length === 0 && (criteria.district || criteria.maxPricePerHour || criteria.amenities?.length)
+          ? `${data.reply}\n\nKhông tìm thấy sân phù hợp trong dữ liệu hiện có.` : data.reply,
+        extractedCriteria: Object.keys(criteria).length ? criteria : undefined,
+        recommendedCourts: data.recommendedCourts || [],
         timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-      }
-
-      setMessages((prev) => [...prev, aiMsg])
-      if (clientResult.extractedCriteria && Object.keys(clientResult.extractedCriteria).length > 0) {
-        onApplyCriteria(clientResult.extractedCriteria)
-      }
-    }, 600)
+      }])
+      if (Object.keys(criteria).length) onApplyCriteria(criteria)
+    } catch {
+      setMessages((prev) => [...prev, {
+        id: 'ai_' + Date.now(), sender: 'ai', isError: true,
+        text: 'Không thể kết nối trợ lý lúc này. Vui lòng thử lại sau.',
+        timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      }])
+    } finally {
+      setIsThinking(false)
+    }
   }
 
   return (
-    <div className="fixed inset-0 z-50 pointer-events-none flex sm:items-end sm:justify-end items-end justify-center p-0 sm:p-4">
+    <div
+      className={`fixed inset-0 z-50 pointer-events-none flex items-center justify-center transition-all duration-300 ${
+        isExpanded ? 'p-0' : 'p-3 sm:p-5'
+      }`}
+    >
       {/* Backdrop overlay */}
       <div
-        className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs pointer-events-auto overlay-enter"
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs pointer-events-auto overlay-enter"
         onClick={onClose}
       />
 
-      {/* Floating Chat Panel with Smooth Enter Animation */}
+      {/* Centered Floating Chat Panel with Smooth Enter Animation & Fullscreen Mode */}
       <div
-        className={`relative pointer-events-auto bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col transition-all duration-300 max-sm:sheet-enter sm:panel-slide-in-right ${
+        className={`relative pointer-events-auto bg-white overflow-hidden flex flex-col transition-all duration-300 ${
           isExpanded
-            ? 'w-full sm:w-[680px] h-[90vh] sm:h-[84vh]'
-            : 'w-full sm:w-[500px] h-[82vh] sm:h-[620px]'
+            ? 'w-full h-full sm:w-full sm:h-full rounded-none border-0 shadow-none'
+            : 'w-full max-w-xl sm:max-w-2xl h-[86vh] sm:h-[680px] max-h-[min(90vh,760px)] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 modal-enter'
         }`}
       >
         {/* Header - Flat, solid, high contrast */}
-        <div className="px-5 py-3.5 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-[#168039] text-white flex items-center justify-center shrink-0">
-              <Bot className="w-5 h-5 text-white" />
+        <div className="px-4 sm:px-6 py-3 sm:py-3.5 bg-white border-b border-slate-100 shrink-0">
+          <div className={`flex items-center justify-between gap-3 ${isExpanded ? 'max-w-5xl mx-auto w-full' : ''}`}>
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#168039] text-white flex items-center justify-center shrink-0">
+                <Bot className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-normal truncate">
+                  Trợ lý AI SmashCourt
+                </h3>
+                <p className="text-xs text-slate-600 font-medium truncate">
+                  Tìm sân, tư vấn trang bị & giải đáp luật chơi
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-normal truncate">
-                Trợ lý AI SmashCourt
-              </h3>
-              <p className="text-xs text-slate-600 font-medium truncate">
-                Tìm sân, tư vấn trang bị & giải đáp luật chơi
-              </p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-1 text-slate-500 shrink-0">
-            <button
-              type="button"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="p-1.5 rounded-lg hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
-              title={isExpanded ? 'Thu nhỏ' : 'Mở rộng'}
-            >
-              {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1.5 rounded-lg hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
-              title="Đóng chat"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1.5 text-slate-500 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="p-2 rounded-lg hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+                title={isExpanded ? 'Thu nhỏ cửa sổ' : 'Toàn màn hình'}
+                aria-label={isExpanded ? 'Thu nhỏ cửa sổ' : 'Toàn màn hình'}
+              >
+                {isExpanded ? <Minimize2 className="w-4.5 h-4.5" /> : <Maximize2 className="w-4.5 h-4.5" />}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-2 rounded-lg hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+                title="Đóng chat"
+                aria-label="Đóng chat"
+              >
+                <X className="w-4.5 h-4.5" />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Listening Voice Indicator Banner */}
+        {/* Real-time Voice Soundwave Visualizer Banner */}
         {isListening && (
-          <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-200/80 flex items-center justify-between gap-2 text-xs font-bold text-[#168039] shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
-              <span>Đang lắng nghe giọng nói... Hãy nói yêu cầu của bạn!</span>
+          <div className="px-4 py-3 bg-emerald-50 border-b border-emerald-200/90 shrink-0">
+            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isExpanded ? 'max-w-5xl mx-auto w-full' : ''}`}>
+              {/* Soundwave bars & live listening status */}
+              <div className="flex items-center gap-3 min-w-0">
+                {/* Dynamic Soundwave Bars reacting to actual microphone volume */}
+                <div className="flex items-center gap-1 h-9 px-2.5 py-1 bg-white rounded-xl border border-emerald-300 shrink-0 select-none">
+                  {audioLevels.map((lvl, idx) => (
+                    <div
+                      key={idx}
+                      className="w-1.5 rounded-full bg-[#168039] transition-all duration-75"
+                      style={{ height: `${Math.max(6, Math.min(30, lvl))}px` }}
+                    />
+                  ))}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-[#168039]">Đang nhận diện giọng nói:</span>
+                    <span className="text-[11px] text-slate-500 font-medium truncate">
+                      {liveTranscript ? 'Hiển thị tức thì thời gian thực' : 'Hãy nói câu lệnh (chữ sẽ hiện ngay)...'}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 min-h-[20px] flex items-center">
+                    {liveTranscript ? (
+                      <p className="text-xs sm:text-sm font-bold text-slate-900 leading-snug break-words">
+                        "{liveTranscript}"
+                        <span className="inline-block w-1.5 h-3 bg-[#168039] ml-1 align-middle" />
+                      </p>
+                    ) : (
+                      <p className="text-xs text-slate-500 italic">
+                        Đang chờ âm thanh tiếng Việt...
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => handleStopVoice(true)}
+                  className="px-3 py-1.5 rounded-lg bg-[#168039] hover:bg-[#136c30] text-white text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Hoàn tất và gửi yêu cầu"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Xong &amp; Gửi</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStopVoice(false)}
+                  className="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold cursor-pointer transition-colors"
+                  title="Hủy thu âm"
+                >
+                  Hủy
+                </button>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={handleToggleVoice}
-              className="text-xs font-bold underline cursor-pointer hover:text-emerald-800"
-            >
-              Dừng lại
-            </button>
           </div>
         )}
 
         {/* Messages Thread */}
-        <div className="flex-1 p-3.5 sm:p-4 overflow-y-auto space-y-4 bg-slate-50">
+        <div className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-4 bg-slate-50">
+          <div className={`space-y-4 ${isExpanded ? 'max-w-4xl mx-auto w-full' : ''}`}>
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -423,67 +594,12 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     </div>
 
                     {msg.recommendedCourts.map((court) => (
-                      <div
-                        key={court.id}
-                        className="bg-white rounded-xl border border-slate-200 p-2.5 sm:p-3 hover:border-emerald-600 transition-colors flex flex-col gap-2.5"
-                      >
-                        <div className="flex gap-2.5">
-                          <img
-                            src={court.imageUrl}
-                            alt={court.name}
-                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover shrink-0 border border-slate-100"
-                          />
-                          <div className="min-w-0 flex-1 flex flex-col justify-between">
-                            <div>
-                              <h4 className="font-bold text-slate-900 text-xs sm:text-sm truncate">
-                                {court.name}
-                              </h4>
-                              <p className="text-[11px] text-slate-600 flex items-center gap-1 mt-0.5 truncate">
-                                <MapPin className="w-3 h-3 text-slate-500 shrink-0" />
-                                <span>{court.district} • {court.distance}</span>
-                              </p>
-                            </div>
-
-                            <div className="flex items-center justify-between pt-1">
-                              <div className="flex items-center gap-1 text-[11px] font-bold text-slate-800">
-                                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                                <span>{court.rating || 4.8}</span>
-                              </div>
-                              <span className="text-xs sm:text-sm font-black text-[#168039]">
-                                {formatPrice(court.pricePerHour)}/h
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Action buttons inside card */}
-                        <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-                          {onSelectCourt && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onSelectCourt(court)
-                              }}
-                              className="flex-1 py-1.5 px-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                            >
-                              <span>Xem chi tiết</span>
-                              <ChevronRight className="w-3 h-3 text-slate-500" />
-                            </button>
-                          )}
-                          {onBookCourt && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onBookCourt(court)
-                                onClose()
-                              }}
-                              className="flex-1 py-1.5 px-3 rounded-lg bg-[#168039] hover:bg-[#136c30] text-white text-xs font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                            >
-                              <Calendar className="w-3 h-3 text-white" />
-                              <span>Đặt ngay</span>
-                            </button>
-                          )}
-                        </div>
+                      <div key={court.facilityId} className="border border-slate-200 rounded-lg p-3">
+                        <p className="font-bold text-slate-900">{court.facilityName}</p>
+                        <p className="text-slate-700 mt-1">{court.address}</p>
+                        <p className="text-slate-700 mt-1">Giờ mở cửa: {court.openHours}</p>
+                        <p className="text-slate-700 mt-1">{court.minPricePerHour != null ? `Giá từ ${formatPrice(court.minPricePerHour)}/h` : 'Chưa có bảng giá'}</p>
+                        <p className="text-slate-700 mt-1">{court.matchReason}</p>
                       </div>
                     ))}
                   </div>
@@ -540,11 +656,12 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
           )}
 
           <div ref={messagesEndRef} />
+          </div>
         </div>
 
         {/* Bottom Quick Prompts Strip */}
-        <div className="px-3.5 py-2 border-t border-slate-100 bg-white shrink-0">
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+        <div className="px-3.5 sm:px-6 py-2 border-t border-slate-100 bg-white shrink-0">
+          <div className={`flex gap-1.5 overflow-x-auto no-scrollbar py-0.5 ${isExpanded ? 'max-w-4xl mx-auto' : ''}`}>
             {quickPrompts.map((prompt, idx) => (
               <button
                 key={idx}
@@ -564,8 +681,9 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
             e.preventDefault()
             handleSendMessage()
           }}
-          className="p-3 bg-white border-t border-slate-200 flex items-center gap-2 shrink-0"
+          className="p-3 sm:p-4 bg-white border-t border-slate-200 shrink-0"
         >
+          <div className={`flex items-center gap-2 ${isExpanded ? 'max-w-4xl mx-auto' : ''}`}>
           <button
             type="button"
             onClick={handleToggleVoice}
@@ -584,7 +702,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder={isListening ? 'Đang lắng nghe... Hãy nói yêu cầu' : 'Nhập: khu vực, giờ, hỏi luật hay chọn vợt...'}
+            placeholder={isListening ? 'Đang nói... chữ hiển thị trực tiếp ở đây' : 'Nhập: khu vực, giờ, hỏi luật hay chọn vợt...'}
             className="flex-1 px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#168039]/20 focus:border-[#168039]"
           />
 
@@ -597,6 +715,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
             <Send className="w-4 h-4" />
             <span className="hidden sm:inline">Gửi</span>
           </button>
+          </div>
         </form>
       </div>
     </div>

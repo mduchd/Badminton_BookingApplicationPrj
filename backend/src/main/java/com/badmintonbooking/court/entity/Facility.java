@@ -3,7 +3,6 @@ package com.badmintonbooking.court.entity;
 import jakarta.persistence.*;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "facilities")
@@ -94,23 +93,4 @@ public class Facility {
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
 
-    @Transient
-    public java.math.BigDecimal getRating() {
-        return java.math.BigDecimal.valueOf(4.9);
-    }
-
-    @Transient
-    public Integer getReviewCount() {
-        return 128;
-    }
-
-    @Transient
-    public String getImageUrl() {
-        return "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&auto=format&fit=crop&q=80";
-    }
-
-    @Transient
-    public List<String> getAmenities() {
-        return List.of("Thảm Yonex", "Máy lạnh", "Wifi miễn phí", "Nước uống");
-    }
 }

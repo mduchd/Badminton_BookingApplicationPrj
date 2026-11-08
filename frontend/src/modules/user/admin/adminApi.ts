@@ -1,13 +1,19 @@
 import axios from 'axios'
 import type { UserRole } from '../../types/user'
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+import { API_BASE_URL } from '../../../lib/apiConfig'
+import { authStorage } from '../auth/authApi'
 
 const client = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+})
+
+client.interceptors.request.use((config) => {
+  const token = authStorage.getToken()
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
 })
 
 export interface AdminDashboardMetrics {
@@ -92,18 +98,18 @@ export interface AdminSystemSettings {
 export const adminApi = {
   // 1. Dashboard metrics
   async getDashboardMetrics(): Promise<AdminDashboardMetrics> {
-    const res = await client.get('/api/v1/admin/dashboard')
+    const res = await client.get('/v1/admin/dashboard')
     return res.data.data
   },
 
   // 2. Facilities
   async getFacilities(params?: { search?: string; status?: string; district?: string }): Promise<AdminFacilityItem[]> {
-    const res = await client.get('/api/v1/admin/facilities', { params })
+    const res = await client.get('/v1/admin/facilities', { params })
     return res.data.data
   },
 
   async approveFacility(id: number | string, action: 'APPROVE' | 'REJECT', reason?: string): Promise<AdminFacilityItem> {
-    const res = await client.patch(`/api/v1/admin/facilities/${id}/approval`, {
+    const res = await client.patch(`/v1/admin/facilities/${id}/approval`, {
       action,
       rejectionReason: reason,
     })
@@ -111,7 +117,7 @@ export const adminApi = {
   },
 
   async updateFacilityStatus(id: number | string, status: string, reason?: string): Promise<AdminFacilityItem> {
-    const res = await client.patch(`/api/v1/admin/facilities/${id}/status`, {
+    const res = await client.patch(`/v1/admin/facilities/${id}/status`, {
       status,
       reason,
     })
@@ -120,34 +126,34 @@ export const adminApi = {
 
   // 3. Users
   async getUsers(params?: { search?: string; role?: string; status?: string }): Promise<AdminUserItem[]> {
-    const res = await client.get('/api/v1/admin/users', { params })
+    const res = await client.get('/v1/admin/users', { params })
     return res.data.data
   },
 
   async updateUserRole(id: number | string, role: UserRole): Promise<AdminUserItem> {
-    const res = await client.patch(`/api/v1/admin/users/${id}/role`, { role })
+    const res = await client.patch(`/v1/admin/users/${id}/role`, { role })
     return res.data.data
   },
 
   async updateUserStatus(id: number | string, status: 'ACTIVE' | 'LOCKED', reason?: string): Promise<AdminUserItem> {
-    const res = await client.patch(`/api/v1/admin/users/${id}/status`, { status, reason })
+    const res = await client.patch(`/v1/admin/users/${id}/status`, { status, reason })
     return res.data.data
   },
 
   // 4. Transactions
   async getTransactions(params?: { search?: string; provider?: string; status?: string }): Promise<AdminTransaction[]> {
-    const res = await client.get('/api/v1/admin/transactions', { params })
+    const res = await client.get('/v1/admin/transactions', { params })
     return res.data.data
   },
 
   // 5. System settings
   async getSystemSettings(): Promise<AdminSystemSettings> {
-    const res = await client.get('/api/v1/admin/settings')
+    const res = await client.get('/v1/admin/settings')
     return res.data.data
   },
 
   async updateSystemSettings(payload: Partial<AdminSystemSettings>): Promise<AdminSystemSettings> {
-    const res = await client.put('/api/v1/admin/settings', payload)
+    const res = await client.put('/v1/admin/settings', payload)
     return res.data.data
   },
 }

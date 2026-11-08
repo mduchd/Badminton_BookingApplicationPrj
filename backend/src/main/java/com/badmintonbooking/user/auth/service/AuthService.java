@@ -33,7 +33,7 @@ public class AuthService {
         User user = userRepository.findByEmail(request.email().trim().toLowerCase())
                 .orElseThrow(() -> new IllegalArgumentException("Email hoặc mật khẩu không chính xác"));
 
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        if (user.getPasswordHash() == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new IllegalArgumentException("Email hoặc mật khẩu không chính xác");
         }
 
@@ -57,6 +57,9 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setFullName(request.fullName().trim());
         user.setPhone(request.phone() != null ? request.phone().trim() : null);
+        if (request.role() == com.badmintonbooking.user.model.UserRole.SYSTEM_ADMIN) {
+            throw new IllegalArgumentException("Không thể tự đăng ký quyền quản trị");
+        }
         user.setRole(request.role() != null ? request.role().name() : "CUSTOMER");
         user.setProvider("LOCAL");
         user.setStatus("ACTIVE");
@@ -65,6 +68,29 @@ public class AuthService {
 
         String token = jwtTokenProvider.generateToken(savedUser.getId(), savedUser.getEmail(), savedUser.getRole());
         return AuthResponse.of(token, UserResponse.fromEntity(savedUser));
+    }
+
+    @Transactional
+    public AuthResponse loginWithGoogle(GoogleIdentity identity) {
+        User user = userRepository.findByProviderAndProviderSubject("GOOGLE", identity.subject())
+                .orElseGet(() -> {
+                    String email = identity.email().trim().toLowerCase(java.util.Locale.ROOT);
+                    if (userRepository.existsByEmail(email)) {
+                        throw new IllegalArgumentException("Email đã có tài khoản. Hãy đăng nhập bằng phương thức đã đăng ký.");
+                    }
+                    User created = new User();
+                    created.setEmail(email);
+                    created.setFullName(identity.name());
+                    created.setRole("CUSTOMER");
+                    created.setProvider("GOOGLE");
+                    created.setProviderSubject(identity.subject());
+                    created.setStatus("ACTIVE");
+                    return userRepository.save(created);
+                });
+        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            throw new IllegalStateException("Tài khoản của bạn đang bị tạm khóa");
+        }
+        return AuthResponse.of(jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole()), UserResponse.fromEntity(user));
     }
 
     @Transactional(readOnly = true)
@@ -77,7 +103,8 @@ public class AuthService {
         }
         String email = jwtTokenProvider.getEmailFromToken(token);
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng"));
+                .filter(account -> "ACTIVE".equalsIgnoreCase(account.getStatus()))
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng hoặc tài khoản bị khóa"));
         return UserResponse.fromEntity(user);
     }
 }

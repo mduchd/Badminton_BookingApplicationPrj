@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar, ExternalLink } from 'lucide-react';
 import type { BookingResponse, BookingStatus } from '../types';
+import { TabSkeleton } from '../../../components/shared/TabSkeleton';
 
 interface MyBookingsListProps {
   bookings: BookingResponse[];
@@ -99,7 +100,7 @@ export const MyBookingsList: React.FC<MyBookingsListProps> = ({
       </div>
 
       {isLoading ? (
-        <div className="text-center py-8 text-slate-500 text-xs">Đang tải lịch sử đơn...</div>
+        <TabSkeleton variant="table" />
       ) : bookings.length === 0 ? (
         <div className="text-center py-8 text-slate-500 text-xs font-medium">Bạn chưa có đơn đặt sân nào.</div>
       ) : (

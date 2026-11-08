@@ -1,0 +1,8 @@
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "24"
+  VITE_API_URL = "https://badminton-booking-api-pjtn.onrender.com/api"

@@ -113,7 +113,7 @@ class BookingServiceTest {
             return b;
         });
 
-        BookingResponse res = bookingService.createHeldBooking(req);
+        BookingResponse res = bookingService.createHeldBooking(req, 1L);
 
         assertNotNull(res);
         assertEquals(BookingStatus.HELD, res.status());
@@ -144,7 +144,7 @@ class BookingServiceTest {
         when(availabilityService.checkIntervalAvailability(eq(1L), eq(date), eq(start), eq(end)))
                 .thenReturn(new CheckAvailabilityResponse(1L, false, BigDecimal.ZERO, "Khung giờ đã có người giữ chỗ", OffsetDateTime.now()));
 
-        assertThrows(SlotConflictException.class, () -> bookingService.createHeldBooking(req));
+        assertThrows(SlotConflictException.class, () -> bookingService.createHeldBooking(req, 1L));
         verify(bookingRepository, never()).save(any());
     }
 

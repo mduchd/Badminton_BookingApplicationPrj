@@ -24,13 +24,21 @@ spring:
     time-zone: Asia/Ho_Chi_Minh
 
 server:
-  port: 8080
+  port: ${PORT:8080}
   tomcat:
-    basedir: target/tomcat
+    basedir: ${TOMCAT_BASEDIR:target/tomcat}
 
 booking:
   hold-duration-minutes: 10
 payos:
-  client-id: 7c48e6a8-78f3-41b8-b462-fdfebe37c142
-  api-key: f6399d82-29c9-41b5-84d5-bb4a4bf4adad
-  checksum-key: c0fc66b5c6e2fb261509784a4171f823ca01c4b196fff892832e3a4284ab130d
+  client-id: ${PAYOS_CLIENT_ID:}
+  api-key: ${PAYOS_API_KEY:}
+  checksum-key: ${PAYOS_CHECKSUM_KEY:}
+deepseek:
+  api-key: ${DEEPSEEK_API_KEY:}
+  base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+  model: ${DEEPSEEK_MODEL:deepseek-chat}
+  timeout-seconds: ${DEEPSEEK_TIMEOUT_SECONDS:12}
+app:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:329281674145-bbkiipcmkff46lqraifh7fcatsg225vv.apps.googleusercontent.com}

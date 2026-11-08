@@ -8,14 +8,12 @@ interface NotificationBellProps {
   notifications: NotificationItem[]
   onMarkAllAsRead: () => void
   onMarkAsRead: (id: string) => void
-  onSimulateNewNotification: () => void
 }
 
 export const NotificationBell: React.FC<NotificationBellProps> = ({
   notifications,
   onMarkAllAsRead,
   onMarkAsRead,
-  onSimulateNewNotification,
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -72,17 +70,18 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   }
 
   return (
-    <div className="relative inline-flex items-center">
+    <div className="relative inline-flex items-center shrink-0">
       <button
         ref={buttonRef}
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/15 hover:bg-white/25 active:scale-90 flex items-center justify-center text-white transition-all duration-200 cursor-pointer"
+        className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
         aria-label="Thông báo"
         title="Thông báo"
       >
-        <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+        <Bell className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-white" />
         {unreadCount > 0 && (
-          <span className="badge-pop absolute -top-1 -right-1 flex h-5 min-w-5 px-1.5 items-center justify-center rounded-full bg-red-600 text-xs font-black text-white ring-2 ring-[#1b7a42]">
+          <span className="badge-pop absolute -top-1 -right-1 flex h-5 min-w-5 px-1.5 items-center justify-center rounded-full bg-red-600 text-xs font-black text-white ring-2 ring-[#156335]">
             {unreadCount}
           </span>
         )}
@@ -189,13 +188,6 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
               {/* Footer */}
               <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span className="text-slate-600 text-[11px] font-medium">Thông báo tức thời</span>
-                <button
-                  type="button"
-                  onClick={onSimulateNewNotification}
-                  className="text-xs font-medium text-[#1b7a42] hover:underline cursor-pointer"
-                >
-                  + Giả lập nhận thông báo
-                </button>
               </div>
             </div>
           </div>,

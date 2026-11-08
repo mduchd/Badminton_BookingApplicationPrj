@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -21,7 +21,6 @@ import {
   AlertCircle,
   Check,
   GraduationCap,
-  Copy,
   User as UserIcon,
   ChevronDown,
   Building,
@@ -29,6 +28,7 @@ import {
 import type { User } from '../../types/user'
 import { toast } from 'sonner'
 import { ROUTES } from '../../../app/router'
+import { bookingApi } from '../../booking/services/bookingApi'
 
 export interface UserBooking {
   id: string
@@ -109,58 +109,23 @@ export const AccountView: React.FC<AccountViewProps> = ({
   const [editName, setEditName] = useState(currentUser?.fullName || '')
   const [editPhone, setEditPhone] = useState(currentUser?.phone || '')
 
-  // Bookings list state inspired by the reference design
-  const [bookings] = useState<UserBooking[]>([
-    {
-      id: 'bk_101',
-      facilityName: 'Phúc Long Badminton Arena',
-      courtName: 'Yard 5',
-      address: 'đường Tân Triều Mới, Tân Triều, Thanh Trì, Hà Nội',
-      date: 'May 30, 2026',
-      dayLabel: 'Day',
-      timeRange: '22h00 - 24h00',
-      totalPrice: 280000,
-      status: 'CONFIRMED',
-      sportType: 'Cầu lông',
-    },
-    {
-      id: 'bk_102',
-      facilityName: 'Thắng Lĩnh Sport',
-      courtName: 'Yard 2',
-      address: 'đường Tân Triều Mới, Tân Triều, Thanh Trì, Hà Nội',
-      date: 'May 29, 2026',
-      dayLabel: 'Day',
-      timeRange: '22h00 - 24h00',
-      totalPrice: 240000,
-      status: 'CANCELLED',
-      sportType: 'Cầu lông',
-      statusMessage: 'Cancel due to payment timeout',
-    },
-    {
-      id: 'bk_103',
-      facilityName: 'Thắng Lĩnh Sport',
-      courtName: 'C.Lông 2',
-      address: '948 Quang Trung, Hà Đông, Hà Nội',
-      date: 'May 21, 2026',
-      dayLabel: 'Day',
-      timeRange: '17h30 - 18h00, C.Lông 2: 18h00 - 19h30',
-      totalPrice: 210000,
-      status: 'CONFIRMED',
-      sportType: 'Cầu lông',
-    },
-    {
-      id: 'bk_104',
-      facilityName: 'CLB Cầu Giấy Star Sport',
-      courtName: 'Yard 5',
-      address: 'đường Tân Triều Mới, Tân Triều, Thanh Trì, Hà Nội',
-      date: 'May 3, 2026',
-      dayLabel: 'Day',
-      timeRange: '22h00 - 23h30',
-      totalPrice: 195000,
-      status: 'COMPLETED',
-      sportType: 'Cầu lông',
-    },
-  ])
+  const [bookings, setBookings] = useState<UserBooking[]>([])
+  useEffect(() => {
+    let active = true
+    setBookings([])
+    if (currentUser) {
+      bookingApi.getMyBookings().then((items) => {
+        if (!active) return
+        setBookings(items.filter((b) => ['CONFIRMED', 'COMPLETED', 'CANCELLED', 'EXPIRED'].includes(b.status)).map((b) => ({
+          id: String(b.id), facilityName: b.facilityName, courtName: b.courtName,
+          address: '', date: b.bookingDate, dayLabel: '',
+          timeRange: `${b.startTime.slice(0, 5)} - ${b.endTime.slice(0, 5)}`,
+          totalPrice: b.totalAmount, status: b.status === 'EXPIRED' ? 'CANCELLED' : b.status as UserBooking['status'], sportType: 'Cầu lông',
+        })))
+      }).catch(() => { if (active) toast.error('Không thể tải lịch đặt sân.') })
+    }
+    return () => { active = false }
+  }, [currentUser?.id])
 
   // Filtered bookings
   const filteredBookings = bookings.filter((b) => {
@@ -301,7 +266,7 @@ END:VCALENDAR`
           >
             <div className="flex items-center gap-2 min-w-0">
               <Crown className="w-4 h-4 text-[#e5a92c] shrink-0" />
-              <span className="text-xs truncate">Hạng thành viên: Thành viên Bạc</span>
+              <span className="text-xs truncate">Hạng thành viên</span>
             </div>
             <ChevronRight className="w-4 h-4 text-emerald-200 shrink-0" />
           </button>
@@ -859,179 +824,10 @@ END:VCALENDAR`
             </div>
           )}
 
-          {/* 3. SECTION: MEMBERSHIP */}
-          {activeSection === 'membership' && (
-            <div className="max-w-2xl mx-auto w-full py-4 space-y-5">
-              <div className="p-5 rounded-2xl bg-[#168039] text-white space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <Crown className="w-6 h-6 text-[#e5a92c]" />
-                    <div>
-                      <div className="text-xs text-emerald-100 font-semibold">Hạng hội viên hiện tại</div>
-                      <div className="text-lg font-extrabold text-white">Thành viên Bạc</div>
-                    </div>
-                  </div>
-                  <span className="px-3 py-1 rounded-full bg-white/20 text-xs font-bold">2.450 / 5.000 điểm</span>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="w-full bg-black/20 rounded-full h-2 overflow-hidden">
-                  <div className="bg-[#e5a92c] h-2 rounded-full w-[49%]" />
-                </div>
-                <div className="text-xs text-emerald-100 flex justify-between font-medium">
-                  <span>Hạng Bạc</span>
-                  <span>Còn 2.550 điểm để lên Hạng Vàng</span>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <h3 className="font-bold text-slate-900 text-sm">Đặc quyền hạng thành viên SmashCourt</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-1">
-                    <div className="font-bold text-xs text-[#168039]">Ưu tiên giữ chỗ 15 phút</div>
-                    <p className="text-xs text-slate-700 font-normal">Thêm 5 phút thanh toán giữ chỗ so với người dùng thông thường.</p>
-                  </div>
-                  <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-1">
-                    <div className="font-bold text-xs text-[#168039]">Tặng 2 Voucher giảm 10% mỗi tháng</div>
-                    <p className="text-xs text-slate-700 font-normal">Áp dụng cho mọi đơn đặt sân trên toàn hệ thống SmashCourt.</p>
-                  </div>
-                  <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-1">
-                    <div className="font-bold text-xs text-[#168039]">Tích 5% giá trị đơn đặt sân</div>
-                    <p className="text-xs text-slate-700 font-normal">Đổi điểm thưởng lấy phụ kiện cầu lông hoặc giờ chơi miễn phí.</p>
-                  </div>
-                  <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-1">
-                    <div className="font-bold text-xs text-[#168039]">Hỗ trợ hoàn đổi linh hoạt</div>
-                    <p className="text-xs text-slate-700 font-normal">Được đổi lịch chơi trước 4 tiếng mà không mất phí dịch vụ.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 4. SECTION: MY GROUPS */}
-          {activeSection === 'groups' && (
-            <div className="max-w-2xl mx-auto w-full py-4 space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <h3 className="font-bold text-slate-900 text-sm">Câu lạc bộ & Nhóm giao lưu của bạn</h3>
-                <button
-                  type="button"
-                  onClick={() => toast.info('Tính năng tạo nhóm mới sẽ sớm khả dụng!')}
-                  className="px-3 py-1.5 rounded-xl bg-[#168039] hover:bg-[#136c30] text-white text-xs font-bold transition-colors cursor-pointer"
-                >
-                  + Tạo nhóm mới
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                <div className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#168039] text-white flex items-center justify-center font-bold">
-                      CLB
-                    </div>
-                    <div>
-                      <div className="font-bold text-sm text-slate-900">CLB Cầu Lông Tân Triều Sport</div>
-                      <div className="text-xs text-slate-600 font-medium">28 thành viên - Lịch cố định Thứ 3, 5, 7 (20:00 - 22:00)</div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => toast.success('Đã mở trang nhóm!')}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-800 cursor-pointer"
-                  >
-                    Xem nhóm
-                  </button>
-                </div>
-
-                <div className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center font-bold">
-                      PK
-                    </div>
-                    <div>
-                      <div className="font-bold text-sm text-slate-900">Hội Pickleball & Badminton Hà Đông</div>
-                      <div className="text-xs text-slate-600 font-medium">42 thành viên - Giao lưu cuối tuần Sân Thắng Lĩnh</div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => toast.success('Đã mở trang nhóm!')}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-800 cursor-pointer"
-                  >
-                    Xem nhóm
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 5. SECTION: CLASS SCHEDULE LIST */}
-          {activeSection === 'classes' && (
-            <div className="max-w-2xl mx-auto w-full py-4 space-y-4">
-              <h3 className="font-bold text-slate-900 text-sm">Lịch học kỹ thuật & Ca thi đấu giao lưu</h3>
-              <div className="space-y-3">
-                <div className="p-4 rounded-xl border border-slate-200 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-slate-900">Khóa huấn luyện Smash & Di chuyển nâng cao</span>
-                    <span className="text-xs font-bold text-[#168039] bg-emerald-50 px-2.5 py-0.5 rounded-md">Đang tham gia</span>
-                  </div>
-                  <div className="text-xs text-slate-700 font-medium flex items-center gap-2">
-                    <Clock className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Thứ Hai, Thứ Tư (18:00 - 19:30) - HLV Nguyễn Văn An</span>
-                  </div>
-                  <div className="text-xs text-slate-600 font-medium flex items-center gap-2">
-                    <MapPin className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Sân Phúc Long Badminton Arena, Đống Đa, Hà Nội</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 6. SECTION: VOUCHERS */}
-          {activeSection === 'vouchers' && (
-            <div className="max-w-2xl mx-auto w-full py-4 space-y-4">
-              <h3 className="font-bold text-slate-900 text-sm">Mã ưu đãi khả dụng của bạn</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="p-4 rounded-xl border border-emerald-300 bg-emerald-50/40 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-sm text-[#168039]">SMASH10</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText('SMASH10')
-                        toast.success('Đã sao chép mã SMASH10')
-                      }}
-                      className="text-xs font-semibold text-[#168039] hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <Copy className="w-3 h-3" />
-                      <span>Sao chép</span>
-                    </button>
-                  </div>
-                  <p className="text-xs text-slate-800 font-semibold">Giảm 10% tối đa 50.000đ cho đơn đặt sân cuối tuần</p>
-                  <p className="text-[11px] text-slate-600 font-medium">Hạn dùng: Đến 31/12/2026</p>
-                </div>
-
-                <div className="p-4 rounded-xl border border-amber-300 bg-amber-50/40 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-sm text-amber-800">CHAOBANMOI</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText('CHAOBANMOI')
-                        toast.success('Đã sao chép mã CHAOBANMOI')
-                      }}
-                      className="text-xs font-semibold text-amber-800 hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <Copy className="w-3 h-3" />
-                      <span>Sao chép</span>
-                    </button>
-                  </div>
-                  <p className="text-xs text-slate-800 font-semibold">Giảm ngay 30.000đ cho đơn đặt sân đầu tiên qua PayOS</p>
-                  <p className="text-[11px] text-slate-600 font-medium">Hạn dùng: Đến 30/06/2026</p>
-                </div>
-              </div>
-            </div>
-          )}
+          {activeSection === 'membership' && <p className="py-4 text-sm text-slate-500">Chưa có thông tin hội viên.</p>}
+          {activeSection === 'groups' && <p className="py-4 text-sm text-slate-500">Chưa có nhóm giao lưu.</p>}
+          {activeSection === 'classes' && <p className="py-4 text-sm text-slate-500">Chưa có lịch học hoặc thi đấu.</p>}
+          {activeSection === 'vouchers' && <p className="py-4 text-sm text-slate-500">Chưa có mã ưu đãi.</p>}
 
           {/* 7. SECTION: SETTINGS */}
           {activeSection === 'settings' && (
@@ -1135,3 +931,4 @@ END:VCALENDAR`
     </div>
   )
 }
+

@@ -69,8 +69,13 @@ public class BookingService {
         this.systemSettingService = systemSettingService;
     }
 
-    @Transactional
     public BookingResponse createHeldBooking(BookingCreateRequest request) {
+        Long cid = request.customerId() != null ? request.customerId() : 1L;
+        return createHeldBooking(request, cid);
+    }
+
+    @Transactional
+    public BookingResponse createHeldBooking(BookingCreateRequest request, Long customerId) {
         // 0. Kiểm tra chế độ bảo trì toàn hệ thống
         if (systemSettingService != null && systemSettingService.isMaintenanceMode()) {
             throw new BadRequestException("Hệ thống đang trong chế độ bảo trì định kỳ. Quý khách vui lòng thử lại sau ít phút!");
@@ -100,9 +105,9 @@ public class BookingService {
             throw new BadRequestException("Sân con \"" + court.getName() + "\" hiện đang bảo trì hoặc tạm ngưng hoạt động, không thể đặt sân!");
         }
 
-        Long customerId = request.customerId() != null ? request.customerId() : 1L;
-        if (!userRepository.existsById(customerId)) {
-            throw new ResourceNotFoundException("Không tìm thấy tài khoản khách hàng với id: " + customerId);
+        Long effectiveCustomerId = customerId != null ? customerId : (request.customerId() != null ? request.customerId() : 1L);
+        if (!userRepository.existsById(effectiveCustomerId)) {
+            throw new ResourceNotFoundException("Không tìm thấy tài khoản khách hàng với id: " + effectiveCustomerId);
         }
 
         // 1. Kiểm tra tính khả dụng của khoảng giờ
@@ -127,7 +132,7 @@ public class BookingService {
         OffsetDateTime holdExpiresAt = now.plusMinutes(effectiveHoldMinutes);
 
         Booking booking = new Booking();
-        booking.setCustomerId(customerId);
+        booking.setCustomerId(effectiveCustomerId);
         booking.setFacilityId(facility.getId());
         booking.setCourtId(court.getId());
         booking.setBookingDate(request.bookingDate());
