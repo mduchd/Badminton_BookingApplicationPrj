@@ -14,6 +14,16 @@ import type { BadmintonCourtItem } from '../../modules/types/court'
 import { useQuery } from '@tanstack/react-query'
 import { courtApi } from '../../modules/court/services/courtApi'
 
+function safeMessengerUrl(value?: string | null): string | null {
+  if (!value) return null
+  try {
+    const url = new URL(value.trim())
+    return url.protocol === 'https:' && url.hostname.toLowerCase() === 'm.me' && !url.username && !url.password && !url.port && url.pathname.length > 1 ? url.href : null
+  } catch {
+    return null
+  }
+}
+
 interface CourtContactModalProps {
   isOpen: boolean
   onClose: () => void
@@ -39,6 +49,7 @@ export const CourtContactModal: React.FC<CourtContactModalProps> = ({
   const courtName = currentCourt?.name || 'Cụm sân'
   const formattedPhone = (data?.facility.phone || currentCourt?.phone || '').split('|')[0].split(' - ')[0].trim()
   const cleanPhone = formattedPhone.replace(/[^\d+]/g, '')
+  const messengerUrl = safeMessengerUrl(data?.facility ? data.facility.messengerUrl : currentCourt?.messengerUrl)
 
   // Pre-made quick message template for user convenience
   const sampleMessage = `Chào ${courtName}, mình liên hệ qua ứng dụng SmashCourt cần hỗ trợ tư vấn giờ chơi và đặt sân. Nhờ ban quản lý phản hồi giúp mình nhé!`
@@ -46,7 +57,7 @@ export const CourtContactModal: React.FC<CourtContactModalProps> = ({
   const handleCopyMessage = () => {
     navigator.clipboard.writeText(sampleMessage)
     setCopied(true)
-    toast.success('Đã sao chép tin nhắn mẫu! Bạn có thể dán vào Zalo.')
+    toast.success('Đã sao chép tin nhắn mẫu! Bạn có thể dán vào Zalo hoặc Messenger.')
     setTimeout(() => setCopied(false), 2500)
   }
 
@@ -73,7 +84,7 @@ export const CourtContactModal: React.FC<CourtContactModalProps> = ({
                 Nhắn tin với Chủ sân
               </h2>
               <p className="text-xs text-slate-600 font-medium truncate">
-                Liên hệ trực tiếp qua Zalo hoặc gọi điện
+                Liên hệ qua Zalo, Messenger hoặc gọi điện
               </p>
             </div>
           </div>
@@ -177,6 +188,23 @@ export const CourtContactModal: React.FC<CourtContactModalProps> = ({
             </a>
               </>
             ) : <p className="text-sm text-slate-600">Cụm sân chưa công bố số điện thoại.</p>}
+            {messengerUrl ? (
+              <a href={messengerUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-between gap-3 p-3.5 rounded-xl border border-blue-200 bg-white hover:bg-slate-50 transition-colors cursor-pointer">
+                <div className="flex items-center gap-3 min-w-0">
+                  <img src="/logos/messenger.svg" alt="" className="w-11 h-11 object-contain shrink-0" />
+                  <div className="min-w-0"><span className="text-sm font-bold text-slate-900">Chat qua Messenger</span>
+                    <p className="text-xs text-slate-600 font-medium">Nhắn tin cho chủ sân trên Messenger</p></div>
+                </div>
+                <span className="px-3 py-1.5 rounded-lg bg-[#0068ff] text-white text-xs font-bold flex items-center gap-1 shrink-0">Nhắn tin <ExternalLink className="w-3 h-3" /></span>
+              </a>
+            ) : (
+              <div className="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200">
+                <img src="/logos/messenger.svg" alt="" className="w-11 h-11 object-contain shrink-0" />
+                <div><span className="text-sm font-bold text-slate-900">Chat qua Messenger</span>
+                  <p className="text-xs text-slate-600">Chủ sân chưa cập nhật liên kết Messenger.</p></div>
+              </div>
+            )}
           </div>
 
           {/* Quick message template */}
@@ -210,7 +238,7 @@ export const CourtContactModal: React.FC<CourtContactModalProps> = ({
         {/* Footer - Flat, clean close button */}
         <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between shrink-0">
           <span className="text-xs text-slate-600 font-medium">
-            Phản hồi nhanh qua Zalo &amp; Hotline
+            Chọn kênh liên hệ phù hợp
           </span>
           <button
             type="button"

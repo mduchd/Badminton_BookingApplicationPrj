@@ -31,13 +31,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (tab === activeTab) return
     setTabSlideDir(tab === 'register' ? 'right' : 'left')
     setActiveTab(tab)
-    setChallengeId(null)
-    setOtp('')
   }
 
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email')
-  const [challengeId, setChallengeId] = useState<string | null>(null)
-  const [otp, setOtp] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -53,19 +49,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     try {
       if (activeTab === 'login') {
-        if (loginMethod === 'phone' && !challengeId) {
-          const challenge = await authApi.startPhoneLogin({ phone, password })
-          setChallengeId(challenge.challengeId)
-          setPassword('')
-          setOtp('')
-          toast.success('Đã gửi mã xác minh qua SMS.')
-          return
-        }
         const authData = loginMethod === 'phone'
-          ? await authApi.verifyPhoneLogin({ challengeId: challengeId!, code: otp })
+          ? await authApi.loginByPhone({ phone, password })
           : await authApi.login({ email, password })
-        setChallengeId(null)
-        setOtp('')
         toast.success(`Đăng nhập thành công! Chào mừng ${authData.user.fullName}`)
         onLoginSuccess(authData.user)
         onClose()
@@ -177,11 +163,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {activeTab === 'login' && (
             <div className="flex border-b border-slate-200" role="tablist" aria-label="Phương thức đăng nhập">
-              <button type="button" role="tab" aria-selected={loginMethod === 'phone'} onClick={() => { setLoginMethod('phone'); setChallengeId(null); setOtp('') }}
+              <button type="button" role="tab" aria-selected={loginMethod === 'phone'} onClick={() => setLoginMethod('phone')}
                 className={`flex-1 py-2 text-sm font-semibold cursor-pointer border-b-2 ${loginMethod === 'phone' ? 'text-[#1b7a42] border-[#1b7a42]' : 'text-slate-600 border-transparent hover:text-slate-900'}`}>
                 Số điện thoại
               </button>
-              <button type="button" role="tab" aria-selected={loginMethod === 'email'} onClick={() => { setLoginMethod('email'); setChallengeId(null); setOtp('') }}
+              <button type="button" role="tab" aria-selected={loginMethod === 'email'} onClick={() => setLoginMethod('email')}
                 className={`flex-1 py-2 text-sm font-semibold cursor-pointer border-b-2 ${loginMethod === 'email' ? 'text-[#1b7a42] border-[#1b7a42]' : 'text-slate-600 border-transparent hover:text-slate-900'}`}>
                 Email
               </button>
@@ -189,15 +175,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
 
           <form onSubmit={handleStandardAuth} className="space-y-3">
-            {challengeId && activeTab === 'login' && loginMethod === 'phone' ? (
-              <div className="space-y-2">
-                <label htmlFor="phone-otp" className="block text-xs font-semibold text-slate-700">Mã xác minh SMS</label>
-                <input id="phone-otp" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{4,10}" required value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:border-[#1b7a42]" />
-                <button type="button" onClick={() => { setChallengeId(null); setOtp('') }} className="text-xs text-[#1b7a42] font-semibold cursor-pointer hover:underline">Gửi lại mã</button>
-              </div>
-            ) : <>
             {activeTab === 'register' && (
               <>
                 <div>
@@ -323,8 +300,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             </div>
 
-            </>}
-
             {/* Flat CTA button */}
             <button
               type="submit"
@@ -335,7 +310,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <span>Đang xử lý...</span>
               ) : (
                 <>
-                  <span>{challengeId && activeTab === 'login' && loginMethod === 'phone' ? 'Xác minh và đăng nhập' : activeTab === 'login' && loginMethod === 'phone' ? 'Gửi mã xác minh' : activeTab === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</span>
+                  <span>{activeTab === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}

@@ -22,6 +22,7 @@ public record FacilitySummaryDto(
         LocalTime closeTime,
         String openHours,
         String phone,
+        String messengerUrl,
         String description,
         String logoUrl,
         String imageUrl,

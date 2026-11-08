@@ -1,0 +1,1 @@
+ALTER TABLE facilities ADD COLUMN IF NOT EXISTS messenger_url VARCHAR(500);

@@ -19,6 +19,7 @@ public record FacilityUpsertRequest(
         LocalTime openTime,
         LocalTime closeTime,
         String phone,
+        String messengerUrl,
         String description,
         String logoUrl,
         String imageUrl,

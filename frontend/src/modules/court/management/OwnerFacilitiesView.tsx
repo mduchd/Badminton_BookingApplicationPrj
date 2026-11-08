@@ -84,6 +84,7 @@ interface FacilityFormState {
   secondaryPhone: string
   secondaryPhoneNote: string
   phone: string
+  messengerUrl: string
   description: string
   logoUrl: string
   imageUrl: string
@@ -258,6 +259,7 @@ export const OwnerFacilitiesView: React.FC = () => {
       secondaryPhone: '0364059999',
       secondaryPhoneNote: 'Gọi khi đặt lịch cố định / Khiếu nại dịch vụ',
       phone: '0866866368 - Gọi khi đặt lịch vãng lai / Chốt lịch qua Zalo | 0364059999 - Gọi khi đặt lịch cố định / Khiếu nại dịch vụ',
+      messengerUrl: '',
       description:
         'Cụm sân thảm tiêu chuẩn thi đấu BWF, trần cao thoáng mát, hệ thống chiếu sáng chống chói và đầy đủ dịch vụ tiện ích.',
       logoUrl: '/images/logos/badminton-club-logo.svg',
@@ -324,6 +326,7 @@ export const OwnerFacilitiesView: React.FC = () => {
       secondaryPhone: parsedPhones.secondaryPhone,
       secondaryPhoneNote: parsedPhones.secondaryPhoneNote,
       phone: fac.phone || '',
+      messengerUrl: fac.messengerUrl || '',
       description: fac.description || '',
       logoUrl: fac.logoUrl || '/images/logos/badminton-club-logo.svg',
       imageUrl: fac.imageUrl,
@@ -514,6 +517,7 @@ export const OwnerFacilitiesView: React.FC = () => {
         openTime: effectiveOpenTime,
         closeTime: effectiveCloseTime,
         phone: composedPhone,
+        messengerUrl: formState.messengerUrl.trim(),
         description: formState.description.trim(),
         logoUrl: formState.logoUrl || '/images/logos/badminton-club-logo.svg',
         imageUrl: formState.imageUrl || formState.galleryImages[0],
@@ -1187,6 +1191,15 @@ export const OwnerFacilitiesView: React.FC = () => {
                         />
                       </div>
                     </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="facility-messenger" className="block text-xs font-bold text-slate-700 mb-1">Liên kết Messenger (tùy chọn)</label>
+                    <input id="facility-messenger" type="url" maxLength={500} value={formState.messengerUrl}
+                      onChange={(e) => setFormState({ ...formState, messengerUrl: e.target.value })}
+                      placeholder="https://m.me/ten-trang"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-medium text-slate-900" />
+                    <p className="text-xs text-slate-600 mt-1">Nhập liên kết Messenger của trang để khách nhắn tin.</p>
                   </div>
 
                   <div>

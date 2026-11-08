@@ -39,18 +39,13 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public User verifyPhonePassword(PhoneLoginRequest request) {
+    public AuthResponse loginByPhone(PhoneLoginRequest request) {
         String national = normalizePhone(request.phone());
         List<User> matches = findPhone(national);
         if (matches.size() != 1) {
             throw new IllegalArgumentException("Số điện thoại hoặc mật khẩu không chính xác");
         }
-        User user = matches.get(0);
-        if (user.getPasswordHash() == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new IllegalArgumentException("Số điện thoại hoặc mật khẩu không chính xác");
-        }
-        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) throw new IllegalStateException("Tài khoản của bạn đang bị tạm khóa");
-        return user;
+        return authenticate(matches.get(0), request.password(), "Số điện thoại hoặc mật khẩu không chính xác");
     }
 
     private List<User> findPhone(String national) {
@@ -58,7 +53,7 @@ public class AuthService {
         return userRepository.findByPhoneVariants(national, "84" + suffix, "0084" + suffix);
     }
 
-    public String normalizePhone(String value) {
+    private String normalizePhone(String value) {
         if (value == null || !value.trim().matches("\\+?[0-9][0-9\\s().-]*")) {
             throw new IllegalArgumentException("Số điện thoại không hợp lệ");
         }
@@ -67,19 +62,6 @@ public class AuthService {
         else if (digits.startsWith("84")) digits = "0" + digits.substring(2);
         if (!digits.matches("0[1-9][0-9]{8}")) throw new IllegalArgumentException("Số điện thoại Việt Nam không hợp lệ");
         return digits;
-    }
-
-    @Transactional(readOnly = true)
-    public AuthResponse completePhoneLogin(Long userId, String verifiedPhone, String expectedPasswordHash) {
-        User user = userRepository.findById(userId)
-                .filter(u -> "ACTIVE".equalsIgnoreCase(u.getStatus()))
-                .orElseThrow(() -> new IllegalArgumentException("Tài khoản không khả dụng"));
-        if (!java.util.Objects.equals(user.getPasswordHash(), expectedPasswordHash)) throw new IllegalArgumentException("Thông tin đăng nhập đã thay đổi. Vui lòng thử lại.");
-        String currentPhone = "+84" + normalizePhone(user.getPhone()).substring(1);
-        if (!currentPhone.equals(verifiedPhone)) throw new IllegalArgumentException("Số điện thoại đã thay đổi. Vui lòng thử lại.");
-        List<User> matches = findPhone(normalizePhone(user.getPhone()));
-        if (matches.size() != 1 || !userId.equals(matches.get(0).getId())) throw new IllegalArgumentException("Không thể xác minh tài khoản.");
-        return AuthResponse.of(jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole()), UserResponse.fromEntity(user));
     }
 
     private AuthResponse authenticate(User user, String password, String errorMessage) {

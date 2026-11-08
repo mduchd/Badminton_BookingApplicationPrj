@@ -27,27 +27,28 @@ class PhoneLoginTest {
         var user = activeUser();
         when(users.findByPhoneVariants("0912345678", "84912345678", "0084912345678")).thenReturn(List.of(user));
         when(passwords.matches("secret", "hash")).thenReturn(true);
+        when(tokens.generateToken(7L, "a@example.com", "CUSTOMER")).thenReturn("token");
         for (String number : List.of("0912 345 678", "+84 912 345 678", "0084 912345678")) {
-            assertEquals(7L, auth.verifyPhonePassword(new PhoneLoginRequest(number, "secret")).getId());
+            assertEquals("token", auth.loginByPhone(new PhoneLoginRequest(number, "secret")).accessToken());
         }
     }
     @Test void rejectsWrongPasswordAndLockedAccounts() {
         var user = activeUser();
         when(users.findByPhoneVariants(anyString(), anyString(), anyString())).thenReturn(List.of(user));
-        assertThrows(IllegalArgumentException.class, () -> auth.verifyPhonePassword(new PhoneLoginRequest("0912345678", "wrong")));
+        assertThrows(IllegalArgumentException.class, () -> auth.loginByPhone(new PhoneLoginRequest("0912345678", "wrong")));
         when(passwords.matches("secret", "hash")).thenReturn(true);
         user.setStatus("LOCKED");
-        assertThrows(IllegalStateException.class, () -> auth.verifyPhonePassword(new PhoneLoginRequest("0912345678", "secret")));
+        assertThrows(IllegalStateException.class, () -> auth.loginByPhone(new PhoneLoginRequest("0912345678", "secret")));
         verifyNoInteractions(tokens);
     }
     @Test void ambiguousPhoneCannotSignInEvenWhenPasswordMatches() {
         when(users.findByPhoneVariants(anyString(), anyString(), anyString())).thenReturn(List.of(activeUser(), activeUser()));
-        assertThrows(IllegalArgumentException.class, () -> auth.verifyPhonePassword(new PhoneLoginRequest("0912345678", "secret")));
+        assertThrows(IllegalArgumentException.class, () -> auth.loginByPhone(new PhoneLoginRequest("0912345678", "secret")));
         verifyNoInteractions(passwords, tokens);
     }
     @Test void invalidNumbersAreRejected() {
         for (String number : List.of("123", "+1 212 555 0123", "09abc12345678", "09+12345678")) {
-            assertThrows(IllegalArgumentException.class, () -> auth.verifyPhonePassword(new PhoneLoginRequest(number, "secret")));
+            assertThrows(IllegalArgumentException.class, () -> auth.loginByPhone(new PhoneLoginRequest(number, "secret")));
         }
         verifyNoInteractions(users);
     }

@@ -178,7 +178,7 @@ class Tv2CourtManagementServiceTest {
         FacilityUpsertRequest req = new FacilityUpsertRequest(
                 "Tên mới", "Hà Nội", "Đống Đa", "Văn Chương", "460 Trần Quý Cáp",
                 null, 21.0221, 105.8347, LocalTime.of(6, 0), LocalTime.of(22, 0),
-                "0912345678", null, null, null, List.of(), List.of(), "badminton", "ACTIVE", List.of()
+                "0912345678", null, null, null, null, List.of(), List.of(), "badminton", "ACTIVE", List.of()
         );
 
         assertThrows(ForbiddenException.class, () -> ownerService.updateFacility(1L, req));

@@ -263,6 +263,7 @@ public class FacilityQueryService {
                 f.getCloseTime(),
                 openHours,
                 f.getPhone(),
+                f.getMessengerUrl(),
                 f.getDescription(),
                 f.getLogoUrl(),
                 gallery.isEmpty() ? null : gallery.getFirst(),

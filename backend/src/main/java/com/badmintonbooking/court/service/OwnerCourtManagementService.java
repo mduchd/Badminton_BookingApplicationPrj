@@ -718,6 +718,7 @@ public class OwnerCourtManagementService {
         facility.setCloseTime(close);
 
         if (req.phone() != null) facility.setPhone(req.phone().trim());
+        if (req.messengerUrl() != null) facility.setMessengerUrl(MessengerUrl.normalize(req.messengerUrl()));
         if (req.description() != null) facility.setDescription(req.description().trim());
         if (req.logoUrl() != null && !req.logoUrl().isBlank()) facility.setLogoUrl(req.logoUrl().trim());
         if (req.imageUrl() != null && !req.imageUrl().isBlank()) {

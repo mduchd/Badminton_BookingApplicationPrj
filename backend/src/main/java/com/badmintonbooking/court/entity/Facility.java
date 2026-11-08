@@ -56,6 +56,9 @@ public class Facility {
     @Column(length = 300)
     private String phone;
 
+    @Column(name = "messenger_url", length = 500)
+    private String messengerUrl;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 
@@ -150,6 +153,9 @@ public class Facility {
 
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
+
+    public String getMessengerUrl() { return messengerUrl; }
+    public void setMessengerUrl(String messengerUrl) { this.messengerUrl = messengerUrl; }
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }

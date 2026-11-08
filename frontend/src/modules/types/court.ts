@@ -39,6 +39,7 @@ export interface Facility {
   latitude: number
   longitude: number
   phone: string
+  messengerUrl?: string
   description: string
   ownerId: string
   isApproved: boolean
@@ -207,6 +208,7 @@ export interface FacilityUpsertPayload {
   openTime: string
   closeTime: string
   phone?: string
+  messengerUrl?: string
   description?: string
   logoUrl?: string
   imageUrl?: string
@@ -260,6 +262,7 @@ export interface BadmintonCourtItem {
   minPrice?: number
   maxPrice?: number
   phone?: string
+  messengerUrl?: string
   pricePerHour: number
   amenities: string[]
   isFavorite?: boolean

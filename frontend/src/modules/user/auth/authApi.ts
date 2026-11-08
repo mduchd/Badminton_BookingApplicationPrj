@@ -74,21 +74,12 @@ export const authApi = {
     return result.data
   },
 
-  async startPhoneLogin(payload: { phone: string; password: string }): Promise<{ challengeId: string; expiresInSeconds: number }> {
+  async loginByPhone(payload: { phone: string; password: string }): Promise<AuthResponseData> {
     const response = await fetch(`${AUTH_API_URL}/auth/login/phone`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
     })
-    const result: ApiResponse<{ challengeId: string; expiresInSeconds: number }> = await response.json()
-    if (!response.ok || !result.success || !result.data?.challengeId) throw new Error(result.message || 'Không thể gửi mã xác minh.')
-    return result.data
-  },
-
-  async verifyPhoneLogin(payload: { challengeId: string; code: string }): Promise<AuthResponseData> {
-    const response = await fetch(`${AUTH_API_URL}/auth/login/phone/verify`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-    })
     const result: ApiResponse<AuthResponseData> = await response.json()
-    if (!response.ok || !result.success || !result.data?.accessToken) throw new Error(result.message || 'Mã xác minh không hợp lệ.')
+    if (!response.ok || !result.success || !result.data?.accessToken) throw new Error(result.message || 'Đăng nhập thất bại.')
     authStorage.setToken(result.data.accessToken)
     return result.data
   },

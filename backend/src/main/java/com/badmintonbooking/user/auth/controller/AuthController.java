@@ -4,8 +4,6 @@ import com.badmintonbooking.common.ApiResponse;
 import com.badmintonbooking.user.auth.dto.AuthResponse;
 import com.badmintonbooking.user.auth.dto.LoginRequest;
 import com.badmintonbooking.user.auth.dto.PhoneLoginRequest;
-import com.badmintonbooking.user.auth.dto.PhoneOtpVerifyRequest;
-import com.badmintonbooking.user.auth.service.PhoneOtpService;
 import com.badmintonbooking.user.auth.dto.RegisterRequest;
 import com.badmintonbooking.user.auth.dto.UserResponse;
 import com.badmintonbooking.user.auth.service.AuthService;
@@ -22,12 +20,10 @@ public class AuthController {
 
     private final AuthService authService;
     private final GoogleTokenVerifier googleTokenVerifier;
-    private final PhoneOtpService phoneOtpService;
 
-    public AuthController(AuthService authService, GoogleTokenVerifier googleTokenVerifier, PhoneOtpService phoneOtpService) {
+    public AuthController(AuthService authService, GoogleTokenVerifier googleTokenVerifier) {
         this.authService = authService;
         this.googleTokenVerifier = googleTokenVerifier;
-        this.phoneOtpService = phoneOtpService;
     }
 
     public record GoogleLoginRequest(@NotBlank String credential) {}
@@ -56,24 +52,13 @@ public class AuthController {
     }
 
     @PostMapping("/login/phone")
-    public ResponseEntity<ApiResponse<PhoneOtpService.ChallengeResponse>> loginByPhone(@Valid @RequestBody PhoneLoginRequest request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> loginByPhone(@Valid @RequestBody PhoneLoginRequest request) {
         try {
-            return ResponseEntity.ok(ApiResponse.success(phoneOtpService.start(request), "Đã gửi mã xác minh"));
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error("Không thể gửi mã xác minh"));
-        }
-    }
-
-    @PostMapping("/login/phone/verify")
-    public ResponseEntity<ApiResponse<AuthResponse>> verifyPhone(@Valid @RequestBody PhoneOtpVerifyRequest request) {
-        try {
-            return ResponseEntity.ok(ApiResponse.success(phoneOtpService.complete(request.challengeId(), request.code()), "Đăng nhập thành công"));
+            return ResponseEntity.ok(ApiResponse.success(authService.loginByPhone(request), "Đăng nhập thành công"));
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error("Không thể xác minh mã"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error("Lỗi hệ thống khi đăng nhập"));
         }
     }
 
