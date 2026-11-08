@@ -15,6 +15,7 @@ import { Header } from './components/shared/Header'
 import { GlobalLoadingScreen } from './components/shared/GlobalLoadingScreen'
 import { TopLoadingBar } from './components/shared/TopLoadingBar'
 import { CourtSearchBar } from './components/shared/CourtSearchBar'
+import { Pagination } from './components/shared/Pagination'
 import { CourtCardItem } from './modules/user/ai-search/CourtCardItem'
 import { SmartFilterModal } from './modules/user/ai-search/SmartFilterModal'
 import { AIChatPanel } from './modules/user/ai-search/AIChatPanel'
@@ -103,6 +104,7 @@ export function MainApp() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [criteria, setCriteria] = useState<SearchCriteria>(defaultCriteria)
   const [searchTerm, setSearchTerm] = useState('')
+  const [courtPagination, setCourtPagination] = useState({ key: '', page: 0 })
 
   // Verify and restore authenticated session on load
   useEffect(() => {
@@ -223,24 +225,28 @@ export function MainApp() {
 
   const { data: allFacilities } = useQuery({
     queryKey: ['publicFacilities'],
-    enabled: !isManagementRoute,
+    enabled: !isManagementRoute && (activeNavTab === 'map' || location.pathname === ROUTES.TRENDING),
     queryFn: () => courtApi.searchFacilities(),
   })
+  const courtPageKey = JSON.stringify([searchTerm, criteria, activeTab, favoriteIds])
+  const currentCourtPage = courtPagination.key === courtPageKey ? courtPagination.page : 0
   const { data: filteredFacilities, isLoading: courtsLoading, isError: courtsError } = useQuery({
-    queryKey: ['publicFacilities', searchTerm, criteria.district, criteria.maxPricePerHour, criteria.amenities],
-    enabled: !isManagementRoute,
-    queryFn: () => courtApi.searchFacilities({
+    queryKey: ['publicFacilitiesPage', courtPageKey, currentCourtPage],
+    enabled: !isManagementRoute && (location.pathname === ROUTES.HOME || location.pathname === ROUTES.FAVORITES) && (activeTab !== 'favorite' || favoriteIds.length > 0),
+    queryFn: () => courtApi.searchFacilitiesPage({
       keyword: searchTerm.trim() || undefined,
       district: criteria.district || undefined,
       maxPrice: criteria.maxPricePerHour || undefined,
       amenities: criteria.amenities,
+      ids: activeTab === 'favorite' ? favoriteIds : undefined,
+      page: currentCourtPage,
     }),
   })
   const courts = useMemo(() => (allFacilities ?? []).map((facility) => ({
     ...facilityToCourtItem(facility),
     isFavorite: favoriteIds.includes(facility.id),
   })), [allFacilities, favoriteIds])
-  const filteredCourts = useMemo(() => (filteredFacilities ?? []).map((facility) => ({
+  const filteredCourts = useMemo(() => (filteredFacilities?.content ?? []).map((facility) => ({
     ...facilityToCourtItem(facility),
     isFavorite: favoriteIds.includes(facility.id),
   })).filter((court) => activeTab !== 'favorite' || court.isFavorite), [filteredFacilities, favoriteIds, activeTab])
@@ -427,6 +433,7 @@ export function MainApp() {
             </button>
           </div>
         ) : (
+          <div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
             {filteredCourts.map((court, index) => (
               <CourtCardItem
@@ -438,6 +445,8 @@ export function MainApp() {
                 onToggleFavorite={handleToggleFavorite}
               />
             ))}
+          </div>
+          <Pagination page={currentCourtPage} pageSize={24} total={filteredFacilities?.totalElements ?? 0} onChange={(page) => setCourtPagination({ key: courtPageKey, page })} />
           </div>
         )
       )}
@@ -595,7 +604,6 @@ export function MainApp() {
                       setAuthInitialTab(tab)
                       setIsAuthOpen(true)
                     }}
-                    courts={courts}
                     onSelectCourt={handleOpenCourtSidebar}
                     onBookCourtDirect={handleOpenBooking}
                     onOpenAIChat={() => setIsAIChatOpen(true)}
@@ -692,7 +700,7 @@ export function MainApp() {
         criteria={criteria}
         onClose={() => setIsFilterModalOpen(false)}
         onChangeCriteria={setCriteria}
-        onApply={() => toast.success(`Đã áp dụng bộ lọc! Tìm thấy ${filteredCourts.length} sân`)}
+        onApply={() => toast.success('Đã áp dụng bộ lọc')}
         onReset={() => {
           setCriteria(defaultCriteria)
           toast.info('Đã đặt lại bộ lọc')

@@ -2,6 +2,7 @@ package com.badmintonbooking.court.repository;
 
 import com.badmintonbooking.court.entity.Facility;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface FacilityRepository extends JpaRepository<Facility, Long> {
+public interface FacilityRepository extends JpaRepository<Facility, Long>, JpaSpecificationExecutor<Facility> {
 
     List<Facility> findByStatus(String status);
 
@@ -73,6 +74,9 @@ public interface FacilityRepository extends JpaRepository<Facility, Long> {
 
     @Query(value = "SELECT DISTINCT district FROM facilities WHERE status = 'ACTIVE' AND district IS NOT NULL ORDER BY district", nativeQuery = true)
     List<String> findDistinctActiveDistricts();
+
+    @Query("SELECT DISTINCT f.district FROM Facility f WHERE f.district IS NOT NULL AND f.district <> '' ORDER BY f.district")
+    List<String> findAllDistricts();
 
     @Query(value = "SELECT DISTINCT amenity FROM facility_amenities ORDER BY amenity", nativeQuery = true)
     List<String> findDistinctAmenities();

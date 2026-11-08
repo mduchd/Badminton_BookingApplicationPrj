@@ -22,6 +22,8 @@ import type { Facility } from '../../types/court'
 import type { UserRole } from '../../types/user'
 import { toast } from 'sonner'
 import { ROUTES } from '../../../app/router'
+import { Pagination } from '../../../components/shared/Pagination'
+import { venueThumbnail } from '../../../lib/venueThumbnail'
 import {
   adminApi,
   type AdminDashboardMetrics,
@@ -40,6 +42,9 @@ export const AdminPortalView: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false)
 
   const [facilities, setFacilities] = useState<Facility[]>([])
+  const [facilityTotal, setFacilityTotal] = useState(0)
+  const [districts, setDistricts] = useState<string[]>([])
+  const [facilityRefresh, setFacilityRefresh] = useState(0)
   const [aloProfiles, setAloProfiles] = useState<Record<string, AloBookingFacilityProfile>>({})
   const [metrics, setMetrics] = useState<AdminDashboardMetrics | null>(null)
   const [transactions, setTransactions] = useState<AdminTransaction[]>([])
@@ -67,8 +72,11 @@ export const AdminPortalView: React.FC = () => {
 
   // Filters
   const [facSearch, setFacSearch] = useState<string>('')
+  const [facilityPagination, setFacilityPagination] = useState({ key: '', page: 0 })
   const [facStatusFilter, setFacStatusFilter] = useState<string>('ALL')
   const [facDistrictFilter, setFacDistrictFilter] = useState<string>('ALL')
+  const facilityPageKey = JSON.stringify([facSearch, facStatusFilter, facDistrictFilter])
+  const currentFacilityPage = facilityPagination.key === facilityPageKey ? facilityPagination.page : 0
 
   const [userSearch, setUserSearch] = useState<string>('')
   const [userRoleFilter, setUserRoleFilter] = useState<string>('ALL')
@@ -101,12 +109,12 @@ export const AdminPortalView: React.FC = () => {
   const loadDashboardData = async () => {
     setLoading(true)
     try {
-      const [dashboard, facilityData, userData, transactionData, settingsData] = await Promise.all([
-        adminApi.getDashboardMetrics(), adminApi.getFacilities(), adminApi.getUsers(),
+      const [dashboard, userData, transactionData, settingsData] = await Promise.all([
+        adminApi.getDashboardMetrics(), adminApi.getUsers(),
         adminApi.getTransactions(), adminApi.getSystemSettings(),
       ])
       setMetrics(dashboard)
-      setFacilities(facilityData.map(toFacility))
+      setFacilityRefresh((value) => value + 1)
       setUsers(userData)
       setTransactions(transactionData)
       setSettings(settingsData)
@@ -119,6 +127,7 @@ export const AdminPortalView: React.FC = () => {
 
   useEffect(() => {
     void loadDashboardData()
+    void adminApi.getFacilityDistricts().then(setDistricts).catch(() => toast.error('Không thể tải danh sách quận huyện.'))
     void adminApi.getAloBookingProfiles()
       .then((profiles) => setAloProfiles(Object.fromEntries(profiles.map((profile) => [String(profile.facilityId), profile]))))
       .catch(() => toast.error('Không thể tải thông tin công khai của cụm sân.'))
@@ -128,8 +137,17 @@ export const AdminPortalView: React.FC = () => {
     if (activeTab !== 'facilities') return
     let active = true
     const refreshFacilities = () => {
-      void adminApi.getFacilities()
-        .then((items) => { if (active) setFacilities(items.map(toFacility)) })
+      void adminApi.getFacilitiesPage({ search: facSearch || undefined, status: facStatusFilter, district: facDistrictFilter, page: currentFacilityPage, size: 20 })
+        .then((result) => {
+          if (!active) return
+          const lastPage = Math.max(0, Math.ceil(result.totalElements / 20) - 1)
+          if (currentFacilityPage > lastPage) {
+            setFacilityPagination({ key: facilityPageKey, page: lastPage })
+            return
+          }
+          setFacilities(result.content.map(toFacility))
+          setFacilityTotal(result.totalElements)
+        })
         .catch(() => { if (active) toast.error('Không thể làm mới danh sách cụm sân.') })
     }
     refreshFacilities()
@@ -138,7 +156,7 @@ export const AdminPortalView: React.FC = () => {
       active = false
       window.removeEventListener('focus', refreshFacilities)
     }
-  }, [activeTab])
+  }, [activeTab, facSearch, facStatusFilter, facDistrictFilter, currentFacilityPage, facilityRefresh, facilityPageKey])
 
   // Moderation Handlers
   const handleApproveFacility = async (fac: Facility) => {
@@ -241,22 +259,7 @@ export const AdminPortalView: React.FC = () => {
   }
 
   // Filtered Facilities
-  const filteredFacilities = useMemo(() => {
-    return facilities.filter((f) => {
-      if (facSearch) {
-        const q = facSearch.toLowerCase()
-        const matchName = f.name.toLowerCase().includes(q)
-        const matchAddr = f.address.toLowerCase().includes(q)
-        if (!matchName && !matchAddr) return false
-      }
-      if (facStatusFilter === 'APPROVED' && !f.isApproved) return false
-      if (facStatusFilter === 'PENDING' && f.isApproved) return false
-      if (facStatusFilter === 'ACTIVE' && f.status !== 'active') return false
-      if (facStatusFilter === 'PAUSED' && f.status !== 'paused') return false
-      if (facDistrictFilter !== 'ALL' && f.district !== facDistrictFilter) return false
-      return true
-    })
-  }, [facilities, facSearch, facStatusFilter, facDistrictFilter])
+  const filteredFacilities = facilities
 
   // Filtered Users
   const filteredUsers = useMemo(() => {
@@ -293,10 +296,6 @@ export const AdminPortalView: React.FC = () => {
   }, [transactions, txSearch, txProviderFilter, txStatusFilter])
 
   // Districts list for filter
-  const districts = useMemo(() => {
-    const set = new Set(facilities.map((f) => f.district).filter(Boolean))
-    return Array.from(set)
-  }, [facilities])
 
   const formatVND = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
@@ -402,7 +401,7 @@ export const AdminPortalView: React.FC = () => {
             }`}
           >
             <Building2 className="w-4 h-4" />
-            <span>Kiểm duyệt Cụm sân ({facilities.length})</span>
+            <span>Kiểm duyệt Cụm sân ({metrics?.totalFacilities ?? 0})</span>
           </button>
 
           <button
@@ -505,7 +504,7 @@ export const AdminPortalView: React.FC = () => {
                 <div className="text-xs font-medium text-slate-600 pt-1 border-t border-slate-100 flex items-center justify-between">
                   <span>Chờ kiểm duyệt:</span>
                   <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-900">
-                    {facilities.filter((f) => !f.isApproved).length} chờ duyệt
+                    {metrics?.pendingFacilities ?? 0} chờ duyệt
                   </span>
                 </div>
               </div>
@@ -707,7 +706,7 @@ export const AdminPortalView: React.FC = () => {
                         <div className="flex min-w-0 items-center gap-3">
                           <div className="w-11 h-11 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex-shrink-0">
                             <img
-                              src={fac.logoUrl || fac.imageUrl || '/images/logos/badminton-club-logo.svg'}
+                              src={venueThumbnail(fac.logoUrl || fac.imageUrl || '/images/logos/badminton-club-logo.svg')}
                               loading="lazy"
                               onError={(event) => {
                                 event.currentTarget.onerror = null
@@ -819,6 +818,7 @@ export const AdminPortalView: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            <Pagination page={currentFacilityPage} pageSize={20} total={facilityTotal} onChange={(page) => setFacilityPagination({ key: facilityPageKey, page })} />
           </div>
         )}
 

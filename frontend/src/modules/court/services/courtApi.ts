@@ -264,6 +264,19 @@ export function facilityToCourtItem(fac: Facility): BadmintonCourtItem {
 }
 
 export const courtApi = {
+  searchFacilitiesPage: async (params: { keyword?: string; district?: string; maxPrice?: number; amenities?: string[]; minRating?: number; ids?: string[]; page?: number; size?: number } = {}): Promise<{ content: Facility[]; totalElements: number; totalPages: number }> => {
+    const qs = new URLSearchParams()
+    if (params.keyword?.trim()) qs.set('keyword', params.keyword.trim())
+    if (params.district?.trim()) qs.set('district', params.district.trim())
+    if (params.maxPrice != null) qs.set('maxPrice', String(params.maxPrice))
+    if (params.minRating != null) qs.set('minRating', String(params.minRating))
+    params.amenities?.forEach((item) => qs.append('amenities', item))
+    params.ids?.forEach((id) => qs.append('ids', id))
+    qs.set('page', String(params.page ?? 0))
+    qs.set('size', String(params.size ?? 24))
+    const data = await apiRequest<{ content: unknown[]; totalElements: number; totalPages: number }>(`/facilities/page?${qs}`)
+    return { ...data, content: data.content.map(mapFacilityDto) }
+  },
   getFavorites: async (): Promise<string[]> =>
     (await apiRequest<number[]>('/facilities/favorites')).map(String),
 

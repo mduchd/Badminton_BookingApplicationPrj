@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import com.badmintonbooking.common.dto.PageResponse;
 
 @RestController
 public class PublicFacilityController {
@@ -56,6 +57,19 @@ public class PublicFacilityController {
     @GetMapping("/api/facilities/metadata")
     public ResponseEntity<FacilityFilterMetadataDto> getFilterMetadata() {
         return ResponseEntity.ok(facilityQueryService.getFilterMetadata());
+    }
+
+    @GetMapping("/api/facilities/page")
+    public PageResponse<FacilitySummaryDto> searchFacilitiesPage(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String district,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) List<String> amenities,
+            @RequestParam(required = false) BigDecimal minRating,
+            @RequestParam(required = false) List<Long> ids,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "24") int size) {
+        return PageResponse.from(facilityQueryService.searchFacilitiesPage(keyword, district, maxPrice, amenities, minRating, ids, page, size));
     }
 
     @GetMapping("/api/facilities/{id}")

@@ -16,6 +16,11 @@ import com.badmintonbooking.court.repository.FacilityImageRepository;
 import com.badmintonbooking.court.repository.FacilityRepository;
 import com.badmintonbooking.court.repository.PriceRuleRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -126,6 +131,39 @@ public class FacilityQueryService {
         };
 
         return dtos.stream().sorted(comparator).toList();
+    }
+
+    public Page<FacilitySummaryDto> searchFacilitiesPage(String keyword, String district, BigDecimal maxPrice,
+            List<String> amenities, BigDecimal minRating, List<Long> ids, int page, int size) {
+        Specification<Facility> spec = (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> conditions = new ArrayList<>();
+            conditions.add(cb.equal(root.get("status"), "ACTIVE"));
+            conditions.add(cb.isTrue(root.get("isApproved")));
+            if (keyword != null && !keyword.isBlank()) {
+                String pattern = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
+                conditions.add(cb.or(cb.like(cb.lower(root.get("name")), pattern), cb.like(cb.lower(root.get("address")), pattern),
+                        cb.like(cb.lower(cb.coalesce(root.<String>get("normalizedAddress"), "")), pattern),
+                        cb.like(cb.lower(cb.coalesce(root.<String>get("district"), "")), pattern)));
+            }
+            if (district != null && !district.isBlank())
+                conditions.add(cb.like(cb.lower(cb.coalesce(root.<String>get("district"), "")), "%" + district.trim().toLowerCase(Locale.ROOT) + "%"));
+            if (maxPrice != null) conditions.add(cb.lessThanOrEqualTo(root.get("minPrice"), maxPrice));
+            if (minRating != null) conditions.add(cb.greaterThanOrEqualTo(root.get("rating"), minRating));
+            if (ids != null) conditions.add(ids.isEmpty() ? cb.disjunction() : root.get("id").in(ids));
+            if (amenities != null) for (String amenity : amenities) {
+                if (amenity == null || amenity.isBlank()) continue;
+                var sub = query.subquery(Long.class);
+                var facility = sub.from(Facility.class);
+                jakarta.persistence.criteria.SetJoin<Facility, String> item = facility.joinSet("amenitySet");
+                sub.select(facility.get("id")).where(cb.equal(facility.get("id"), root.get("id")),
+                        cb.equal(cb.lower(item), amenity.trim().toLowerCase(Locale.ROOT)));
+                conditions.add(cb.exists(sub));
+            }
+            return cb.and(conditions.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
+        Page<Facility> result = facilityRepository.findAll(spec, PageRequest.of(Math.max(0, page), Math.clamp(size, 1, 100),
+                Sort.by(Sort.Order.desc("rating"), Sort.Order.asc("id"))));
+        return new PageImpl<>(toFacilitySummaries(result.getContent(), null, null), result.getPageable(), result.getTotalElements());
     }
 
     public FacilityDetailDto getFacilityDetail(Long facilityId, Double userLat, Double userLng) {

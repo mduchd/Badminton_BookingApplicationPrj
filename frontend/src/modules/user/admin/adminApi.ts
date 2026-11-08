@@ -113,6 +113,14 @@ export const adminApi = {
   },
 
   // 2. Facilities
+  async getFacilitiesPage(params: { search?: string; status?: string; district?: string; page: number; size: number }): Promise<{ content: AdminFacilityItem[]; totalElements: number }> {
+    const res = await client.get('/v1/admin/facilities/page', { params })
+    return res.data.data
+  },
+  async getFacilityDistricts(): Promise<string[]> {
+    const res = await client.get('/v1/admin/facilities/districts')
+    return res.data.data
+  },
   async getAloBookingProfiles(): Promise<AloBookingFacilityProfile[]> {
     const res = await client.get('/v1/admin/facilities/alobooking-profiles')
     return res.data.data

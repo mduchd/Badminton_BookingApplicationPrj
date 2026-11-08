@@ -29,9 +29,11 @@ import {
 import type { CourtResult, User } from '../../types/user'
 import type { BadmintonCourtItem } from '../../types/court'
 import { CourtCardItem } from './CourtCardItem'
+import { Pagination } from '../../../components/shared/Pagination'
+import { useQuery } from '@tanstack/react-query'
+import { courtApi, facilityToCourtItem } from '../../court/services/courtApi'
 
 export interface KhamPhaViewProps {
-  courts: BadmintonCourtItem[]
   onOpenAIChat: () => void
   currentUser?: User | null
   onOpenAuth?: (tab?: 'login' | 'register') => void
@@ -40,7 +42,6 @@ export interface KhamPhaViewProps {
 }
 
 export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
-  courts,
   onOpenAIChat,
   currentUser = null,
   onOpenAuth,
@@ -48,6 +49,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
   onBookCourtDirect,
 }) => {
   const [searchParams, setSearchParams] = useSearchParams()
+  const [pagination, setPagination] = useState({ category: '', page: 0 })
   const catFromUrl = searchParams.get('category')
   const activeCategory = catFromUrl || 'CumSan'
 
@@ -107,7 +109,13 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
   ]
 
   const showAllCourts = activeCategory === 'CumSan'
-  const visibleCourts = showAllCourts ? courts : courts.filter((court) => (court.rating || 0) >= 4.8)
+  const currentPage = pagination.category === activeCategory ? pagination.page : 0
+  const { data: courtPage, isLoading, isError } = useQuery({
+    queryKey: ['exploreFacilitiesPage', activeCategory, currentPage],
+    enabled: showAllCourts || activeCategory === 'NoiBat',
+    queryFn: () => courtApi.searchFacilitiesPage({ page: currentPage, minRating: showAllCourts ? undefined : 4.8 }),
+  })
+  const visibleCourts = (courtPage?.content ?? []).map(facilityToCourtItem)
 
   return (
     <div className="w-full space-y-5">
@@ -187,7 +195,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
                 </h2>
               </div>
               <span className="text-xs font-semibold text-slate-600">
-                {visibleCourts.length} cụm sân
+                {courtPage?.totalElements ?? 0} cụm sân
               </span>
             </div>
 
@@ -202,6 +210,9 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
                 />
               ))}
             </div>
+            {isLoading && <p className="text-sm text-slate-600">Đang tải danh sách sân...</p>}
+            {isError && <p className="text-sm text-red-700">Không thể tải danh sách sân. Vui lòng thử lại.</p>}
+            <Pagination page={currentPage} pageSize={24} total={courtPage?.totalElements ?? 0} onChange={(page) => setPagination({ category: activeCategory, page })} />
           </div>
 
           {/* Section 2: Buổi chơi giao lưu nổi bật */}

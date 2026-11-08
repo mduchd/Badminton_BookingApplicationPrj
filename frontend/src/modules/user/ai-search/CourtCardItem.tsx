@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { Heart, Navigation, Clock, Star } from 'lucide-react'
 import type { BadmintonCourtItem } from '../../types/court'
+import { venueThumbnail } from '../../../lib/venueThumbnail'
 
 interface CourtCardItemProps {
   court: BadmintonCourtItem
@@ -57,7 +58,7 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
     >
       {/* Top Image & Floating Badges */}
       <div className="relative h-44 sm:h-48 w-full overflow-hidden bg-slate-100">
-        {court.imageUrl && <img src={court.imageUrl} alt={court.name} className="w-full h-full object-cover" loading="lazy" />}
+        {court.imageUrl && <img src={venueThumbnail(court.imageUrl)} alt={court.name} className="w-full h-full object-cover" loading={index < 3 ? 'eager' : 'lazy'} decoding="async" onError={(event) => { if (event.currentTarget.getAttribute('src') !== court.imageUrl) event.currentTarget.src = court.imageUrl }} />}
 
         {/* Top-Left Badges */}
         <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap z-10">
@@ -98,7 +99,7 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
       <div className="p-3.5 flex items-center gap-3">
         {/* Round Logo */}
         <div className="w-12 h-12 rounded-full border border-slate-200 overflow-hidden flex-shrink-0 bg-slate-50 shadow-2xs">
-          {court.logoUrl && <img src={court.logoUrl} alt={court.name} className="w-full h-full object-cover" />}
+          {court.logoUrl && <img src={court.logoUrl} alt={court.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />}
         </div>
 
         {/* Text Details */}

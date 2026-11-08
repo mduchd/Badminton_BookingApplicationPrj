@@ -21,6 +21,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -31,6 +36,45 @@ import java.util.stream.Collectors;
 
 @Service
 public class AdminService {
+
+    @Transactional(readOnly = true)
+    public List<String> getFacilityDistricts() { return facilityRepository.findAllDistricts(); }
+
+    @Transactional(readOnly = true)
+    public Page<AdminFacilityDto> getFacilitiesPage(String search, String status, String district, int page, int size) {
+        Specification<Facility> spec = (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> conditions = new ArrayList<>();
+            if (search != null && !search.isBlank()) {
+                String pattern = "%" + search.trim().toLowerCase(Locale.ROOT) + "%";
+                conditions.add(cb.or(cb.like(cb.lower(root.get("name")), pattern), cb.like(cb.lower(root.get("address")), pattern)));
+            }
+            if (district != null && !district.isBlank() && !"ALL".equalsIgnoreCase(district))
+                conditions.add(cb.equal(root.get("district"), district));
+            if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
+                if ("APPROVED".equals(status)) conditions.add(root.get("status").in("ACTIVE", "PAUSED"));
+                else if ("PENDING".equals(status)) conditions.add(cb.not(root.get("status").in("ACTIVE", "PAUSED")));
+                else conditions.add(cb.equal(root.get("status"), status));
+            }
+            return cb.and(conditions.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
+        Page<Facility> result = facilityRepository.findAll(spec, PageRequest.of(Math.max(0, page), Math.clamp(size, 1, 100),
+                Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))));
+        List<Facility> list = result.getContent();
+        if (list.isEmpty()) return new PageImpl<>(List.of(), result.getPageable(), result.getTotalElements());
+        List<Long> ownerIds = list.stream().map(Facility::getOwnerId).filter(Objects::nonNull).distinct().toList();
+        Map<Long, User> owners = userRepository.findAllById(ownerIds).stream().collect(Collectors.toMap(User::getId, u -> u));
+        Map<Long, Long> counts = courtRepository.findByFacilityIdInOrderByCourtNumberAscIdAsc(list.stream().map(Facility::getId).toList())
+                .stream().collect(Collectors.groupingBy(Court::getFacilityId, Collectors.counting()));
+        List<AdminFacilityDto> items = list.stream().map(f -> {
+            User owner = owners.get(f.getOwnerId());
+            return new AdminFacilityDto(f.getId(), f.getOwnerId(), owner != null ? owner.getFullName() : "N/A",
+                    owner != null ? owner.getEmail() : "N/A", owner != null ? owner.getPhone() : "N/A", f.getName(), f.getCity(),
+                    f.getDistrict(), f.getWard(), f.getAddress(), f.getImageUrl(), f.getLogoUrl(), f.getOpenTime(), f.getCloseTime(),
+                    f.getStatus(), "ACTIVE".equalsIgnoreCase(f.getStatus()) || "PAUSED".equalsIgnoreCase(f.getStatus()),
+                    counts.getOrDefault(f.getId(), 0L).intValue(), f.getRejectionReason(), f.getCreatedAt(), f.getUpdatedAt());
+        }).toList();
+        return new PageImpl<>(items, result.getPageable(), result.getTotalElements());
+    }
 
     private static final Logger log = LoggerFactory.getLogger(AdminService.class);
 

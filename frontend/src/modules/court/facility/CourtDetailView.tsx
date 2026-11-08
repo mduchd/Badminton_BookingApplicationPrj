@@ -178,7 +178,7 @@ export const CourtDetailView: React.FC<CourtDetailViewProps> = ({ favoriteIds, o
                     : 'border-slate-200 opacity-75 hover:opacity-100'
                 }`}
               >
-                <img src={img} alt="" className="w-full h-full object-cover" />
+                <img src={img} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
               </button>
             ))}
           </div>

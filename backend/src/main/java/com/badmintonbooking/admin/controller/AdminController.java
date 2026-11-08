@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.badmintonbooking.common.dto.PageResponse;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -49,6 +50,18 @@ public class AdminController {
     @GetMapping("/facilities/alobooking-profiles")
     public ApiResponse<List<AloBookingFacilityProfile>> getAloBookingProfiles() {
         return ApiResponse.ok(profiles.findAll(), "Lấy hồ sơ công khai AloBooking thành công");
+    }
+
+    @GetMapping("/facilities/page")
+    public ApiResponse<PageResponse<AdminFacilityDto>> getFacilitiesPage(@RequestParam(required = false) String search,
+            @RequestParam(required = false) String status, @RequestParam(required = false) String district,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+        return ApiResponse.ok(PageResponse.from(adminService.getFacilitiesPage(search, status, district, page, size)), "Lấy danh sách cụm sân thành công");
+    }
+
+    @GetMapping("/facilities/districts")
+    public ApiResponse<List<String>> getFacilityDistricts() {
+        return ApiResponse.ok(adminService.getFacilityDistricts(), "Lấy danh sách quận huyện thành công");
     }
 
     /**

@@ -15,6 +15,8 @@ export const CourtResultCard: React.FC<CourtResultCardProps> = ({ court, onBookN
         <img
           src={court.imageUrl}
           alt={court.facilityName}
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover "
         />
         <div className="absolute inset-0 bg-black/35" />
