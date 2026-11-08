@@ -58,7 +58,7 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
     >
       {/* Top Image & Floating Badges */}
       <div className="relative h-44 sm:h-48 w-full overflow-hidden bg-slate-100">
-        {court.imageUrl && <img src={venueThumbnail(court.imageUrl)} alt={court.name} className="w-full h-full object-cover" loading={index < 3 ? 'eager' : 'lazy'} decoding="async" onError={(event) => { if (event.currentTarget.getAttribute('src') !== court.imageUrl) event.currentTarget.src = court.imageUrl }} />}
+        {court.imageUrl && <img src={venueThumbnail(court.imageUrl)} alt={court.name} className="w-full h-full object-cover" loading={index < 3 ? 'eager' : 'lazy'} fetchPriority={index === 0 ? 'high' : 'auto'} decoding="async" onError={(event) => { if (event.currentTarget.getAttribute('src') !== court.imageUrl) event.currentTarget.src = court.imageUrl }} />}
 
         {/* Top-Left Badges */}
         <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap z-10">

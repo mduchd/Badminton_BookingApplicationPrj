@@ -12,7 +12,8 @@ import { Activity, Flame, CalendarCheck } from 'lucide-react'
 import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { Header } from './components/shared/Header'
-import { GlobalLoadingScreen } from './components/shared/GlobalLoadingScreen'
+import { CourtListSkeleton } from './components/shared/CourtListSkeleton'
+import { readHomeFacilityCache, writeHomeFacilityCache } from './lib/homeFacilityCache'
 import { TopLoadingBar } from './components/shared/TopLoadingBar'
 import { CourtSearchBar } from './components/shared/CourtSearchBar'
 import { Pagination } from './components/shared/Pagination'
@@ -228,19 +229,27 @@ export function MainApp() {
     enabled: !isManagementRoute && (activeNavTab === 'map' || location.pathname === ROUTES.TRENDING),
     queryFn: () => courtApi.searchFacilities(),
   })
-  const courtPageKey = JSON.stringify([searchTerm, criteria, activeTab, favoriteIds])
+  const courtPageKey = JSON.stringify([searchTerm, criteria, activeTab, activeTab === 'favorite' ? favoriteIds : null])
   const currentCourtPage = courtPagination.key === courtPageKey ? courtPagination.page : 0
-  const { data: filteredFacilities, isLoading: courtsLoading, isError: courtsError } = useQuery({
+  const isDefaultHomePage = activeTab === 'all' && currentCourtPage === 0 && !searchTerm.trim() && !criteria.district && !criteria.maxPricePerHour && !criteria.amenities?.length
+  const cachedHomePage = isDefaultHomePage ? readHomeFacilityCache() : undefined
+  const { data: filteredFacilities, isLoading: courtsLoading, isError: courtsError, refetch: refetchCourts } = useQuery({
     queryKey: ['publicFacilitiesPage', courtPageKey, currentCourtPage],
     enabled: !isManagementRoute && (location.pathname === ROUTES.HOME || location.pathname === ROUTES.FAVORITES) && (activeTab !== 'favorite' || favoriteIds.length > 0),
-    queryFn: () => courtApi.searchFacilitiesPage({
+    initialData: cachedHomePage?.data,
+    initialDataUpdatedAt: cachedHomePage?.savedAt,
+    queryFn: async () => {
+      const result = await courtApi.searchFacilitiesPage({
       keyword: searchTerm.trim() || undefined,
       district: criteria.district || undefined,
       maxPrice: criteria.maxPricePerHour || undefined,
       amenities: criteria.amenities,
       ids: activeTab === 'favorite' ? favoriteIds : undefined,
       page: currentCourtPage,
-    }),
+      })
+      if (isDefaultHomePage) writeHomeFacilityCache(result)
+      return result
+    },
   })
   const courts = useMemo(() => (allFacilities ?? []).map((facility) => ({
     ...facilityToCourtItem(facility),
@@ -413,27 +422,29 @@ export function MainApp() {
 
       {/* Cards Grid */}
       {activeTab !== 'booked' && (
-        filteredCourts.length === 0 ? (
+        courtsLoading ? <CourtListSkeleton /> : filteredCourts.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center border border-slate-200/80 max-w-md mx-auto">
             <Activity className="w-8 h-8 text-[#1b7a42] mx-auto mb-2" />
-            <h3 className="font-bold text-slate-800 text-sm">{courtsLoading ? 'Đang tải danh sách sân' : courtsError ? 'Không thể tải danh sách sân' : 'Không tìm thấy sân phù hợp'}</h3>
+            <h3 className="font-bold text-slate-800 text-sm">{courtsError ? 'Không thể tải danh sách sân' : 'Không tìm thấy sân phù hợp'}</h3>
             <p className="text-xs text-slate-600 font-medium mt-1 mb-4">
               {courtsError ? 'Vui lòng thử lại sau.' : 'Thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc để xem tất cả sân.'}
             </p>
             <button
               type="button"
               onClick={() => {
+                if (courtsError) { void refetchCourts(); return }
                 setSearchTerm('')
                 setCriteria(defaultCriteria)
                 navigate(ROUTES.HOME)
               }}
               className="px-4 py-2 rounded-xl bg-[#1b7a42] text-white text-xs font-bold cursor-pointer hover:bg-[#156335] transition-colors"
             >
-              Xem tất cả sân
+              {courtsError ? 'Thử lại' : 'Xem tất cả sân'}
             </button>
           </div>
         ) : (
           <div>
+          {courtsError && <p role="status" className="mb-3 text-sm text-slate-600">Không thể cập nhật danh sách. Đang hiển thị dữ liệu đã lưu.</p>}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
             {filteredCourts.map((court, index) => (
               <CourtCardItem
@@ -783,7 +794,6 @@ export function MainApp() {
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <GlobalLoadingScreen minDuration={900} />
       <MainApp />
     </QueryClientProvider>
   )
