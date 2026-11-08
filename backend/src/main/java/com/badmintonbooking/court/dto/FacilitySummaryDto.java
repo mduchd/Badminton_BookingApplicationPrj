@@ -1,0 +1,41 @@
+package com.badmintonbooking.court.dto;
+
+import java.math.BigDecimal;
+import java.time.LocalTime;
+import java.util.List;
+
+public record FacilitySummaryDto(
+        Long id,
+        Long ownerId,
+        String name,
+        String slug,
+        String city,
+        String district,
+        String ward,
+        String streetAddress,
+        String address,
+        String normalizedAddress,
+        Double latitude,
+        Double longitude,
+        Double distanceKm,
+        LocalTime openTime,
+        LocalTime closeTime,
+        String openHours,
+        String phone,
+        String description,
+        String logoUrl,
+        String imageUrl,
+        List<String> galleryImages,
+        String mapsEmbedUrl,
+        String mapsDirectionsUrl,
+        String sportType,
+        BigDecimal rating,
+        Integer reviewCount,
+        BigDecimal minPrice,
+        BigDecimal maxPrice,
+        BigDecimal pricePerHour,
+        String status,
+        Boolean isApproved,
+        List<String> amenities,
+        List<CourtDto> courts
+) {}

@@ -19,10 +19,10 @@ import { CourtCardItem } from './modules/user/ai-search/CourtCardItem'
 import { SmartFilterModal } from './modules/user/ai-search/SmartFilterModal'
 import { AIChatPanel } from './modules/user/ai-search/AIChatPanel'
 import { CourtContactModal } from './components/shared/CourtContactModal'
-import { BookingConfirmModal } from './modules/user/ai-search/BookingConfirmModal'
+import { CourtBookingModal } from './modules/booking/components/CourtBookingModal'
+import { courtApi, facilityToCourtItem } from './modules/court/services/courtApi'
 import { AuthModal } from './modules/user/auth/AuthModal'
 import { authApi, authStorage } from './modules/user/auth/authApi'
-import { API_BASE_URL } from './lib/apiConfig'
 import { ProfileModal } from './modules/user/profile/ProfileModal'
 import { BottomNav } from './components/shared/BottomNav'
 import { KhamPhaView } from './modules/user/ai-search/KhamPhaView'
@@ -53,10 +53,8 @@ import { PaymentCheckoutModal } from './modules/booking/components/PaymentChecko
 import { bookingApi } from './modules/booking/services/bookingApi'
 import type { BookingResponse } from './modules/booking/types'
 
-import {
-  defaultCriteria,
-  type BadmintonCourtItem,
-} from './modules/user/mockData'
+import { defaultCriteria } from './modules/user/ai-search/searchDefaults'
+import type { BadmintonCourtItem } from './modules/types/court'
 import type { User, NotificationItem, CourtResult, SearchCriteria } from './modules/types/user'
 
 const NAV_TAB_INDEX: Record<MainNavTab, number> = {
@@ -127,6 +125,8 @@ export function MainApp() {
   const handleLogout = () => {
     authStorage.removeToken()
     setCurrentUser(null)
+    setBookingCourt(null)
+    setCheckoutBooking(null)
     toast.info('Đã đăng xuất khỏi hệ thống SmashCourt')
   }
 
@@ -146,7 +146,12 @@ export function MainApp() {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isAIChatOpen, setIsAIChatOpen] = useState(false)
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
-  const [bookingCourt, setBookingCourt] = useState<CourtResult | null>(null)
+  const [bookingCourt, setBookingCourt] = useState<{
+    courtId: number
+    courtName: string
+    facilityName: string
+    facilityAddress?: string
+  } | null>(null)
   const [selectedCourtForSidebar, setSelectedCourtForSidebar] = useState<BadmintonCourtItem | null>(null)
   const [isCourtSidebarOpen, setIsCourtSidebarOpen] = useState(false)
   const [isCourtContactOpen, setIsCourtContactOpen] = useState(false)
@@ -180,7 +185,7 @@ export function MainApp() {
 
   // Mutation Hủy đơn (TV3)
   const cancelBookingMutation = useMutation({
-    mutationFn: (id: number) => bookingApi.cancelBooking(id, 1),
+    mutationFn: (id: number) => bookingApi.cancelBooking(id),
     onSuccess: (b) => {
       qc.invalidateQueries({ queryKey: ['myBookings'] })
       qc.invalidateQueries({ queryKey: ['courtAvailability'] })
@@ -195,60 +200,48 @@ export function MainApp() {
     },
   })
 
-  const { data: courts = [], isLoading: courtsLoading, isError: courtsError } = useQuery<BadmintonCourtItem[]>({
-    queryKey: ['publicFacilities'],
-    queryFn: async () => {
-      const response = await fetch(`${API_BASE_URL}/v1/public/facilities`)
-      if (!response.ok) throw new Error('Không thể tải danh sách sân')
-      const body = await response.json()
-      if (!body.success || !Array.isArray(body.data)) throw new Error('Dữ liệu sân không hợp lệ')
-      return body.data.map((f: { id: number; name: string; address: string; district: string | null; latitude: number | null; longitude: number | null; openHours: string; minPricePerHour: number | null }) => ({
-        id: String(f.id), name: f.name, address: f.address, district: f.district || '',
-        latitude: f.latitude ?? 0, longitude: f.longitude ?? 0, openHours: f.openHours,
-        imageUrl: '', logoUrl: '', distance: '', tags: [], pricePerHour: f.minPricePerHour ?? 0, amenities: [], sportType: 'badminton' as const,
-      }))
-    },
+  const { data: favoriteIds = [] } = useQuery({
+    queryKey: ['facilityFavorites', currentUser?.id],
+    queryFn: courtApi.getFavorites,
+    enabled: !!currentUser,
   })
+  const favoriteMutation = useMutation({
+    mutationFn: ({ id, favorite }: { id: string; favorite: boolean }) => courtApi.setFavorite(id, favorite),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['facilityFavorites', currentUser?.id] }),
+    onError: (error) => toast.error(error.message),
+  })
+  const handleToggleFavorite = (id: string) => {
+    if (!currentUser) {
+      setAuthInitialTab('login')
+      setIsAuthOpen(true)
+      return
+    }
+    favoriteMutation.mutate({ id, favorite: !favoriteIds.includes(id) })
+  }
 
-  // Filtered courts based on search term, activeTab, and criteria
-  const filteredCourts = useMemo(() => {
-    return courts.filter((court) => {
-      // Search term filter
-      if (searchTerm.trim()) {
-        const term = searchTerm.toLowerCase()
-        const matchesName = court.name.toLowerCase().includes(term)
-        const matchesAddr = court.address.toLowerCase().includes(term)
-        const matchesDist = court.district.toLowerCase().includes(term)
-        if (!matchesName && !matchesAddr && !matchesDist) return false
-      }
-
-      // Tab filter (Yêu thích)
-      if (activeTab === 'favorite' && !court.isFavorite) {
-        return false
-      }
-      if (activeTab === 'booked') {
-        return false
-      }
-
-      // District filter
-      if (criteria.district && court.district !== criteria.district) {
-        return false
-      }
-
-      // Max price filter
-      if (criteria.maxPricePerHour && (!court.pricePerHour || court.pricePerHour > criteria.maxPricePerHour)) {
-        return false
-      }
-
-      // Amenities filter
-      if (criteria.amenities && criteria.amenities.length > 0) {
-        const hasAll = criteria.amenities.every((a) => court.amenities.includes(a))
-        if (!hasAll) return false
-      }
-
-      return true
-    })
-  }, [courts, searchTerm, activeTab, criteria])
+  const { data: allFacilities } = useQuery({
+    queryKey: ['publicFacilities'],
+    enabled: !isManagementRoute,
+    queryFn: () => courtApi.searchFacilities(),
+  })
+  const { data: filteredFacilities, isLoading: courtsLoading, isError: courtsError } = useQuery({
+    queryKey: ['publicFacilities', searchTerm, criteria.district, criteria.maxPricePerHour, criteria.amenities],
+    enabled: !isManagementRoute,
+    queryFn: () => courtApi.searchFacilities({
+      keyword: searchTerm.trim() || undefined,
+      district: criteria.district || undefined,
+      maxPrice: criteria.maxPricePerHour || undefined,
+      amenities: criteria.amenities,
+    }),
+  })
+  const courts = useMemo(() => (allFacilities ?? []).map((facility) => ({
+    ...facilityToCourtItem(facility),
+    isFavorite: favoriteIds.includes(facility.id),
+  })), [allFacilities, favoriteIds])
+  const filteredCourts = useMemo(() => (filteredFacilities ?? []).map((facility) => ({
+    ...facilityToCourtItem(facility),
+    isFavorite: favoriteIds.includes(facility.id),
+  })).filter((court) => activeTab !== 'favorite' || court.isFavorite), [filteredFacilities, favoriteIds, activeTab])
 
   // Count active filters
   const activeFilterCount = useMemo(() => {
@@ -270,20 +263,24 @@ export function MainApp() {
     )
   }
 
-  // Booking action: Điều hướng trực tiếp sang trang đặt sân (không dùng popup modal)
-  const handleOpenBooking = (court: BadmintonCourtItem | CourtResult) => {
-    const rawId =
-      'id' in court && court.id
-        ? court.id
-        : 'courtId' in court && court.courtId
-        ? String(court.courtId)
-        : 'court_1'
-    navigate(`/courts/${rawId}/book`)
+  const openBookingForCourt = (court: NonNullable<typeof bookingCourt>) => {
+    if (!currentUser) {
+      setAuthInitialTab('login')
+      setIsAuthOpen(true)
+      return
+    }
+    setBookingCourt(court)
   }
 
-  const handleConfirmBooking = (court: CourtResult) => {
-    setBookingCourt(null)
-    handleOpenBooking(court)
+  const handleOpenBooking = (court: BadmintonCourtItem | CourtResult) => {
+    navigate(`/courts/${'facilityId' in court ? court.facilityId : court.id}/book`)
+  }
+
+  const handleBookingSuccess = (booking: BookingResponse) => {
+    toast.success('Đã giữ chỗ sân', {
+      description: `Mã đơn #SMC-${booking.id}. Bạn có thể xem lại trong mục Sân đã đặt.`,
+      action: { label: 'Xem đơn', onClick: () => navigate(`/checkout/${booking.id}`) },
+    })
   }
 
   // AI sync handlers
@@ -436,6 +433,7 @@ export function MainApp() {
                 index={index}
                 onSelectCourt={handleOpenCourtSidebar}
                 onBook={handleOpenBooking}
+                onToggleFavorite={handleToggleFavorite}
               />
             ))}
           </div>
@@ -564,21 +562,15 @@ export function MainApp() {
               <Route path="/favorite" element={<Navigate to={ROUTES.FAVORITES} replace />} />
 
               {/* Customer Booking Flow */}
-              <Route path={ROUTES.COURT_DETAIL} element={<CourtDetailView />} />
+              <Route path={ROUTES.COURT_DETAIL} element={<CourtDetailView favoriteIds={favoriteIds} onToggleFavorite={handleToggleFavorite} />} />
               <Route
                 path={ROUTES.COURT_BOOK}
                 element={
-                  <CourtBookingGridView
-                    currentUser={currentUser}
-                    onOpenAuth={(tab = 'login') => {
-                      setAuthInitialTab(tab)
-                      setIsAuthOpen(true)
-                    }}
-                  />
+                  <CourtBookingGridView onBook={openBookingForCourt} />
                 }
               />
-              <Route path={ROUTES.CHECKOUT} element={<CheckoutView />} />
-              <Route path={ROUTES.BOOKING_SUCCESS} element={<BookingSuccessView />} />
+              <Route path={ROUTES.CHECKOUT} element={authLoading ? null : currentUser ? <CheckoutView userId={currentUser.id} /> : <Navigate to={ROUTES.ACCOUNT} replace />} />
+              <Route path={ROUTES.BOOKING_SUCCESS} element={authLoading ? null : currentUser ? <BookingSuccessView userId={currentUser.id} /> : <Navigate to={ROUTES.ACCOUNT} replace />} />
               <Route path={ROUTES.BOOKED} element={currentUser ? <MyBookingsList bookings={myBookings} onCancelBooking={(id) => cancelBookingMutation.mutate(id)} onPayBooking={(b) => setCheckoutBooking(b)} isLoading={isLoadingBookings} /> : <Navigate to={ROUTES.ACCOUNT} replace />} />
 
               {/* Court Owner Portal */}
@@ -601,7 +593,9 @@ export function MainApp() {
                       setAuthInitialTab(tab)
                       setIsAuthOpen(true)
                     }}
-                    onBookCourt={(court) => setBookingCourt(court)}
+                    courts={courts}
+                    onSelectCourt={handleOpenCourtSidebar}
+                    onBookCourtDirect={handleOpenBooking}
                     onOpenAIChat={() => setIsAIChatOpen(true)}
                   />
                 }
@@ -644,6 +638,7 @@ export function MainApp() {
                             index={index}
                             onSelectCourt={handleOpenCourtSidebar}
                             onBook={handleOpenBooking}
+                onToggleFavorite={handleToggleFavorite}
                           />
                         ))}
                     </div>
@@ -704,7 +699,10 @@ export function MainApp() {
 
       {/* Court Detail Sidebar (Slide-in Drawer khi ấn vào sân) */}
       <CourtDetailSidebar
-        court={selectedCourtForSidebar}
+        court={selectedCourtForSidebar && {
+          ...selectedCourtForSidebar,
+          isFavorite: favoriteIds.includes(selectedCourtForSidebar.id),
+        }}
         isOpen={isCourtSidebarOpen}
         onClose={handleCloseCourtSidebar}
         onBook={handleOpenBooking}
@@ -713,9 +711,7 @@ export function MainApp() {
           setContactTargetCourt(court)
           setIsCourtContactOpen(true)
         }}
-        onToggleFavorite={(_courtId) => {
-          // Sync favorite state if desired
-        }}
+        onToggleFavorite={handleToggleFavorite}
       />
 
       {/* Court Contact Modal (Nhắn tin với chủ sân qua Zalo, Messenger, Hotline) */}
@@ -723,7 +719,6 @@ export function MainApp() {
         isOpen={isCourtContactOpen}
         onClose={() => setIsCourtContactOpen(false)}
         court={contactTargetCourt}
-        allCourts={courts}
       />
 
       {/* AI Court Finder Chat Panel (Spring AI Orchestrator) - Tuyệt đối không xuất hiện trên Chủ sân & Admin */}
@@ -738,18 +733,14 @@ export function MainApp() {
         />
       )}
 
-      {/* Booking Confirm Modal (Holding HELD & TV3 Hand-off) */}
-      <BookingConfirmModal
-        isOpen={!!bookingCourt}
-        court={bookingCourt}
-        currentUser={currentUser}
-        onOpenAuth={(tab = 'login') => {
-          setAuthInitialTab(tab)
-          setIsAuthOpen(true)
-        }}
-        onClose={() => setBookingCourt(null)}
-        onConfirmBooking={handleConfirmBooking}
-      />
+      {bookingCourt && currentUser && (
+        <CourtBookingModal
+          {...bookingCourt}
+          isOpen
+          onClose={() => setBookingCourt(null)}
+          onBookingSuccess={handleBookingSuccess}
+        />
+      )}
 
       {/* Auth Modal (Login / Register / Google OIDC) */}
       <AuthModal

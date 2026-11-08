@@ -1,7 +1,8 @@
 import React from 'react'
 import { X, Filter, RotateCcw, MapPin, Calendar, Clock, DollarSign, Check } from 'lucide-react'
 import type { SearchCriteria } from '../../types/user'
-import { availableDistricts, availableAmenities } from '../mockData'
+import { useQuery } from '@tanstack/react-query'
+import { courtApi } from '../../court/services/courtApi'
 
 interface SmartFilterModalProps {
   isOpen: boolean
@@ -21,6 +22,13 @@ export const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
   onReset,
 }) => {
   if (!isOpen) return null
+
+  const { data: metadata } = useQuery({
+    queryKey: ['facilityFilterMetadata'],
+    queryFn: courtApi.getFilterMetadata,
+  })
+  const availableDistricts = metadata?.districts ?? []
+  const availableAmenities = metadata?.amenities ?? []
 
   const handleToggleAmenity = (amenity: string) => {
     const list = criteria.amenities || []

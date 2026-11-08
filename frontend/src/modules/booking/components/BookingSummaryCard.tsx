@@ -103,7 +103,7 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
             <AlertCircle className="w-3.5 h-3.5 text-amber-700" />
             <span>Lưu ý giữ chỗ 10 phút:</span>
           </div>
-          Khung giờ sẽ được khóa trong 10 phút để bạn thực hiện thanh toán payOS. Sau thời gian này nếu chưa hoàn tất, slot sẽ tự động giải phóng.
+          Liên hệ chủ sân để được hướng dẫn thanh toán và xác nhận đơn. Khung giờ sẽ tự động mở lại khi hết thời hạn giữ chỗ.
         </div>
       </div>
 

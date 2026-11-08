@@ -1,7 +1,6 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Heart, Navigation, Clock, Star } from 'lucide-react'
-import type { BadmintonCourtItem } from '../mockData'
+import type { BadmintonCourtItem } from '../../types/court'
 
 interface CourtCardItemProps {
   court: BadmintonCourtItem
@@ -19,11 +18,10 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
   index = 0,
 }) => {
   const navigate = useNavigate()
-  const [isFav, setIsFav] = useState(court.isFavorite ?? false)
+  const isFav = court.isFavorite ?? false
 
   const handleFav = (e: React.MouseEvent) => {
     e.stopPropagation()
-    setIsFav(!isFav)
     onToggleFavorite?.(court.id)
   }
 

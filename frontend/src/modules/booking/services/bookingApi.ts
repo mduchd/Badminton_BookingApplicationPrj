@@ -33,10 +33,8 @@ export const bookingApi = {
   },
 
   // Lấy danh sách booking của khách hàng
-  async getMyBookings(customerId: number = 1): Promise<BookingResponse[]> {
-    const response = await client.get<ApiResponse<BookingResponse[]>>('/bookings/me', {
-      params: { customerId },
-    });
+  async getMyBookings(): Promise<BookingResponse[]> {
+    const response = await client.get<ApiResponse<BookingResponse[]>>('/bookings/me');
     return response.data.data;
   },
 
@@ -47,11 +45,9 @@ export const bookingApi = {
   },
 
   // Hủy đơn đặt sân và giải phóng occupancy
-  async cancelBooking(bookingId: number, customerId: number = 1): Promise<BookingResponse> {
+  async cancelBooking(bookingId: number): Promise<BookingResponse> {
     const response = await client.post<ApiResponse<BookingResponse>>(
-      `/bookings/${bookingId}/cancel`,
-      null,
-      { params: { customerId } }
+      `/bookings/${bookingId}/cancel`
     );
     return response.data.data;
   },
@@ -61,15 +57,6 @@ export const bookingApi = {
     const response = await client.post<ApiResponse<CheckoutResponse>>(
       `/bookings/${bookingId}/checkout`,
       payload
-    );
-    return response.data.data;
-  },
-
-  // Giả lập thanh toán thành công (Mock test)
-  async mockPaySuccess(bookingId: number, orderCode?: number): Promise<CheckoutResponse> {
-    const response = await client.post<ApiResponse<CheckoutResponse>>(
-      '/payments/mock-success',
-      { bookingId, orderCode }
     );
     return response.data.data;
   },
@@ -89,5 +76,4 @@ export const getMyBookings = bookingApi.getMyBookings;
 export const getBookingById = bookingApi.getBookingById;
 export const cancelBooking = bookingApi.cancelBooking;
 export const createCheckout = bookingApi.createCheckout;
-export const mockPaySuccess = bookingApi.mockPaySuccess;
 export const getPaymentByBookingId = bookingApi.getPaymentByBookingId;

@@ -38,7 +38,7 @@ export const BookingPage: React.FC = () => {
     refetch: refetchMyBookings,
   } = useQuery({
     queryKey: ['myBookings'],
-    queryFn: () => bookingApi.getMyBookings(1),
+    queryFn: () => bookingApi.getMyBookings(),
   });
 
   // 3. Mutation tạo đơn giữ chỗ HELD (10 phút)
@@ -51,7 +51,6 @@ export const BookingPage: React.FC = () => {
         startTime: selectedSlot.startTime,
         endTime: selectedSlot.endTime,
         note,
-        customerId: 1,
       });
     },
     onSuccess: (data) => {
@@ -68,7 +67,7 @@ export const BookingPage: React.FC = () => {
 
   // 4. Mutation hủy đơn đặt sân
   const cancelBookingMutation = useMutation({
-    mutationFn: (bookingId: number) => bookingApi.cancelBooking(bookingId, 1),
+    mutationFn: (bookingId: number) => bookingApi.cancelBooking(bookingId),
     onSuccess: (data) => {
       showToast(`Đã hủy đơn #${data.id} và giải phóng khung giờ thành công.`);
       queryClient.invalidateQueries({ queryKey: ['courtAvailability'] });

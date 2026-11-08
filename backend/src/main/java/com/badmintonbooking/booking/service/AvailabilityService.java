@@ -60,6 +60,10 @@ public class AvailabilityService {
         List<CourtOccupancy> activeOccupancies = occupancyRepository.findActiveForCourtInDateRange(courtId, startOfDay, endOfDay);
         int dayOfWeek = date.getDayOfWeek().getValue(); // 1 = Mon ... 7 = Sun
         List<PriceRule> rules = priceRuleRepository.findRulesForCourtAndDay(courtId, dayOfWeek);
+        BigDecimal fallbackRate = court.getPricePerHour();
+
+        boolean courtUnderMaintenance = !"ACTIVE".equalsIgnoreCase(court.getStatus())
+                || !"ACTIVE".equalsIgnoreCase(facility.getStatus());
 
         List<TimeSlotDto> slots = new ArrayList<>();
         LocalTime currentStart = openTime;
@@ -73,17 +77,23 @@ public class AvailabilityService {
             OffsetDateTime slotStart = date.atTime(currentStart).atZone(ZONE_VN).toOffsetDateTime();
             OffsetDateTime slotEnd = date.atTime(currentEnd).atZone(ZONE_VN).toOffsetDateTime();
 
-            // Kiểm tra xung đột: newStart < existingEnd && newEnd > existingStart
-            CourtOccupancy conflict = findConflict(activeOccupancies, slotStart, slotEnd);
+            BigDecimal slotPrice = calculatePriceForInterval(rules, currentStart, currentEnd, fallbackRate);
 
-            BigDecimal slotPrice = calculatePriceForInterval(rules, currentStart, currentEnd);
-
-            if (conflict == null) {
-                slots.add(new TimeSlotDto(currentStart, currentEnd, slotPrice, true, "AVAILABLE", null));
+            if (courtUnderMaintenance) {
+                slots.add(new TimeSlotDto(currentStart, currentEnd, slotPrice, false, "MAINTENANCE", "Sân đang tạm ngưng bảo trì"));
             } else {
-                String slotStatus = mapOccupancyToStatus(conflict.getOccupancyType());
-                String reason = conflict.getOccupancyType() == OccupancyType.MAINTENANCE ? "Sân đang bảo trì" : "Sân đã có người giữ/đặt";
-                slots.add(new TimeSlotDto(currentStart, currentEnd, slotPrice, false, slotStatus, reason));
+                CourtOccupancy conflict = findConflict(activeOccupancies, slotStart, slotEnd);
+                if (conflict == null) {
+                    slots.add(new TimeSlotDto(currentStart, currentEnd, slotPrice, true, "AVAILABLE", null));
+                } else {
+                    String slotStatus = mapOccupancyToStatus(conflict.getOccupancyType());
+                    String reason = conflict.getOccupancyType() == OccupancyType.MAINTENANCE
+                            ? (conflict.getNote() != null && !conflict.getNote().isBlank()
+                                ? "Sân bảo trì: " + conflict.getNote()
+                                : "Sân đang bảo trì")
+                            : "Sân đã có người giữ/đặt";
+                    slots.add(new TimeSlotDto(currentStart, currentEnd, slotPrice, false, slotStatus, reason));
+                }
             }
 
             currentStart = currentEnd;
@@ -112,6 +122,16 @@ public class AvailabilityService {
         Facility facility = facilityRepository.findById(court.getFacilityId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cụm sân"));
 
+        if (!"ACTIVE".equalsIgnoreCase(facility.getStatus()) || !"ACTIVE".equalsIgnoreCase(court.getStatus())) {
+            return new CheckAvailabilityResponse(
+                    courtId,
+                    false,
+                    BigDecimal.ZERO,
+                    "Sân hiện đang tạm đóng để bảo trì",
+                    OffsetDateTime.now()
+            );
+        }
+
         if (startTime.isBefore(facility.getOpenTime()) || endTime.isAfter(facility.getCloseTime())) {
             return new CheckAvailabilityResponse(
                     courtId,
@@ -128,22 +148,28 @@ public class AvailabilityService {
         List<CourtOccupancy> conflicts = occupancyRepository.findActiveOverlapping(courtId, startAt, endAt);
         if (!conflicts.isEmpty()) {
             CourtOccupancy c = conflicts.getFirst();
-            String reason = c.getOccupancyType() == OccupancyType.MAINTENANCE ? "Sân đang bảo trì" : "Sân đã có người giữ hoặc đặt";
+            String reason = c.getOccupancyType() == OccupancyType.MAINTENANCE
+                    ? (c.getNote() != null && !c.getNote().isBlank() ? "Sân bảo trì: " + c.getNote() : "Sân đang bảo trì")
+                    : "Sân đã có người giữ hoặc đặt";
             return new CheckAvailabilityResponse(courtId, false, BigDecimal.ZERO, reason, OffsetDateTime.now());
         }
 
         int dayOfWeek = date.getDayOfWeek().getValue();
         List<PriceRule> rules = priceRuleRepository.findRulesForCourtAndDay(courtId, dayOfWeek);
-        BigDecimal totalPrice = calculatePriceForInterval(rules, startTime, endTime);
+        BigDecimal totalPrice = calculatePriceForInterval(rules, startTime, endTime, court.getPricePerHour());
 
         return new CheckAvailabilityResponse(courtId, true, totalPrice, "Sân còn trống", OffsetDateTime.now());
     }
 
     public BigDecimal calculatePriceForInterval(List<PriceRule> rules, LocalTime start, LocalTime end) {
+        return calculatePriceForInterval(rules, start, end, BigDecimal.valueOf(100000));
+    }
+
+    public BigDecimal calculatePriceForInterval(List<PriceRule> rules, LocalTime start, LocalTime end, BigDecimal defaultHourlyRate) {
+        BigDecimal fallbackHourly = defaultHourlyRate != null ? defaultHourlyRate : BigDecimal.valueOf(100000);
         if (rules.isEmpty()) {
-            // Mặc định fallback nếu chưa có price_rule
             long durationMinutes = Duration.between(start, end).toMinutes();
-            return BigDecimal.valueOf(100000)
+            return fallbackHourly
                     .multiply(BigDecimal.valueOf(durationMinutes))
                     .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
         }
@@ -151,7 +177,6 @@ public class AvailabilityService {
         BigDecimal total = BigDecimal.ZERO;
         LocalTime current = start;
 
-        // Tính theo từng lát 30 phút để áp giá chính xác theo từng khung giờ
         while (current.isBefore(end)) {
             LocalTime next = current.plusMinutes(30);
             if (next.isAfter(end)) {
@@ -159,11 +184,15 @@ public class AvailabilityService {
             }
 
             LocalTime midPoint = current.plusMinutes(Duration.between(current, next).toMinutes() / 2);
-            BigDecimal hourlyRate = BigDecimal.valueOf(100000); // Mặc định
+            BigDecimal hourlyRate = fallbackHourly;
 
             for (PriceRule r : rules) {
                 if (!midPoint.isBefore(r.getStartTime()) && midPoint.isBefore(r.getEndTime())) {
-                    hourlyRate = r.getPricePerSlot();
+                    int slotMins = r.getSlotDurationMinutes() != null && r.getSlotDurationMinutes() > 0
+                            ? r.getSlotDurationMinutes() : 60;
+                    hourlyRate = r.getPricePerSlot()
+                            .multiply(BigDecimal.valueOf(60))
+                            .divide(BigDecimal.valueOf(slotMins), 2, RoundingMode.HALF_UP);
                     break;
                 }
             }
@@ -181,7 +210,6 @@ public class AvailabilityService {
 
     private CourtOccupancy findConflict(List<CourtOccupancy> occupancies, OffsetDateTime start, OffsetDateTime end) {
         for (CourtOccupancy o : occupancies) {
-            // Overlap: newStart < existingEnd && newEnd > existingStart
             if (start.isBefore(o.getEndAt()) && end.isAfter(o.getStartAt())) {
                 return o;
             }

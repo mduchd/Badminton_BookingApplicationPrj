@@ -2,6 +2,8 @@ package com.badmintonbooking.user.entity;
 
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -22,8 +24,11 @@ public class User {
 
     private String phone;
 
+    @Column(name = "avatar_url", columnDefinition = "TEXT")
+    private String avatarUrl;
+
     @Column(nullable = false)
-    private String role = "CUSTOMER"; // CUSTOMER, OWNER, ADMIN
+    private String role = "CUSTOMER"; // CUSTOMER, COURT_OWNER, SYSTEM_ADMIN
 
     private String provider = "LOCAL";
 
@@ -42,6 +47,13 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
+    @ElementCollection
+    @CollectionTable(name = "user_favorite_facilities", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "facility_id", nullable = false)
+    private Set<Long> favoriteFacilityIds = new HashSet<>();
+
+    public Set<Long> getFavoriteFacilityIds() { return favoriteFacilityIds; }
+
     public User() {}
 
     public Long getId() { return id; }
@@ -58,6 +70,11 @@ public class User {
 
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }

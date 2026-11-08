@@ -94,7 +94,7 @@ public class PaymentService {
 
     @Transactional
     public CheckoutResponse createCheckout(Long bookingId, CheckoutRequest request, Long customerId) {
-        Booking booking = ownedBooking(bookingId, customerId);
+        Booking booking = requireOwnedBooking(bookingRepository.findByIdForUpdate(bookingId), customerId);
 
         if (booking.getStatus() == BookingStatus.CONFIRMED || booking.getStatus() == BookingStatus.COMPLETED) {
             throw new BadRequestException("Đơn đặt sân này đã được thanh toán xác nhận thành công!");
@@ -183,7 +183,7 @@ public class PaymentService {
     @Transactional
     public CheckoutResponse processMockSuccess(Long bookingId, Long orderCode, Long customerId) {
         if (!mockAllowed()) throw new BadRequestException("Thanh toán thử nghiệm không khả dụng");
-        Booking booking = ownedBooking(bookingId, customerId);
+        Booking booking = requireOwnedBooking(bookingRepository.findByIdForUpdate(bookingId), customerId);
 
         if (booking.getStatus() == BookingStatus.CONFIRMED) {
             return toCheckoutResponse(booking, orderCode, "Đơn đã được xác nhận thanh toán trước đó.");
@@ -194,6 +194,11 @@ public class PaymentService {
         }
 
         OffsetDateTime now = OffsetDateTime.now();
+
+        List<CourtOccupancy> occupancies = occupancyRepository.findByBookingId(bookingId);
+        if (!hasActiveHold(booking, now, occupancies)) {
+            throw new BadRequestException("Đơn không còn giữ khung giờ.");
+        }
 
         // 1. Cập nhật Payment
         Payment payment = paymentRepository.findByBookingId(bookingId).orElseGet(() -> {
@@ -216,10 +221,8 @@ public class PaymentService {
         bookingRepository.save(booking);
 
         // 3. Đổi occupancy sang BOOKING
-        List<CourtOccupancy> occupancies = occupancyRepository.findByBookingId(bookingId);
         for (CourtOccupancy occ : occupancies) {
             occ.setOccupancyType(OccupancyType.BOOKING);
-            occ.setActiveStatus(ActiveStatus.ACTIVE);
             occupancyRepository.save(occ);
         }
 
@@ -288,14 +291,18 @@ public class PaymentService {
         if (existingPayment.getStatus() != PaymentStatus.PENDING) throw new BadRequestException("Giao dịch không còn hiệu lực");
 
         Payment payment = paymentOpt.get();
-        Booking booking = bookingRepository.findById(payment.getBookingId())
+        Booking booking = bookingRepository.findByIdForUpdate(payment.getBookingId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy booking tương ứng với thanh toán!"));
 
         OffsetDateTime now = OffsetDateTime.now();
 
-        // 4. Xử lý webhook đến trễ sau khi hold đã hết hạn (TC05)
-        if ((booking.getStatus() != BookingStatus.HELD && booking.getStatus() != BookingStatus.PENDING_PAYMENT)
-                || (booking.getHoldExpiresAt() != null && booking.getHoldExpiresAt().isBefore(now))) {
+        if (webhookEventRepository.existsByProviderEventKey(eventKey)) {
+            return true;
+        }
+
+        List<CourtOccupancy> occupancies = occupancyRepository.findByBookingId(booking.getId());
+        // Chuyển sang xử lý hoàn tiền nếu khung giờ đã được giải phóng.
+        if (!hasActiveHold(booking, now, occupancies)) {
             log.warn("Webhook thanh toán tới sau khi đơn đã hết hạn: bookingId={}, status={}", booking.getId(), booking.getStatus());
             payment.setStatus(PaymentStatus.FAILED);
             paymentRepository.save(payment);
@@ -319,10 +326,8 @@ public class PaymentService {
         booking.setUpdatedAt(now);
         bookingRepository.save(booking);
 
-        List<CourtOccupancy> occupancies = occupancyRepository.findByBookingId(booking.getId());
         for (CourtOccupancy occ : occupancies) {
             occ.setOccupancyType(OccupancyType.BOOKING);
-            occ.setActiveStatus(ActiveStatus.ACTIVE);
             occupancyRepository.save(occ);
         }
 
@@ -343,18 +348,26 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public Payment getPaymentByBookingId(Long bookingId, Long customerId) {
-        ownedBooking(bookingId, customerId);
+        requireOwnedBooking(bookingRepository.findById(bookingId), customerId);
         return paymentRepository.findByBookingId(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giao dịch cho đơn #" + bookingId));
     }
 
-    private Booking ownedBooking(Long bookingId, Long customerId) {
-        Booking booking = bookingRepository.findById(bookingId)
+    private Booking requireOwnedBooking(Optional<Booking> bookingResult, Long customerId) {
+        Booking booking = bookingResult
             .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt sân"));
         if (customerId == null || !customerId.equals(booking.getCustomerId())) {
             throw new ResourceNotFoundException("Không tìm thấy đơn đặt sân");
         }
         return booking;
+    }
+
+    private boolean hasActiveHold(Booking booking, OffsetDateTime now, List<CourtOccupancy> occupancies) {
+        return (booking.getStatus() == BookingStatus.HELD || booking.getStatus() == BookingStatus.PENDING_PAYMENT)
+                && booking.getHoldExpiresAt() != null && booking.getHoldExpiresAt().isAfter(now)
+                && !occupancies.isEmpty()
+                && occupancies.stream().allMatch(occupancy -> occupancy.getActiveStatus() == ActiveStatus.ACTIVE
+                        && occupancy.getOccupancyType() == OccupancyType.HOLD);
     }
 
     private boolean mockAllowed() { return mockEnabled && !environment.acceptsProfiles(Profiles.of("prod")); }

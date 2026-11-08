@@ -166,7 +166,7 @@ public class BookingService {
 
     @Transactional
     public BookingResponse cancelBooking(Long id, Long customerId) {
-        Booking booking = bookingRepository.findById(id)
+        Booking booking = bookingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt sân với id: " + id));
 
         if (customerId == null || !booking.getCustomerId().equals(customerId)) {

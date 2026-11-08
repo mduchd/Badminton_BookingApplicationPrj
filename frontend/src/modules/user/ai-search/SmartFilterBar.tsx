@@ -1,7 +1,8 @@
 import React from 'react'
 import { MapPin, Calendar as CalendarIcon, Clock, DollarSign, Filter, Sparkles, RotateCcw } from 'lucide-react'
 import type { SearchCriteria } from '../../types/user'
-import { availableDistricts, availableAmenities } from '../mockData'
+import { useQuery } from '@tanstack/react-query'
+import { courtApi } from '../../court/services/courtApi'
 
 interface SmartFilterBarProps {
   criteria: SearchCriteria
@@ -20,6 +21,13 @@ export const SmartFilterBar: React.FC<SmartFilterBarProps> = ({
   onReset,
   isLoading,
 }) => {
+  const { data: metadata } = useQuery({
+    queryKey: ['facilityFilterMetadata'],
+    queryFn: courtApi.getFilterMetadata,
+  })
+  const availableDistricts = metadata?.districts ?? []
+  const availableAmenities = metadata?.amenities ?? []
+
   const getFormattedDate = (offsetDays: number) => {
     const d = new Date()
     d.setDate(d.getDate() + offsetDays)

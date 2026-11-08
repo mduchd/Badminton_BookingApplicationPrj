@@ -9,19 +9,38 @@ import {
   ArrowRight,
   Home,
 } from 'lucide-react'
-import { appStore } from '../../../lib/appStore'
+import { useQuery } from '@tanstack/react-query'
+import { bookingApi } from '../services/bookingApi'
 import { toast } from 'sonner'
 import { ROUTES } from '../../../app/router'
 
-export const BookingSuccessView: React.FC = () => {
+export const BookingSuccessView: React.FC<{ userId: string }> = ({ userId }) => {
   const { bookingId } = useParams<{ bookingId: string }>()
   const navigate = useNavigate()
-  const booking = appStore.getBookingById(bookingId || '')
+  const id = Number(bookingId)
+  const { data, isPending } = useQuery({
+    queryKey: ['booking', userId, id],
+    queryFn: () => bookingApi.getBookingById(id),
+    enabled: Number.isSafeInteger(id) && id > 0,
+    retry: false,
+  })
+  const booking = data && (data.status === 'CONFIRMED' || data.status === 'COMPLETED') ? {
+    ...data,
+    bookingCode: `SMC-${data.id}`,
+    facilityAddress: data.facilityName,
+    slots: [{
+      courtName: data.courtName,
+      date: data.bookingDate,
+      startTime: data.startTime.slice(0, 5),
+      endTime: data.endTime.slice(0, 5),
+      price: data.totalAmount,
+    }],
+  } : undefined
 
   if (!booking) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center p-6 text-center">
-        <h2 className="text-xl font-bold text-slate-900 mb-2">Không tìm thấy đơn đặt</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">{isPending && Number.isSafeInteger(id) && id > 0 ? 'Đang tải đơn đặt sân…' : 'Chưa có biên nhận xác nhận cho đơn này'}</h2>
         <button
           type="button"
           onClick={() => navigate(ROUTES.HOME)}
@@ -46,7 +65,7 @@ export const BookingSuccessView: React.FC = () => {
 
     const title = encodeURIComponent(`Lịch chơi cầu lông tại ${booking.facilityName}`)
     const details = encodeURIComponent(
-      `Đơn đặt sân SmashCourt: ${booking.bookingCode}\nSân: ${booking.slots.map((s) => s.courtName).join(', ')}\nKhách hàng: ${booking.customerName}`
+      `Đơn đặt sân SmashCourt: ${booking.bookingCode}\nSân: ${booking.slots.map((s) => s.courtName).join(', ')}`
     )
     const location = encodeURIComponent(booking.facilityAddress)
     const dates = `${dateClean}T${startHour}/${dateClean}T${endHour}`

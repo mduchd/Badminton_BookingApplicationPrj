@@ -92,7 +92,7 @@ class BookingServiceTest {
         LocalTime start = LocalTime.of(8, 0);
         LocalTime end = LocalTime.of(9, 0);
 
-        BookingCreateRequest req = new BookingCreateRequest(1L, date, start, end, "Đặt giao lưu", 1L);
+        BookingCreateRequest req = new BookingCreateRequest(1L, date, start, end, "Đặt giao lưu");
 
         when(courtRepository.findById(1L)).thenReturn(Optional.of(mockCourt));
         when(facilityRepository.findById(10L)).thenReturn(Optional.of(mockFacility));
@@ -129,7 +129,7 @@ class BookingServiceTest {
         LocalTime start = LocalTime.of(8, 0);
         LocalTime end = LocalTime.of(9, 0);
 
-        BookingCreateRequest req = new BookingCreateRequest(1L, date, start, end, "Giao lưu", 1L);
+        BookingCreateRequest req = new BookingCreateRequest(1L, date, start, end, "Giao lưu");
 
         when(courtRepository.findById(1L)).thenReturn(Optional.of(mockCourt));
         when(facilityRepository.findById(10L)).thenReturn(Optional.of(mockFacility));
@@ -156,7 +156,7 @@ class BookingServiceTest {
 
         CourtOccupancy occ = new CourtOccupancy(1L, 100L, OffsetDateTime.now(), OffsetDateTime.now().plusHours(1), OccupancyType.HOLD);
 
-        when(bookingRepository.findById(100L)).thenReturn(Optional.of(booking));
+        when(bookingRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(booking));
         when(occupancyRepository.findByBookingId(100L)).thenReturn(List.of(occ));
         when(courtRepository.findById(1L)).thenReturn(Optional.of(mockCourt));
         when(facilityRepository.findById(10L)).thenReturn(Optional.of(mockFacility));

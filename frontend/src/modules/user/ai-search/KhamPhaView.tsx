@@ -9,11 +9,9 @@ import {
   Calendar,
   Sparkles,
   Ticket,
-  Users,
   Flag,
   Clock,
   ChevronRight,
-  Plus,
   Crown,
   BookOpen,
   Bell,
@@ -29,18 +27,11 @@ import {
   Flame,
 } from 'lucide-react'
 import type { CourtResult, User } from '../../types/user'
-import { formatPrice } from '../../../lib/utils'
-import {
-  mockSessions,
-  mockBadmintonCourts,
-  type SessionMatch,
-  type BadmintonCourtItem,
-} from '../mockData'
+import type { BadmintonCourtItem } from '../../types/court'
 import { CourtCardItem } from './CourtCardItem'
-import { toast } from 'sonner'
 
 export interface KhamPhaViewProps {
-  onBookCourt: (court: CourtResult) => void
+  courts: BadmintonCourtItem[]
   onOpenAIChat: () => void
   currentUser?: User | null
   onOpenAuth?: (tab?: 'login' | 'register') => void
@@ -49,7 +40,7 @@ export interface KhamPhaViewProps {
 }
 
 export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
-  onBookCourt,
+  courts,
   onOpenAIChat,
   currentUser = null,
   onOpenAuth,
@@ -58,7 +49,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
 }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const catFromUrl = searchParams.get('category')
-  const activeCategory = catFromUrl || 'Social'
+  const activeCategory = catFromUrl || 'CumSan'
 
   const setActiveCategory = (category: string) => {
     setSearchParams(
@@ -72,6 +63,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
   }
 
   const categories = [
+    { id: 'CumSan', label: 'Cụm sân', icon: <Building2 className="w-3.5 h-3.5" /> },
     { id: 'Social', label: 'Buổi chơi giao lưu', icon: <Sparkles className="w-3.5 h-3.5" /> },
     { id: 'NoiBat', label: 'Nổi bật hôm nay', icon: <Flame className="w-3.5 h-3.5" /> },
     { id: 'SuKien', label: 'Sự kiện', icon: <Ticket className="w-3.5 h-3.5" /> },
@@ -114,39 +106,8 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
     { id: 'golf', label: 'Golf', icon: <Flag className="w-3.5 h-3.5" /> },
   ]
 
-  const handleBookSession = (session: SessionMatch) => {
-    if (!currentUser) {
-      toast.info('Vui lòng đăng nhập để đăng ký buổi chơi giao lưu!', {
-        description: 'Đăng nhập giúp bạn nhận vé check-in và liên hệ ban tổ chức.',
-      })
-      onOpenAuth?.('login')
-      return
-    }
-
-    const court: CourtResult = {
-      courtId: session.id,
-      facilityId: 'fac_' + session.id,
-      facilityName: session.clubName,
-      courtName: session.detail.courtNumbers + ' (' + session.detail.levelText + ')',
-      address: session.clubName + ', Hà Nội',
-      district: 'Hà Nội',
-      imageUrl: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&auto=format&fit=crop&q=80',
-      rating: 4.9,
-      reviewCount: 150,
-      startTime: session.detail.timeRange.split(' - ')[0] || '19:00',
-      endTime: session.detail.timeRange.split(' - ')[1] || '21:00',
-      durationHours: 2,
-      pricePerHour: session.detail.pricePerTicket,
-      calculatedTotalPrice: session.detail.pricePerTicket,
-      amenities: ['Máy lạnh', 'Bãi đỗ ô tô', 'Xé vé theo buổi'],
-      availabilityCheckedAt: 'Vừa xong',
-      isAvailable: true,
-      googleMapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(session.clubName),
-    }
-    onBookCourt(court)
-  }
-
-  const trendingCourts = mockBadmintonCourts.filter((c) => (c.rating || 0) >= 4.8)
+  const showAllCourts = activeCategory === 'CumSan'
+  const visibleCourts = showAllCourts ? courts : courts.filter((court) => (court.rating || 0) >= 4.8)
 
   return (
     <div className="w-full space-y-5">
@@ -214,7 +175,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
       </div>
 
       {/* 2. Unified Workplace Canvas (Toàn bộ thao tác nằm trong MỘT khung làm việc thống nhất, không chia vụn thành cục lơ lửng) */}
-      {activeCategory === 'NoiBat' ? (
+      {showAllCourts || activeCategory === 'NoiBat' ? (
         <div className="space-y-6">
           {/* Section 1: Cụm sân đánh giá cao */}
           <div className="space-y-3.5">
@@ -222,48 +183,22 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
               <div className="flex items-center gap-2.5">
                 <Flame className="w-5 h-5 text-amber-600 shrink-0" />
                 <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                  Cụm sân được đánh giá cao nhất (Từ 4.8★ trở lên)
+                  {showAllCourts ? 'Danh sách cụm sân' : 'Cụm sân được đánh giá cao nhất (từ 4.8★)'}
                 </h2>
               </div>
               <span className="text-xs font-semibold text-slate-600">
-                {trendingCourts.length} cụm sân tiêu chuẩn
+                {visibleCourts.length} cụm sân
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-              {trendingCourts.map((court, index) => (
+              {visibleCourts.map((court, index) => (
                 <CourtCardItem
                   key={court.id}
                   court={court}
                   index={index}
-                  onSelectCourt={onSelectCourt || (() => {})}
-                  onBook={(c) => {
-                    if (onBookCourtDirect) {
-                      onBookCourtDirect(c)
-                    } else {
-                      const courtResult: CourtResult = {
-                        courtId: c.id,
-                        facilityId: 'fac_' + c.id,
-                        facilityName: c.name,
-                        courtName: c.name,
-                        address: c.address,
-                        district: c.district,
-                        imageUrl: c.imageUrl,
-                        rating: c.rating,
-                        reviewCount: c.reviewCount,
-                        startTime: c.openHours.split(' - ')[0] || '06:00',
-                        endTime: c.openHours.split(' - ')[1] || '23:00',
-                        durationHours: 1,
-                        pricePerHour: c.pricePerHour,
-                        calculatedTotalPrice: c.pricePerHour,
-                        amenities: c.amenities,
-                        availabilityCheckedAt: 'Vừa xong',
-                        isAvailable: true,
-                        googleMapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(c.name),
-                      }
-                      onBookCourt(courtResult)
-                    }
-                  }}
+                  onSelectCourt={onSelectCourt}
+                  onBook={onBookCourtDirect}
                 />
               ))}
             </div>
@@ -287,79 +222,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {mockSessions.slice(0, 4).map((session) => (
-                <div
-                  key={session.id}
-                  className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3 flex flex-col justify-between"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <img
-                        src={session.clubLogo}
-                        alt={session.clubName}
-                        className="w-10 h-10 rounded-full border border-slate-200 object-cover shrink-0"
-                      />
-                      <div>
-                        <h3 className="text-xs font-bold text-slate-900 line-clamp-1">
-                          {session.clubName}
-                        </h3>
-                        <p className="text-[11px] text-slate-600 mt-0.5 font-medium">
-                          Cách bạn {session.distance} | {session.schedulesToday} lịch hôm nay
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleBookSession(session)}
-                      className="text-[11px] font-bold text-[#168039] hover:underline px-2.5 py-1 rounded-md bg-emerald-50 whitespace-nowrap shrink-0 cursor-pointer"
-                    >
-                      Chi tiết
-                    </button>
-                  </div>
-
-                  <div className="p-3 rounded-xl border border-amber-200 bg-amber-50/40 space-y-2.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-900">{session.detail.levelText}</span>
-                      <ChevronRight className="w-4 h-4 text-slate-600" />
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-wrap text-xs">
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-600 text-white flex items-center gap-1">
-                        <Flame className="w-3 h-3 text-white" />
-                        Nổi bật
-                      </span>
-                      <span className="font-bold text-amber-900 text-xs">
-                        {session.detail.timeRange}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1 border-t border-amber-200/60 text-xs">
-                      <span className="flex items-center gap-1 text-slate-700 text-[11px] font-medium">
-                        <Users className="w-3.5 h-3.5" />
-                        <span>{session.detail.capacityText}</span>
-                      </span>
-
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-[#ea580c] text-xs sm:text-sm">
-                          {formatPrice(session.detail.pricePerTicket)}
-                          <span className="text-[10px] font-normal text-slate-600"> / vé</span>
-                        </span>
-
-                        <button
-                          type="button"
-                          onClick={() => handleBookSession(session)}
-                          className="px-3 py-1.5 rounded-lg bg-[#168039] hover:bg-[#136c30] text-white font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Đặt chỗ</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <p className="text-sm text-slate-600">Chưa có lịch giao lưu được công bố.</p>
           </div>
         </div>
       ) : (
@@ -547,7 +410,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
             {/* Subheader info bar */}
             <div className="flex items-center justify-between px-1">
               <div className="text-xs font-bold text-slate-800">
-                <span>{mockSessions.length} buổi chơi tìm thấy</span>
+                <span>Chưa có dữ liệu lịch giao lưu</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -569,113 +432,10 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
 
             {/* Session Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
-              {mockSessions.length === 0 && (
-                <p className="text-sm text-slate-600 font-medium col-span-2 py-8 text-center">
-                  Chưa có buổi chơi nào trong khung giờ này.
-                </p>
-              )}
-              {mockSessions.map((session) => (
-                <div
-                  key={session.id}
-                  className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3 flex flex-col justify-between hover:border-slate-300 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <img
-                        src={session.clubLogo}
-                        alt={session.clubName}
-                        className="w-10 h-10 rounded-full border border-slate-200 object-cover shrink-0"
-                      />
-                      <div>
-                        <h3 className="text-xs font-bold text-slate-900 line-clamp-1">
-                          {session.clubName}
-                        </h3>
-                        <p className="text-[11px] text-slate-600 mt-0.5 font-medium">
-                          Cách bạn {session.distance} | {session.schedulesToday} lịch hôm nay
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleBookSession(session)}
-                      className="text-[11px] font-bold text-[#168039] hover:underline px-2.5 py-1 rounded-md bg-emerald-50 whitespace-nowrap shrink-0 cursor-pointer"
-                    >
-                      Chi tiết
-                    </button>
-                  </div>
+              <p className="col-span-full py-8 text-center text-sm text-slate-600">
+                Chưa có lịch giao lưu được công bố.
+              </p>
 
-                  <div className="grid grid-cols-4 gap-1.5 pt-1">
-                    {session.slots.map((slot, sIdx) => {
-                      const isActive = sIdx === session.activeSlotIndex
-                      return (
-                        <div
-                          key={sIdx}
-                          className={`p-1.5 rounded-xl text-center border transition-colors cursor-pointer ${
-                            isActive
-                              ? 'border-[#168039] bg-emerald-50 text-[#168039] font-bold'
-                              : 'border-slate-200 text-slate-700 bg-white hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className="text-xs font-bold">{slot.time}</div>
-                          <div className={`text-[10px] ${slot.available ? 'text-emerald-700 font-bold' : 'text-slate-500 font-medium'}`}>
-                            {slot.subtext}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  <div className="p-3 rounded-xl border border-rose-200 bg-rose-50/40 space-y-2.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-900">{session.detail.levelText}</span>
-                      <ChevronRight className="w-4 h-4 text-slate-600" />
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-wrap text-xs">
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-600 text-white flex items-center gap-1">
-                        LIVE
-                      </span>
-                      <span className="font-bold text-rose-900 text-xs">
-                        {session.detail.timeRange}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-3 text-[11px] text-slate-700 font-medium">
-                      <span className="flex items-center gap-1">
-                        <Ticket className="w-3.5 h-3.5 text-rose-600" />
-                        <span>{session.detail.ticketType}</span>
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Activity className="w-3.5 h-3.5 text-[#168039]" />
-                        <span>{session.detail.courtNumbers}</span>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1 border-t border-rose-200/60 text-xs">
-                      <span className="flex items-center gap-1 text-slate-700 text-[11px] font-medium">
-                        <Users className="w-3.5 h-3.5" />
-                        <span>{session.detail.capacityText}</span>
-                      </span>
-
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-[#ea580c] text-xs sm:text-sm">
-                          {formatPrice(session.detail.pricePerTicket)}
-                          <span className="text-[10px] font-normal text-slate-600"> / vé</span>
-                        </span>
-
-                        <button
-                          type="button"
-                          onClick={() => handleBookSession(session)}
-                          className="px-3 py-1.5 rounded-lg bg-[#168039] hover:bg-[#136c30] text-white font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Đặt chỗ</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
             </div>
           </section>
         </div>

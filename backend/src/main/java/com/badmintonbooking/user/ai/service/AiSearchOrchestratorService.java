@@ -12,6 +12,7 @@ import com.badmintonbooking.user.ai.dto.AiSearchRequest;
 import com.badmintonbooking.user.ai.dto.AiSearchResponse;
 import com.badmintonbooking.user.ai.dto.SearchCriteriaDto;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,7 @@ public class AiSearchOrchestratorService {
         this.priceRuleRepository = priceRuleRepository;
     }
 
+    @Transactional(readOnly = true)
     public AiSearchResponse orchestrateSearch(AiSearchRequest request, String clientKey) {
         long startTime = System.currentTimeMillis();
 
@@ -53,19 +55,21 @@ public class AiSearchOrchestratorService {
             throw new IllegalArgumentException("Khung giờ hoặc khoảng giá tìm kiếm không hợp lệ.");
         }
 
-        // Only return known active facilities. Availability and amenities are not
-        // represented by this search, so do not claim those requirements are met.
+        // Lọc theo dữ liệu đã công bố. Giờ trống được kiểm tra riêng khi đặt sân.
         List<Facility> matchedFacilities = facilityRepository.findByStatus("ACTIVE");
         List<AiRecommendedCourtDto> recommendations = new ArrayList<>();
         String district = criteria.getDistrict();
         LocalDate today = LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
         for (Facility fac : matchedFacilities) {
+            if (!Boolean.TRUE.equals(fac.getIsApproved())) continue;
             if (district != null && !district.isBlank()) {
                 String term = district.toLowerCase(Locale.ROOT);
                 if ((fac.getDistrict() == null || !fac.getDistrict().toLowerCase(Locale.ROOT).contains(term)) &&
                     (fac.getAddress() == null || !fac.getAddress().toLowerCase(Locale.ROOT).contains(term))) continue;
             }
-            if (criteria.getAmenities() != null && !criteria.getAmenities().isEmpty()) continue;
+            List<String> amenities = fac.getAmenities();
+            if (criteria.getAmenities() != null && !criteria.getAmenities().stream()
+                    .allMatch(requested -> amenities.stream().anyMatch(requested::equalsIgnoreCase))) continue;
             List<Long> courtIds = courtRepository.findByFacilityIdAndStatus(fac.getId(), "ACTIVE").stream().map(Court::getId).toList();
             if (courtIds.isEmpty()) continue;
             Double minPrice = priceRuleRepository.findByCourtIdIn(courtIds).stream()
@@ -75,7 +79,8 @@ public class AiSearchOrchestratorService {
                 .min(Double::compareTo).orElse(null);
             if (criteria.getMaxPricePerHour() != null && (minPrice == null || minPrice > criteria.getMaxPricePerHour())) continue;
             recommendations.add(new AiRecommendedCourtDto(fac.getId(), fac.getName(), fac.getAddress(), fac.getDistrict(),
-                fac.getOpenTime() + " - " + fac.getCloseTime(), null, null, null, minPrice, List.of(),
+                fac.getOpenTime() + " - " + fac.getCloseTime(), fac.getReviewCount() > 0 ? fac.getRating().doubleValue() : null,
+                fac.getReviewCount(), fac.getImageUrl(), minPrice, amenities,
                 "Vui lòng kiểm tra lịch trống và giá theo giờ trước khi đặt."));
             if (recommendations.size() >= 5) break;
         }
