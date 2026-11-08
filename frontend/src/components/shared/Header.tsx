@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import type { User, NotificationItem } from '../../modules/types/user'
 import { NotificationBell } from '../../modules/user/notification/NotificationBell'
 import { AppLogo } from './AppLogo'
+import { UserAvatar } from './UserAvatar'
 
 interface HeaderProps {
   currentUser: User | null
@@ -289,13 +290,12 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* User Avatar */}
               <div className="relative flex-shrink-0">
-                <img
-                  src={
-                    currentUser.avatarUrl ||
-                    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
-                  }
-                  alt={currentUser.fullName}
-                  className="w-9 h-9 sm:w-11 sm:h-11 rounded-full object-cover ring-2 ring-white/90"
+                <UserAvatar
+                  src={currentUser.avatarUrl}
+                  name={currentUser.fullName}
+                  className="w-9 h-9 sm:w-11 sm:h-11"
+                  ringClassName="ring-2 ring-white/90"
+                  fallbackBgColor="bg-emerald-800 text-white"
                 />
               </div>
             </div>

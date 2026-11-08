@@ -30,6 +30,9 @@ public class User {
     @Column(name = "provider_subject")
     private String providerSubject;
 
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
     @Column(nullable = false)
     private String status = "ACTIVE";
 
@@ -65,6 +68,9 @@ public class User {
     public String getProviderSubject() { return providerSubject; }
     public void setProviderSubject(String providerSubject) { this.providerSubject = providerSubject; }
 
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
@@ -73,11 +79,6 @@ public class User {
 
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
-
-    @Transient
-    public String getAvatarUrl() {
-        return null;
-    }
 
     @Transient
     public boolean isFcmEnabled() {

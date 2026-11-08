@@ -15,11 +15,14 @@ class GoogleTokenVerifierTest {
     private Jwt token(String issuer, String audience, boolean verified) {
         return Jwt.withTokenValue("token").header("alg", "RS256").subject("google-sub")
             .issuer(issuer).audience(List.of(audience)).issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300))
-            .claim("email", "person@example.com").claim("email_verified", verified).claim("name", "Person").build();
+            .claim("email", "person@example.com").claim("email_verified", verified).claim("name", "Person")
+            .claim("picture", "https://lh3.googleusercontent.com/a/avatar.jpg").build();
     }
     @Test void acceptsVerifiedIdentityForOurClient() {
         when(decoder.decode("token")).thenReturn(token("https://accounts.google.com", "our-client", true));
-        assertEquals("google-sub", verifier.verify("token").subject());
+        var identity = verifier.verify("token");
+        assertEquals("google-sub", identity.subject());
+        assertEquals("https://lh3.googleusercontent.com/a/avatar.jpg", identity.picture());
     }
     @Test void rejectsWrongAudienceIssuerAndUnverifiedEmail() {
         when(decoder.decode("token")).thenReturn(token("https://accounts.google.com", "other", true),

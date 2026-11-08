@@ -26,12 +26,40 @@ class GoogleAuthServiceTest {
         assertEquals("GOOGLE", result.user().provider());
         assertEquals("CUSTOMER", result.user().role());
     }
+
+    @Test void createsCustomerWithAvatarForGoogleIdentity() {
+        var identityWithAvatar = new GoogleIdentity("google-subject-2", "user2@example.com", "Test User 2", "https://avatar.google.com/photo.jpg");
+        when(users.findByProviderAndProviderSubject("GOOGLE", "google-subject-2")).thenReturn(Optional.empty());
+        when(users.save(any(User.class))).thenAnswer(i -> { User user = i.getArgument(0); user.setId(43L); return user; });
+        when(tokens.generateToken(43L, "user2@example.com", "CUSTOMER")).thenReturn("session-token-2");
+        var result = auth.loginWithGoogle(identityWithAvatar);
+        assertEquals("session-token-2", result.accessToken());
+        assertEquals("https://avatar.google.com/photo.jpg", result.user().avatarUrl());
+    }
+
+    @Test void updatesExistingUserAvatarOnLogin() {
+        var identityWithAvatar = new GoogleIdentity("google-subject", "user@example.com", "Updated Name", "https://avatar.google.com/new.jpg");
+        User existing = new User();
+        existing.setId(42L);
+        existing.setEmail("user@example.com");
+        existing.setStatus("ACTIVE");
+        existing.setRole("CUSTOMER");
+        existing.setAvatarUrl("https://avatar.google.com/old.jpg");
+        when(users.findByProviderAndProviderSubject("GOOGLE", "google-subject")).thenReturn(Optional.of(existing));
+        when(tokens.generateToken(42L, "user@example.com", "CUSTOMER")).thenReturn("session-token");
+
+        var result = auth.loginWithGoogle(identityWithAvatar);
+        assertEquals("https://avatar.google.com/new.jpg", result.user().avatarUrl());
+        assertEquals("Updated Name", result.user().fullName());
+    }
+
     @Test void refusesToLinkExistingEmailWithoutProof() {
         when(users.findByProviderAndProviderSubject("GOOGLE", "google-subject")).thenReturn(Optional.empty());
         when(users.existsByEmail("user@example.com")).thenReturn(true);
         assertThrows(IllegalArgumentException.class, () -> auth.loginWithGoogle(identity));
         verify(users, never()).save(any());
     }
+
     @Test void rejectsBlockedGoogleUser() {
         User user = new User(); user.setStatus("BLOCKED");
         when(users.findByProviderAndProviderSubject("GOOGLE", "google-subject")).thenReturn(Optional.of(user));

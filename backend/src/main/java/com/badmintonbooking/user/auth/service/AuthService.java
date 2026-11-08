@@ -3,6 +3,8 @@ package com.badmintonbooking.user.auth.service;
 import com.badmintonbooking.security.JwtTokenProvider;
 import com.badmintonbooking.user.auth.dto.AuthResponse;
 import com.badmintonbooking.user.auth.dto.LoginRequest;
+import com.badmintonbooking.user.auth.dto.PhoneLoginRequest;
+import java.util.List;
 import com.badmintonbooking.user.auth.dto.RegisterRequest;
 import com.badmintonbooking.user.auth.dto.UserResponse;
 import com.badmintonbooking.user.entity.User;
@@ -33,14 +35,60 @@ public class AuthService {
         User user = userRepository.findByEmail(request.email().trim().toLowerCase())
                 .orElseThrow(() -> new IllegalArgumentException("Email hoặc mật khẩu không chính xác"));
 
-        if (user.getPasswordHash() == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new IllegalArgumentException("Email hoặc mật khẩu không chính xác");
-        }
+        return authenticate(user, request.password(), "Email hoặc mật khẩu không chính xác");
+    }
 
+    @Transactional(readOnly = true)
+    public User verifyPhonePassword(PhoneLoginRequest request) {
+        String national = normalizePhone(request.phone());
+        List<User> matches = findPhone(national);
+        if (matches.size() != 1) {
+            throw new IllegalArgumentException("Số điện thoại hoặc mật khẩu không chính xác");
+        }
+        User user = matches.get(0);
+        if (user.getPasswordHash() == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            throw new IllegalArgumentException("Số điện thoại hoặc mật khẩu không chính xác");
+        }
+        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) throw new IllegalStateException("Tài khoản của bạn đang bị tạm khóa");
+        return user;
+    }
+
+    private List<User> findPhone(String national) {
+        String suffix = national.substring(1);
+        return userRepository.findByPhoneVariants(national, "84" + suffix, "0084" + suffix);
+    }
+
+    public String normalizePhone(String value) {
+        if (value == null || !value.trim().matches("\\+?[0-9][0-9\\s().-]*")) {
+            throw new IllegalArgumentException("Số điện thoại không hợp lệ");
+        }
+        String digits = value.replaceAll("[^0-9]", "");
+        if (digits.startsWith("0084")) digits = "0" + digits.substring(4);
+        else if (digits.startsWith("84")) digits = "0" + digits.substring(2);
+        if (!digits.matches("0[1-9][0-9]{8}")) throw new IllegalArgumentException("Số điện thoại Việt Nam không hợp lệ");
+        return digits;
+    }
+
+    @Transactional(readOnly = true)
+    public AuthResponse completePhoneLogin(Long userId, String verifiedPhone, String expectedPasswordHash) {
+        User user = userRepository.findById(userId)
+                .filter(u -> "ACTIVE".equalsIgnoreCase(u.getStatus()))
+                .orElseThrow(() -> new IllegalArgumentException("Tài khoản không khả dụng"));
+        if (!java.util.Objects.equals(user.getPasswordHash(), expectedPasswordHash)) throw new IllegalArgumentException("Thông tin đăng nhập đã thay đổi. Vui lòng thử lại.");
+        String currentPhone = "+84" + normalizePhone(user.getPhone()).substring(1);
+        if (!currentPhone.equals(verifiedPhone)) throw new IllegalArgumentException("Số điện thoại đã thay đổi. Vui lòng thử lại.");
+        List<User> matches = findPhone(normalizePhone(user.getPhone()));
+        if (matches.size() != 1 || !userId.equals(matches.get(0).getId())) throw new IllegalArgumentException("Không thể xác minh tài khoản.");
+        return AuthResponse.of(jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole()), UserResponse.fromEntity(user));
+    }
+
+    private AuthResponse authenticate(User user, String password, String errorMessage) {
+        if (user.getPasswordHash() == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
+            throw new IllegalArgumentException(errorMessage);
+        }
         if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
             throw new IllegalStateException("Tài khoản của bạn đang bị tạm khóa");
         }
-
         String token = jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole());
         return AuthResponse.of(token, UserResponse.fromEntity(user));
     }
@@ -56,7 +104,11 @@ public class AuthService {
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setFullName(request.fullName().trim());
-        user.setPhone(request.phone() != null ? request.phone().trim() : null);
+        if (request.phone() != null && !request.phone().isBlank()) {
+            String phone = normalizePhone(request.phone());
+            if (!findPhone(phone).isEmpty()) throw new IllegalArgumentException("Số điện thoại này đã được sử dụng trong hệ thống");
+            user.setPhone(phone);
+        }
         if (request.role() == com.badmintonbooking.user.model.UserRole.SYSTEM_ADMIN) {
             throw new IllegalArgumentException("Không thể tự đăng ký quyền quản trị");
         }
@@ -73,6 +125,15 @@ public class AuthService {
     @Transactional
     public AuthResponse loginWithGoogle(GoogleIdentity identity) {
         User user = userRepository.findByProviderAndProviderSubject("GOOGLE", identity.subject())
+                .map(existing -> {
+                    if (identity.picture() != null && !identity.picture().isBlank()) {
+                        existing.setAvatarUrl(identity.picture());
+                    }
+                    if (identity.name() != null && !identity.name().isBlank()) {
+                        existing.setFullName(identity.name());
+                    }
+                    return existing;
+                })
                 .orElseGet(() -> {
                     String email = identity.email().trim().toLowerCase(java.util.Locale.ROOT);
                     if (userRepository.existsByEmail(email)) {
@@ -81,6 +142,7 @@ public class AuthService {
                     User created = new User();
                     created.setEmail(email);
                     created.setFullName(identity.name());
+                    created.setAvatarUrl(identity.picture());
                     created.setRole("CUSTOMER");
                     created.setProvider("GOOGLE");
                     created.setProviderSubject(identity.subject());

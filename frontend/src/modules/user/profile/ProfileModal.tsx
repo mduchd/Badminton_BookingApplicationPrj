@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { X, User as UserIcon, Mail, Phone, Shield, Bell, Calendar, Check, AlertCircle, LogOut } from 'lucide-react'
 import type { User } from '../../types/user'
 import { toast } from 'sonner'
+import { UserAvatar } from '../../../components/shared/UserAvatar'
 
 interface ProfileModalProps {
   isOpen: boolean
@@ -85,10 +86,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
           <div className="flex items-center gap-3">
-            <img
-              src={user.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-              alt={user.fullName}
-              className="w-10 h-10 rounded-full object-cover ring-2 ring-emerald-500/20"
+            <UserAvatar
+              src={user.avatarUrl}
+              name={user.fullName}
+              className="w-10 h-10"
+              ringClassName="ring-2 ring-emerald-500/20"
+              fallbackBgColor="bg-[#168039] text-white"
             />
             <div>
               <h3 className="font-bold text-slate-800 text-sm">{user.fullName}</h3>
@@ -176,7 +179,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="0988 123 456"
                     className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                   />
                 </div>

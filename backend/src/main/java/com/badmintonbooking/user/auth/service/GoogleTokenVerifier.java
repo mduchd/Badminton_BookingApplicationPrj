@@ -37,7 +37,8 @@ public class GoogleTokenVerifier {
                 throw new IllegalArgumentException("Thông tin đăng nhập Google không hợp lệ");
             }
             String name = jwt.getClaimAsString("name");
-            return new GoogleIdentity(subject, email, name == null || name.isBlank() ? email : name.trim());
+            String picture = jwt.getClaimAsString("picture");
+            return new GoogleIdentity(subject, email, name == null || name.isBlank() ? email : name.trim(), picture);
         } catch (JwtException e) {
             throw new IllegalArgumentException("Thông tin đăng nhập Google không hợp lệ", e);
         }

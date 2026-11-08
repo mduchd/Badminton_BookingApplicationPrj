@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import type { User } from '../../types/user'
 import { toast } from 'sonner'
+import { UserAvatar } from '../../../components/shared/UserAvatar'
 import { ROUTES } from '../../../app/router'
 import { bookingApi } from '../../booking/services/bookingApi'
 
@@ -207,7 +208,7 @@ END:VCALENDAR`
 
   return (
     <div className="w-full max-w-full overflow-x-hidden min-h-[calc(100vh-64px)] flex flex-col md:flex-row bg-[#f8fafc] text-slate-900">
-      {/* ================= LEFT SIDEBAR (Reference inspired) ================= */}
+      {/* ================= LEFT SIDEBAR ================= */}
       <aside className={`w-full md:w-80 lg:w-[360px] max-w-full shrink-0 bg-[#eef8f2] border-r border-emerald-200/60 flex flex-col ${isSectionSelected ? 'hidden md:flex' : 'flex'}`}>
         {/* 1. Top Green User Profile & Membership Card */}
         <div className="bg-[#168039] p-4 sm:p-5 text-white flex flex-col gap-3">
@@ -225,13 +226,12 @@ END:VCALENDAR`
           >
             <div className="flex items-center gap-3 min-w-0">
               {currentUser ? (
-                <img
-                  src={
-                    currentUser.avatarUrl ||
-                    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
-                  }
-                  alt={currentUser.fullName}
-                  className="w-12 h-12 rounded-full object-cover ring-2 ring-white/90 shrink-0"
+                <UserAvatar
+                  src={currentUser.avatarUrl}
+                  name={currentUser.fullName}
+                  className="w-12 h-12"
+                  ringClassName="ring-2 ring-white/90 shrink-0"
+                  fallbackBgColor="bg-emerald-800 text-white"
                 />
               ) : (
                 <div className="w-12 h-12 rounded-full bg-white text-[#168039] flex items-center justify-center shrink-0 shadow-xs">
@@ -272,19 +272,19 @@ END:VCALENDAR`
           </button>
         </div>
 
-        {/* 2. Four Quick Action Shortcut Buttons & Grouped Functional Blocks (Matching reference image) */}
+        {/* 2. Four Quick Action Shortcut Buttons & Grouped Functional Blocks */}
         <div className="p-3 sm:p-4 bg-[#f0f7f3] space-y-4 flex-1 overflow-y-auto">
-          {/* Card containing the 4 Quick Shortcuts (Matching reference image) */}
+          {/* Card containing the 4 Quick Shortcuts (Flat buttons inside card, no nested box borders) */}
           <div className="bg-white rounded-2xl p-2.5 sm:p-3 border border-slate-200/90 shadow-2xs">
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-1.5">
               {/* Calendar */}
               <button
                 type="button"
                 onClick={() => setActiveSection('bookings')}
-                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all cursor-pointer text-center ${
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer text-center ${
                   activeSection === 'bookings'
-                    ? 'bg-emerald-50 border-[#168039] text-[#168039]'
-                    : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
+                    ? 'bg-emerald-50 text-[#168039] font-bold'
+                    : 'text-slate-700 hover:bg-slate-50 font-semibold'
                 }`}
               >
                 <Calendar className={`w-5 h-5 mb-1 ${activeSection === 'bookings' ? 'text-[#168039]' : 'text-emerald-700'}`} />
@@ -295,10 +295,10 @@ END:VCALENDAR`
               <button
                 type="button"
                 onClick={() => setActiveSection('settings')}
-                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all cursor-pointer text-center ${
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer text-center ${
                   activeSection === 'settings'
-                    ? 'bg-emerald-50 border-[#168039] text-[#168039]'
-                    : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
+                    ? 'bg-emerald-50 text-[#168039] font-bold'
+                    : 'text-slate-700 hover:bg-slate-50 font-semibold'
                 }`}
               >
                 <Bell className={`w-5 h-5 mb-1 ${activeSection === 'settings' ? 'text-[#168039]' : 'text-amber-600'}`} />
@@ -309,10 +309,10 @@ END:VCALENDAR`
               <button
                 type="button"
                 onClick={() => setActiveSection('classes')}
-                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all cursor-pointer text-center ${
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer text-center ${
                   activeSection === 'classes'
-                    ? 'bg-emerald-50 border-[#168039] text-[#168039]'
-                    : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
+                    ? 'bg-emerald-50 text-[#168039] font-bold'
+                    : 'text-slate-700 hover:bg-slate-50 font-semibold'
                 }`}
               >
                 <Trophy className={`w-5 h-5 mb-1 ${activeSection === 'classes' ? 'text-[#168039]' : 'text-emerald-600'}`} />
@@ -323,10 +323,10 @@ END:VCALENDAR`
               <button
                 type="button"
                 onClick={() => setActiveSection('vouchers')}
-                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all cursor-pointer text-center ${
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer text-center ${
                   activeSection === 'vouchers'
-                    ? 'bg-emerald-50 border-[#168039] text-[#168039]'
-                    : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
+                    ? 'bg-emerald-50 text-[#168039] font-bold'
+                    : 'text-slate-700 hover:bg-slate-50 font-semibold'
                 }`}
               >
                 <Ticket className={`w-5 h-5 mb-1 ${activeSection === 'vouchers' ? 'text-[#168039]' : 'text-rose-600'}`} />
@@ -451,7 +451,7 @@ END:VCALENDAR`
                 <ChevronRight className="w-4 h-4 text-slate-400" />
               </button>
 
-              {/* Đăng xuất tài khoản (chỉ hiển thị khi đã đăng nhập) */}
+              {/* Đăng xuất tài khoản */}
               {currentUser && (
                 <button
                   type="button"
@@ -629,11 +629,11 @@ END:VCALENDAR`
         {/* Right Main Content Body */}
         <div
           key={activeSection}
-          className="p-4 sm:p-6 lg:p-8 flex-1 flex flex-col w-full max-w-full overflow-x-hidden tab-slide-from-right"
+          className="p-4 sm:p-6 lg:p-8 pb-32 flex-1 flex flex-col w-full max-w-full overflow-x-hidden tab-slide-from-right"
         >
           {/* 1. SECTION: RESERVED BOOKINGS */}
           {activeSection === 'bookings' && (
-            <div className="space-y-6 flex-1">
+            <div className="space-y-6 flex-1 w-full">
               {filteredBookings.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center py-24 text-center">
                   <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 mb-3">
@@ -654,7 +654,7 @@ END:VCALENDAR`
                   </button>
                 </div>
               ) : (
-                <div className="space-y-3.5 max-w-4xl">
+                <div className="space-y-3.5 w-full">
                   {filteredBookings.map((b, idx) => (
                     <div
                       key={b.id}
@@ -737,111 +737,214 @@ END:VCALENDAR`
             </div>
           )}
 
-          {/* 2. SECTION: EDIT PROFILE */}
+          {/* 2. SECTION: EDIT PROFILE (Full Width Workplace) */}
           {activeSection === 'profile' && (
-            <div className="max-w-md mx-auto w-full py-4">
-              <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/90 shadow-xs space-y-5">
-                <div className="pb-3 border-b border-slate-100">
-                  <h3 className="text-base font-bold text-slate-900">Thông tin cá nhân</h3>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">Cập nhật họ tên và số điện thoại liên hệ nhận thông báo</p>
+            <div className="w-full flex-1">
+              <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/90 shadow-xs space-y-6 w-full">
+                {/* Header Profile Bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                  <div className="flex items-center gap-4">
+                    <UserAvatar
+                      src={currentUser?.avatarUrl}
+                      name={currentUser?.fullName}
+                      className="w-16 h-16 text-xl"
+                      ringClassName="ring-2 ring-emerald-500/20 shrink-0"
+                      fallbackBgColor="bg-[#168039] text-white"
+                    />
+                    <div>
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                        {currentUser?.fullName || 'Tài khoản SmashCourt'}
+                      </h3>
+                      <p className="text-xs text-slate-600 font-medium mt-0.5">
+                        {currentUser?.email || currentUser?.phone || 'Chưa cập nhật email'}
+                      </p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#168039] bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md">
+                          <CheckCircle2 className="w-3 h-3 text-[#168039]" />
+                          <span>Đã kích hoạt</span>
+                        </span>
+                        <span className="text-[11px] font-medium text-slate-500">
+                          {currentUser?.role === 'COURT_OWNER' ? 'Chủ cụm sân' : currentUser?.role === 'SYSTEM_ADMIN' ? 'Quản trị viên' : 'Khách hàng'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <form onSubmit={handleSaveProfile} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Họ và tên
-                    </label>
-                    <input
-                      type="text"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      placeholder="Nhập họ và tên..."
-                      required
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#168039]"
-                    />
+
+                {/* Profile Form (Responsive 2-column Grid) */}
+                <form onSubmit={handleSaveProfile} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Họ và tên
+                      </label>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        required
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#168039] text-slate-900 font-medium"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Email đăng ký
+                      </label>
+                      <input
+                        type="email"
+                        value={currentUser?.email || ''}
+                        disabled
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 text-xs sm:text-sm cursor-not-allowed font-medium"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Số điện thoại liên hệ
+                      </label>
+                      <input
+                        type="tel"
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#168039] text-slate-900 font-medium"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Hạng tài khoản
+                      </label>
+                      <div className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-xs sm:text-sm font-medium flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Crown className="w-4 h-4 text-[#e5a92c]" />
+                          <span>Hội viên SmashCourt tiêu chuẩn</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveSection('membership')}
+                          className="text-xs text-[#168039] font-bold hover:underline cursor-pointer"
+                        >
+                          Xem chi tiết
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Email đăng ký
-                    </label>
-                    <input
-                      type="email"
-                      value={currentUser?.email || ''}
-                      disabled
-                      placeholder="Chưa đăng ký email"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 text-xs sm:text-sm cursor-not-allowed"
-                    />
-                  </div>
+                  <div className="pt-5 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        type="submit"
+                        className="py-2.5 px-6 rounded-xl bg-[#168039] hover:bg-[#136c30] text-white text-xs sm:text-sm font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Save className="w-4 h-4" />
+                        <span>Lưu thay đổi</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveSection('bookings')}
+                        className="py-2.5 px-5 rounded-xl border border-slate-200 text-slate-700 text-xs sm:text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
+                      >
+                        Hủy
+                      </button>
+                    </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Số điện thoại liên hệ
-                    </label>
-                    <input
-                      type="tel"
-                      value={editPhone}
-                      onChange={(e) => setEditPhone(e.target.value)}
-                      placeholder="0988 xxx xxx"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#168039]"
-                    />
-                  </div>
-
-                  <div className="pt-3 flex items-center gap-2">
-                    <button
-                      type="submit"
-                      className="flex-1 py-2.5 px-4 rounded-xl bg-[#168039] hover:bg-[#136c30] text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <Save className="w-4 h-4" />
-                      <span>Lưu thay đổi</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveSection('bookings')}
-                      className="py-2.5 px-4 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
-                    >
-                      Hủy
-                    </button>
-                  </div>
-
-                  {currentUser && (
-                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                      <span className="text-xs text-slate-500">Đăng xuất khỏi thiết bị này</span>
+                    {currentUser && (
                       <button
                         type="button"
                         onClick={() => {
                           onLogout()
                           toast.info('Đã đăng xuất khỏi SmashCourt')
                         }}
-                        className="py-2 px-3 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                        className="py-2.5 px-4 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs sm:text-sm font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
                       >
                         <LogOut className="w-3.5 h-3.5 text-rose-600" />
-                        <span>Đăng xuất</span>
+                        <span>Đăng xuất tài khoản</span>
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </form>
               </div>
             </div>
           )}
 
-          {activeSection === 'membership' && <p className="py-4 text-sm text-slate-500">Chưa có thông tin hội viên.</p>}
-          {activeSection === 'groups' && <p className="py-4 text-sm text-slate-500">Chưa có nhóm giao lưu.</p>}
-          {activeSection === 'classes' && <p className="py-4 text-sm text-slate-500">Chưa có lịch học hoặc thi đấu.</p>}
-          {activeSection === 'vouchers' && <p className="py-4 text-sm text-slate-500">Chưa có mã ưu đãi.</p>}
+          {/* 3. SECTION: MEMBERSHIP */}
+          {activeSection === 'membership' && (
+            <div className="w-full bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
+              <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                <Crown className="w-6 h-6 text-[#e5a92c]" />
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Gói hội viên SmashCourt</h3>
+                  <p className="text-xs text-slate-500 font-medium">Tích điểm đổi quà & ưu đãi đặt sân thể thao</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                Bạn hiện đang sử dụng hạng thành viên tiêu chuẩn. Tham gia các buổi chơi và hoàn thành đặt sân để tích lũy điểm thưởng, thăng hạng thành viên và nhận các voucher giảm giá đặt sân hàng tháng.
+              </p>
+            </div>
+          )}
+
+          {/* 4. SECTION: GROUPS */}
+          {activeSection === 'groups' && (
+            <div className="w-full bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
+              <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                <Users className="w-6 h-6 text-[#168039]" />
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Nhóm câu lạc bộ & Giao lưu</h3>
+                  <p className="text-xs text-slate-500 font-medium">Kết nối cùng các câu lạc bộ thể thao lân cận</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                Bạn chưa tham gia nhóm câu lạc bộ nào. Hãy khám phá mục Giao lưu trên trang chủ để kết nối cùng các nhóm cầu lông, pickleball đang tìm thành viên!
+              </p>
+            </div>
+          )}
+
+          {/* 5. SECTION: CLASSES */}
+          {activeSection === 'classes' && (
+            <div className="w-full bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
+              <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                <GraduationCap className="w-6 h-6 text-[#168039]" />
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Lịch thi đấu & Lớp học</h3>
+                  <p className="text-xs text-slate-500 font-medium">Đăng ký lớp huấn luyện kỹ thuật & giải đấu</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                Hiện tại chưa có khóa học hoặc giải đấu nào được kích hoạt trong lịch trình của bạn.
+              </p>
+            </div>
+          )}
+
+          {/* 6. SECTION: VOUCHERS */}
+          {activeSection === 'vouchers' && (
+            <div className="w-full bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
+              <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                <Ticket className="w-6 h-6 text-rose-600" />
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Ví Voucher & Mã ưu đãi</h3>
+                  <p className="text-xs text-slate-500 font-medium">Quản lý mã giảm giá đặt sân và dịch vụ</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                Ví của bạn hiện chưa có mã giảm giá nào còn hiệu lực. Đón chờ các sự kiện khai trương cụm sân mới trên hệ thống để nhận mã ưu đãi nhé!
+              </p>
+            </div>
+          )}
 
           {/* 7. SECTION: SETTINGS */}
           {activeSection === 'settings' && (
-            <div className="max-w-xl mx-auto w-full py-4 space-y-5">
+            <div className="w-full space-y-5">
               <h3 className="font-bold text-slate-900 text-sm">Cài đặt thông báo & Đồng bộ lịch</h3>
 
-              <div className="rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden bg-white">
+              <div className="rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden bg-white w-full">
                 {/* FCM Push */}
-                <div className="p-4 flex items-center justify-between gap-4">
+                <div className="p-4 sm:p-5 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
                     <Bell className="w-5 h-5 text-[#168039] shrink-0" />
                     <div>
-                      <div className="text-xs font-bold text-slate-900">Thông báo trình duyệt Web Push</div>
-                      <div className="text-[11px] text-slate-600 font-medium">Nhận nhắc giờ thi đấu & thông báo duyệt đơn đặt sân</div>
+                      <div className="text-xs sm:text-sm font-bold text-slate-900">Thông báo trình duyệt Web Push</div>
+                      <div className="text-xs text-slate-600 font-medium">Nhận nhắc giờ thi đấu & thông báo duyệt đơn đặt sân</div>
                     </div>
                   </div>
                   <button
@@ -860,12 +963,12 @@ END:VCALENDAR`
                 </div>
 
                 {/* Google Calendar */}
-                <div className="p-4 flex items-center justify-between gap-4">
+                <div className="p-4 sm:p-5 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
                     <Calendar className="w-5 h-5 text-[#168039] shrink-0" />
                     <div>
-                      <div className="text-xs font-bold text-slate-900">Đồng bộ Google Calendar</div>
-                      <div className="text-[11px] text-slate-600 font-medium">Tự động thêm lịch thi đấu đã đặt vào Google Calendar</div>
+                      <div className="text-xs sm:text-sm font-bold text-slate-900">Đồng bộ Google Calendar</div>
+                      <div className="text-xs text-slate-600 font-medium">Tự động thêm lịch thi đấu đã đặt vào Google Calendar</div>
                     </div>
                   </div>
                   <button
@@ -888,8 +991,8 @@ END:VCALENDAR`
 
           {/* 8. SECTION: TERMS */}
           {activeSection === 'terms' && (
-            <div className="max-w-2xl mx-auto w-full py-4">
-              <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/90 shadow-xs space-y-4 text-xs text-slate-800 leading-relaxed font-normal">
+            <div className="w-full">
+              <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/90 shadow-xs space-y-4 text-xs text-slate-800 leading-relaxed font-normal w-full">
                 <h3 className="font-bold text-slate-900 text-sm pb-2 border-b border-slate-100">Quy chế sử dụng & Đặt sân thể thao SmashCourt</h3>
                 <p>
                   1. Người chơi cam kết đến đúng giờ đã đăng ký trong đơn đặt sân. Đơn vị chủ sân có quyền từ chối hoàn tiền nếu người chơi đến trễ quá 30 phút mà không thông báo trước.
@@ -906,8 +1009,8 @@ END:VCALENDAR`
 
           {/* 9. SECTION: VERSION */}
           {activeSection === 'version' && (
-            <div className="max-w-xl mx-auto w-full py-4">
-              <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
+            <div className="w-full">
+              <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/90 shadow-xs space-y-4 w-full">
                 <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
                   <div className="w-12 h-12 rounded-2xl bg-[#168039] text-white flex items-center justify-center font-bold">
                     SC

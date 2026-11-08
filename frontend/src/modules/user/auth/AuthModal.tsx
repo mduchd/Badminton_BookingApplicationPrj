@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Mail, Lock, User as UserIcon, Phone, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react'
+import { X, Mail, Lock, User as UserIcon, Phone, ArrowRight, CheckCircle2 } from 'lucide-react'
 import type { User, UserRole } from '../../types/user'
 import { toast } from 'sonner'
 import { AppLogo } from '../../../components/shared/AppLogo'
@@ -31,8 +31,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (tab === activeTab) return
     setTabSlideDir(tab === 'register' ? 'right' : 'left')
     setActiveTab(tab)
+    setChallengeId(null)
+    setOtp('')
   }
 
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email')
+  const [challengeId, setChallengeId] = useState<string | null>(null)
+  const [otp, setOtp] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -48,7 +53,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     try {
       if (activeTab === 'login') {
-        const authData = await authApi.login({ email, password })
+        if (loginMethod === 'phone' && !challengeId) {
+          const challenge = await authApi.startPhoneLogin({ phone, password })
+          setChallengeId(challenge.challengeId)
+          setPassword('')
+          setOtp('')
+          toast.success('Đã gửi mã xác minh qua SMS.')
+          return
+        }
+        const authData = loginMethod === 'phone'
+          ? await authApi.verifyPhoneLogin({ challengeId: challengeId!, code: otp })
+          : await authApi.login({ email, password })
+        setChallengeId(null)
+        setOtp('')
         toast.success(`Đăng nhập thành công! Chào mừng ${authData.user.fullName}`)
         onLoginSuccess(authData.user)
         onClose()
@@ -61,7 +78,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Có lỗi xảy ra khi xác thực'
       if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
-        toast.error('Không thể kết nối đến Backend (port 8080). Vui lòng đảm bảo server Spring Boot đang chạy!')
+        toast.error('Không thể kết nối đến máy chủ. Vui lòng thử lại sau.')
       } else {
         toast.error(message)
       }
@@ -110,13 +127,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           <div>
             <h2 className="text-lg font-bold text-slate-900">
-              {activeTab === 'login' ? 'Đăng nhập tài khoản' : 'Tạo tài khoản mới'}
+              {activeTab === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {activeTab === 'login'
-                ? 'Đăng nhập để đặt sân nhanh chóng và quản lý lịch chơi'
-                : 'Điền thông tin để trải nghiệm đặt sân cầu lông chuyên nghiệp'}
-            </p>
           </div>
 
           {/* Segmented Tab Switcher */}
@@ -158,12 +170,34 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           {/* Divider */}
           <div className="relative flex items-center justify-center my-1">
             <div className="border-t border-slate-200 w-full" />
-            <span className="bg-white px-3 text-[11px] font-semibold text-slate-600 absolute">
-              Hoặc với email
+            <span className="bg-white px-3 text-[11px] font-semibold text-slate-500 absolute">
+              Hoặc
             </span>
           </div>
 
+          {activeTab === 'login' && (
+            <div className="flex border-b border-slate-200" role="tablist" aria-label="Phương thức đăng nhập">
+              <button type="button" role="tab" aria-selected={loginMethod === 'phone'} onClick={() => { setLoginMethod('phone'); setChallengeId(null); setOtp('') }}
+                className={`flex-1 py-2 text-sm font-semibold cursor-pointer border-b-2 ${loginMethod === 'phone' ? 'text-[#1b7a42] border-[#1b7a42]' : 'text-slate-600 border-transparent hover:text-slate-900'}`}>
+                Số điện thoại
+              </button>
+              <button type="button" role="tab" aria-selected={loginMethod === 'email'} onClick={() => { setLoginMethod('email'); setChallengeId(null); setOtp('') }}
+                className={`flex-1 py-2 text-sm font-semibold cursor-pointer border-b-2 ${loginMethod === 'email' ? 'text-[#1b7a42] border-[#1b7a42]' : 'text-slate-600 border-transparent hover:text-slate-900'}`}>
+                Email
+              </button>
+            </div>
+          )}
+
           <form onSubmit={handleStandardAuth} className="space-y-3">
+            {challengeId && activeTab === 'login' && loginMethod === 'phone' ? (
+              <div className="space-y-2">
+                <label htmlFor="phone-otp" className="block text-xs font-semibold text-slate-700">Mã xác minh SMS</label>
+                <input id="phone-otp" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{4,10}" required value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:border-[#1b7a42]" />
+                <button type="button" onClick={() => { setChallengeId(null); setOtp('') }} className="text-xs text-[#1b7a42] font-semibold cursor-pointer hover:underline">Gửi lại mã</button>
+              </div>
+            ) : <>
             {activeTab === 'register' && (
               <>
                 <div>
@@ -177,8 +211,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Nguyễn Văn A"
-                      className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-[#1b7a42] focus:ring-1 focus:ring-[#1b7a42] transition-colors"
+                      className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-[#1b7a42] focus:ring-1 focus:ring-[#1b7a42] transition-colors"
                     />
                   </div>
                 </div>
@@ -194,8 +227,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       required
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="0912 345 678"
-                      className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-[#1b7a42] focus:ring-1 focus:ring-[#1b7a42] transition-colors"
+                      className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-[#1b7a42] focus:ring-1 focus:ring-[#1b7a42] transition-colors"
                     />
                   </div>
                 </div>
@@ -235,33 +267,38 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                           role === 'COURT_OWNER' ? 'text-[#1b7a42]' : 'text-slate-300'
                         }`}
                       />
-                      Chủ sân (Owner)
+                      Chủ sân
                     </button>
                   </div>
                 </div>
               </>
             )}
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Địa chỉ Email
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-[#1b7a42] focus:ring-1 focus:ring-[#1b7a42] transition-colors"
-                />
+            {activeTab === 'login' && loginMethod === 'phone' ? (
+              <div>
+                <label htmlFor="login-phone" className="block text-xs font-semibold text-slate-700 mb-1">Số điện thoại</label>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                  <input id="login-phone" type="tel" required autoComplete="tel" value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-[#1b7a42] focus:ring-1 focus:ring-[#1b7a42]" />
+                </div>
               </div>
-            </div>
+            ) : (
+              <div>
+                <label htmlFor="auth-email" className="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                  <input id="auth-email" type="email" required autoComplete="email" value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-[#1b7a42] focus:ring-1 focus:ring-[#1b7a42]" />
+                </div>
+              </div>
+            )}
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-slate-700">Mật khẩu</label>
+                <label htmlFor="auth-password" className="text-xs font-semibold text-slate-700">Mật khẩu</label>
                 {activeTab === 'login' && (
                   <button
                     type="button"
@@ -275,15 +312,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
                 <input
+                  id="auth-password"
                   type="password"
+                  autoComplete={activeTab === 'login' ? 'current-password' : 'new-password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Tối thiểu 6 ký tự"
-                  className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-[#1b7a42] focus:ring-1 focus:ring-[#1b7a42] transition-colors"
+                  className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-[#1b7a42] focus:ring-1 focus:ring-[#1b7a42] transition-colors"
                 />
               </div>
             </div>
+
+            </>}
 
             {/* Flat CTA button */}
             <button
@@ -295,7 +335,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <span>Đang xử lý...</span>
               ) : (
                 <>
-                  <span>{activeTab === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</span>
+                  <span>{challengeId && activeTab === 'login' && loginMethod === 'phone' ? 'Xác minh và đăng nhập' : activeTab === 'login' && loginMethod === 'phone' ? 'Gửi mã xác minh' : activeTab === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -312,7 +352,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   onClick={() => switchTab('register')}
                   className="font-semibold text-[#1b7a42] hover:underline cursor-pointer"
                 >
-                  Đăng ký ngay
+                  Đăng ký
                 </button>
               </>
             ) : (
@@ -323,16 +363,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   onClick={() => switchTab('login')}
                   className="font-semibold text-[#1b7a42] hover:underline cursor-pointer"
                 >
-                  Đăng nhập ngay
+                  Đăng nhập
                 </button>
               </>
             )}
-          </div>
-
-          {/* Security note */}
-          <div className="pt-2 pb-1 flex items-center justify-center gap-1.5 text-slate-600 text-xs font-medium">
-            <ShieldCheck className="w-4 h-4 text-[#1b7a42]" />
-            <span>Bảo mật thông tin tài khoản an toàn</span>
           </div>
         </div>
       </div>
