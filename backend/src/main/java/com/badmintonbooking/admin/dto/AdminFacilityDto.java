@@ -19,6 +19,7 @@ public record AdminFacilityDto(
         String status,
         boolean isApproved,
         int subCourtCount,
+        String rejectionReason,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {}

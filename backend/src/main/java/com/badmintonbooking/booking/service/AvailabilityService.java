@@ -1,5 +1,6 @@
 package com.badmintonbooking.booking.service;
 
+import com.badmintonbooking.admin.service.SystemSettingService;
 import com.badmintonbooking.booking.dto.CheckAvailabilityResponse;
 import com.badmintonbooking.booking.dto.CourtAvailabilityResponse;
 import com.badmintonbooking.booking.dto.TimeSlotDto;
@@ -14,6 +15,7 @@ import com.badmintonbooking.court.entity.PriceRule;
 import com.badmintonbooking.court.repository.CourtRepository;
 import com.badmintonbooking.court.repository.FacilityRepository;
 import com.badmintonbooking.court.repository.PriceRuleRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ public class AvailabilityService {
     private final FacilityRepository facilityRepository;
     private final PriceRuleRepository priceRuleRepository;
     private final CourtOccupancyRepository occupancyRepository;
+    private SystemSettingService systemSettingService;
 
     public AvailabilityService(CourtRepository courtRepository,
                                FacilityRepository facilityRepository,
@@ -42,6 +45,11 @@ public class AvailabilityService {
         this.facilityRepository = facilityRepository;
         this.priceRuleRepository = priceRuleRepository;
         this.occupancyRepository = occupancyRepository;
+    }
+
+    @Autowired(required = false)
+    public void setSystemSettingService(SystemSettingService systemSettingService) {
+        this.systemSettingService = systemSettingService;
     }
 
     public CourtAvailabilityResponse getCourtAvailability(Long courtId, LocalDate date) {
@@ -61,6 +69,10 @@ public class AvailabilityService {
         int dayOfWeek = date.getDayOfWeek().getValue(); // 1 = Mon ... 7 = Sun
         List<PriceRule> rules = priceRuleRepository.findRulesForCourtAndDay(courtId, dayOfWeek);
 
+        boolean facilityNotActive = !"ACTIVE".equalsIgnoreCase(facility.getStatus());
+        boolean courtNotActive = !"ACTIVE".equalsIgnoreCase(court.getStatus());
+        boolean isSystemMaintenance = systemSettingService != null && systemSettingService.isMaintenanceMode();
+
         List<TimeSlotDto> slots = new ArrayList<>();
         LocalTime currentStart = openTime;
 
@@ -73,17 +85,23 @@ public class AvailabilityService {
             OffsetDateTime slotStart = date.atTime(currentStart).atZone(ZONE_VN).toOffsetDateTime();
             OffsetDateTime slotEnd = date.atTime(currentEnd).atZone(ZONE_VN).toOffsetDateTime();
 
-            // Kiểm tra xung đột: newStart < existingEnd && newEnd > existingStart
-            CourtOccupancy conflict = findConflict(activeOccupancies, slotStart, slotEnd);
-
             BigDecimal slotPrice = calculatePriceForInterval(rules, currentStart, currentEnd);
 
-            if (conflict == null) {
-                slots.add(new TimeSlotDto(currentStart, currentEnd, slotPrice, true, "AVAILABLE", null));
+            if (isSystemMaintenance) {
+                slots.add(new TimeSlotDto(currentStart, currentEnd, slotPrice, false, "MAINTENANCE", "Hệ thống đang bảo trì"));
+            } else if (facilityNotActive) {
+                slots.add(new TimeSlotDto(currentStart, currentEnd, slotPrice, false, "PAUSED", "Cụm sân đang tạm ngừng hoạt động"));
+            } else if (courtNotActive) {
+                slots.add(new TimeSlotDto(currentStart, currentEnd, slotPrice, false, "MAINTENANCE", "Sân đang bảo trì"));
             } else {
-                String slotStatus = mapOccupancyToStatus(conflict.getOccupancyType());
-                String reason = conflict.getOccupancyType() == OccupancyType.MAINTENANCE ? "Sân đang bảo trì" : "Sân đã có người giữ/đặt";
-                slots.add(new TimeSlotDto(currentStart, currentEnd, slotPrice, false, slotStatus, reason));
+                CourtOccupancy conflict = findConflict(activeOccupancies, slotStart, slotEnd);
+                if (conflict == null) {
+                    slots.add(new TimeSlotDto(currentStart, currentEnd, slotPrice, true, "AVAILABLE", null));
+                } else {
+                    String slotStatus = mapOccupancyToStatus(conflict.getOccupancyType());
+                    String reason = conflict.getOccupancyType() == OccupancyType.MAINTENANCE ? "Sân đang bảo trì" : "Sân đã có người giữ/đặt";
+                    slots.add(new TimeSlotDto(currentStart, currentEnd, slotPrice, false, slotStatus, reason));
+                }
             }
 
             currentStart = currentEnd;
@@ -106,11 +124,35 @@ public class AvailabilityService {
             throw new BadRequestException("Giờ bắt đầu phải trước giờ kết thúc!");
         }
 
+        if (systemSettingService != null && systemSettingService.isMaintenanceMode()) {
+            return new CheckAvailabilityResponse(courtId, false, BigDecimal.ZERO, "Hệ thống đang trong chế độ bảo trì định kỳ.", OffsetDateTime.now());
+        }
+
         Court court = courtRepository.findById(courtId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sân với id: " + courtId));
 
         Facility facility = facilityRepository.findById(court.getFacilityId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cụm sân"));
+
+        if (!"ACTIVE".equalsIgnoreCase(facility.getStatus())) {
+            return new CheckAvailabilityResponse(
+                    courtId,
+                    false,
+                    BigDecimal.ZERO,
+                    "Cụm sân \"" + facility.getName() + "\" đang tạm ngưng hoạt động hoặc chưa được phê duyệt.",
+                    OffsetDateTime.now()
+            );
+        }
+
+        if (!"ACTIVE".equalsIgnoreCase(court.getStatus())) {
+            return new CheckAvailabilityResponse(
+                    courtId,
+                    false,
+                    BigDecimal.ZERO,
+                    "Sân con \"" + court.getName() + "\" đang bảo trì hoặc tạm ngưng hoạt động.",
+                    OffsetDateTime.now()
+            );
+        }
 
         if (startTime.isBefore(facility.getOpenTime()) || endTime.isAfter(facility.getCloseTime())) {
             return new CheckAvailabilityResponse(
@@ -141,7 +183,6 @@ public class AvailabilityService {
 
     public BigDecimal calculatePriceForInterval(List<PriceRule> rules, LocalTime start, LocalTime end) {
         if (rules.isEmpty()) {
-            // Mặc định fallback nếu chưa có price_rule
             long durationMinutes = Duration.between(start, end).toMinutes();
             return BigDecimal.valueOf(100000)
                     .multiply(BigDecimal.valueOf(durationMinutes))
@@ -151,7 +192,6 @@ public class AvailabilityService {
         BigDecimal total = BigDecimal.ZERO;
         LocalTime current = start;
 
-        // Tính theo từng lát 30 phút để áp giá chính xác theo từng khung giờ
         while (current.isBefore(end)) {
             LocalTime next = current.plusMinutes(30);
             if (next.isAfter(end)) {
@@ -159,7 +199,7 @@ public class AvailabilityService {
             }
 
             LocalTime midPoint = current.plusMinutes(Duration.between(current, next).toMinutes() / 2);
-            BigDecimal hourlyRate = BigDecimal.valueOf(100000); // Mặc định
+            BigDecimal hourlyRate = BigDecimal.valueOf(100000);
 
             for (PriceRule r : rules) {
                 if (!midPoint.isBefore(r.getStartTime()) && midPoint.isBefore(r.getEndTime())) {
@@ -181,7 +221,6 @@ public class AvailabilityService {
 
     private CourtOccupancy findConflict(List<CourtOccupancy> occupancies, OffsetDateTime start, OffsetDateTime end) {
         for (CourtOccupancy o : occupancies) {
-            // Overlap: newStart < existingEnd && newEnd > existingStart
             if (start.isBefore(o.getEndAt()) && end.isAfter(o.getStartAt())) {
                 return o;
             }

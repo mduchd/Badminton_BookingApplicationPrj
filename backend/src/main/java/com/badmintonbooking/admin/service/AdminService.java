@@ -1,6 +1,7 @@
 package com.badmintonbooking.admin.service;
 
 import com.badmintonbooking.admin.dto.*;
+import com.badmintonbooking.admin.entity.SystemSetting;
 import com.badmintonbooking.booking.entity.Booking;
 import com.badmintonbooking.booking.entity.Payment;
 import com.badmintonbooking.booking.enums.BookingStatus;
@@ -17,6 +18,8 @@ import com.badmintonbooking.user.entity.User;
 import com.badmintonbooking.user.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,35 +39,22 @@ public class AdminService {
     private final CourtRepository courtRepository;
     private final BookingRepository bookingRepository;
     private final PaymentRepository paymentRepository;
-
-    // Cấu hình nền tảng lưu trữ bộ nhớ có thể cập nhật
-    private double commissionRatePercent = 5.0; // 5% phí hoa hồng sàn
-    private int holdMinutes = 10; // 10 phút giữ chỗ
-    private String broadcastAnnouncement = "Chào mừng đến với Nền tảng Đặt sân Cầu lông Toàn quốc SmashCourt!";
-    private boolean maintenanceMode = false;
-    private List<String> systemAmenities = new ArrayList<>(List.of(
-            "Đèn chiếu sáng tiêu chuẩn BWF",
-            "Điều hòa nhiệt độ",
-            "Bãi đỗ xe ô tô & xe máy",
-            "Căn tin giải khát & quầy đồ ăn",
-            "Dịch vụ cho thuê vợt & bán quả cầu",
-            "Wifi tốc độ cao miễn phí",
-            "Tủ đồ cá nhân an toàn",
-            "Phòng tắm & thay đồ nóng lạnh"
-    ));
+    private final SystemSettingService systemSettingService;
 
     public AdminService(
             UserRepository userRepository,
             FacilityRepository facilityRepository,
             CourtRepository courtRepository,
             BookingRepository bookingRepository,
-            PaymentRepository paymentRepository
+            PaymentRepository paymentRepository,
+            SystemSettingService systemSettingService
     ) {
         this.userRepository = userRepository;
         this.facilityRepository = facilityRepository;
         this.courtRepository = courtRepository;
         this.bookingRepository = bookingRepository;
         this.paymentRepository = paymentRepository;
+        this.systemSettingService = systemSettingService;
     }
 
     /**
@@ -89,22 +79,38 @@ public class AdminService {
         long confirmedBookings = bookings.stream().filter(b -> b.getStatus() == BookingStatus.CONFIRMED).count();
         long cancelledBookings = bookings.stream().filter(b -> b.getStatus() == BookingStatus.CANCELLED || b.getStatus() == BookingStatus.EXPIRED).count();
 
+        double currentCommissionRate = systemSettingService.getEffectiveCommissionRate();
+
         List<Payment> payments = paymentRepository.findAll();
-        BigDecimal totalGmv = payments.stream()
+        List<Payment> successPayments = payments.stream()
                 .filter(p -> p.getStatus() == PaymentStatus.SUCCESS)
+                .toList();
+
+        BigDecimal totalGmv = successPayments.stream()
                 .map(Payment::getAmount)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal platformRevenue = totalGmv.multiply(BigDecimal.valueOf(commissionRatePercent / 100.0))
-                .setScale(2, RoundingMode.HALF_UP);
+        // Doanh thu sàn lấy từ snapshot hoa hồng thực tế tại thời điểm giao dịch
+        BigDecimal platformRevenue = successPayments.stream()
+                .map(p -> {
+                    if (p.getCommissionAmount() != null) {
+                        return p.getCommissionAmount();
+                    }
+                    if (p.getAmount() != null) {
+                        double rate = p.getCommissionRate() != null ? p.getCommissionRate() : currentCommissionRate;
+                        return p.getAmount().multiply(BigDecimal.valueOf(rate / 100.0)).setScale(2, RoundingMode.HALF_UP);
+                    }
+                    return BigDecimal.ZERO;
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Top 10 giao dịch gần nhất
-        List<AdminTransactionDto> recentTransactions = payments.stream()
+        // Top 10 giao dịch gần nhất (Batch loading tối ưu để không bị N+1)
+        List<Payment> top10Payments = payments.stream()
                 .sorted(Comparator.comparing(Payment::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(10)
-                .map(this::toTransactionDto)
-                .collect(Collectors.toList());
+                .toList();
+        List<AdminTransactionDto> recentTransactions = toBatchTransactionDtos(top10Payments, currentCommissionRate);
 
         // Phân bổ đơn đặt theo quận
         Map<String, Long> bookingsByDistrict = new HashMap<>();
@@ -130,14 +136,14 @@ public class AdminService {
                 cancelledBookings,
                 totalGmv,
                 platformRevenue,
-                commissionRatePercent,
+                currentCommissionRate,
                 recentTransactions,
                 bookingsByDistrict
         );
     }
 
     /**
-     * Danh sách Cụm sân cho Admin kiểm duyệt
+     * Danh sách Cụm sân cho Admin kiểm duyệt (Tối ưu batch load, hiển thị đúng dữ liệu thực)
      */
     @Transactional(readOnly = true)
     public List<AdminFacilityDto> getFacilities(String search, String status, String district) {
@@ -185,6 +191,7 @@ public class AdminService {
                             f.getStatus(),
                             isApproved,
                             courtsCount,
+                            f.getRejectionReason(),
                             f.getCreatedAt(),
                             f.getUpdatedAt()
                     );
@@ -194,7 +201,7 @@ public class AdminService {
     }
 
     /**
-     * Phê duyệt hoặc từ chối kiểm duyệt cơ sở
+     * Phê duyệt hoặc từ chối kiểm duyệt cơ sở (Lưu lý do từ chối vào Database)
      */
     @Transactional
     public AdminFacilityDto updateFacilityApproval(Long facilityId, AdminFacilityApprovalRequest request) {
@@ -204,14 +211,16 @@ public class AdminService {
         String action = request.action().toUpperCase();
         if ("APPROVE".equals(action)) {
             facility.setStatus("ACTIVE");
+            facility.setRejectionReason(null);
             facility.setUpdatedAt(OffsetDateTime.now());
             facilityRepository.save(facility);
-            log.info("Admin đã phê duyệt cụm sân #{} - {}", facilityId, facility.getName());
+            log.info("Admin [{}] đã phê duyệt cụm sân #{} - {}", getCurrentAdminEmail(), facilityId, facility.getName());
         } else if ("REJECT".equals(action)) {
             facility.setStatus("REJECTED");
+            facility.setRejectionReason(request.rejectionReason() != null ? request.rejectionReason().trim() : "Hồ sơ chưa đạt tiêu chuẩn");
             facility.setUpdatedAt(OffsetDateTime.now());
             facilityRepository.save(facility);
-            log.info("Admin đã từ chối cụm sân #{} - Lý do: {}", facilityId, request.rejectionReason());
+            log.info("Admin [{}] đã từ chối cụm sân #{} - Lý do: {}", getCurrentAdminEmail(), facilityId, facility.getRejectionReason());
         } else {
             throw new BadRequestException("Hành động không hợp lệ: " + action + " (chỉ chấp nhận APPROVE hoặc REJECT)");
         }
@@ -236,6 +245,7 @@ public class AdminService {
                 facility.getStatus(),
                 isApproved,
                 courtsCount,
+                facility.getRejectionReason(),
                 facility.getCreatedAt(),
                 facility.getUpdatedAt()
         );
@@ -254,7 +264,8 @@ public class AdminService {
         facility.setUpdatedAt(OffsetDateTime.now());
         facilityRepository.save(facility);
 
-        log.info("Admin đã cập nhật trạng thái cụm sân #{} sang: {} (Lý do: {})", facilityId, targetStatus, request.reason());
+        log.info("Admin [{}] đã cập nhật trạng thái cụm sân #{} sang: {} (Lý do: {})",
+                getCurrentAdminEmail(), facilityId, targetStatus, request.reason());
 
         User owner = facility.getOwnerId() != null ? userRepository.findById(facility.getOwnerId()).orElse(null) : null;
         int courtsCount = courtRepository.findByFacilityId(facilityId).size();
@@ -276,6 +287,7 @@ public class AdminService {
                 facility.getStatus(),
                 isApproved,
                 courtsCount,
+                facility.getRejectionReason(),
                 facility.getCreatedAt(),
                 facility.getUpdatedAt()
         );
@@ -320,11 +332,11 @@ public class AdminService {
     }
 
     /**
-     * Cập nhật vai trò tài khoản (CUSTOMER, COURT_OWNER, SYSTEM_ADMIN)
+     * Cập nhật vai trò tài khoản (Có cơ chế bảo vệ Admin không tự hạ quyền & bảo vệ Admin cuối cùng)
      */
     @Transactional
     public AdminUserDto updateUserRole(Long userId, AdminUserRoleRequest request) {
-        User user = userRepository.findById(userId)
+        User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng #" + userId));
 
         String targetRole = request.role().toUpperCase();
@@ -332,30 +344,52 @@ public class AdminService {
             throw new BadRequestException("Vai trò không hợp lệ: " + targetRole);
         }
 
-        user.setRole(targetRole);
-        user.setUpdatedAt(OffsetDateTime.now());
-        userRepository.save(user);
+        String operatorEmail = getCurrentAdminEmail();
+        User operator = operatorEmail != null ? userRepository.findByEmail(operatorEmail).orElse(null) : null;
 
-        log.info("Admin đã thay đổi vai trò tài khoản #{} ({}) sang: {}", userId, user.getEmail(), targetRole);
+        // 1. Chặn Admin tự hạ quyền của chính mình
+        if (operator != null && operator.getId().equals(userId)) {
+            if (!List.of("SYSTEM_ADMIN", "ADMIN").contains(targetRole)) {
+                throw new BadRequestException("Bạn không thể tự hạ quyền quản trị của chính mình!");
+            }
+        }
+
+        // 2. Chặn hạ quyền SYSTEM_ADMIN cuối cùng
+        boolean isCurrentlyAdmin = "SYSTEM_ADMIN".equalsIgnoreCase(targetUser.getRole()) || "ADMIN".equalsIgnoreCase(targetUser.getRole());
+        boolean willNotBeAdmin = !List.of("SYSTEM_ADMIN", "ADMIN").contains(targetRole);
+
+        if (isCurrentlyAdmin && willNotBeAdmin) {
+            long activeAdminCount = countActiveAdmins();
+            if (activeAdminCount <= 1) {
+                throw new BadRequestException("Hệ thống phải có ít nhất một Quản trị viên hệ thống (SYSTEM_ADMIN) đang hoạt động! Thao tác hạ quyền bị từ chối.");
+            }
+        }
+
+        targetUser.setRole(targetRole);
+        targetUser.setUpdatedAt(OffsetDateTime.now());
+        userRepository.save(targetUser);
+
+        log.info("Audit: Admin [{}] đã thay đổi vai trò tài khoản #{} ({}) sang: {}",
+                operatorEmail, userId, targetUser.getEmail(), targetRole);
 
         return new AdminUserDto(
-                user.getId(),
-                user.getFullName(),
-                user.getEmail(),
-                user.getPhone(),
-                user.getRole(),
-                user.getStatus(),
-                user.getProvider(),
-                user.getCreatedAt()
+                targetUser.getId(),
+                targetUser.getFullName(),
+                targetUser.getEmail(),
+                targetUser.getPhone(),
+                targetUser.getRole(),
+                targetUser.getStatus(),
+                targetUser.getProvider(),
+                targetUser.getCreatedAt()
         );
     }
 
     /**
-     * Khóa hoặc mở khóa tài khoản
+     * Khóa hoặc mở khóa tài khoản (Có cơ chế bảo vệ Admin không tự khóa & bảo vệ Admin cuối cùng)
      */
     @Transactional
     public AdminUserDto updateUserStatus(Long userId, AdminUserStatusRequest request) {
-        User user = userRepository.findById(userId)
+        User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng #" + userId));
 
         String targetStatus = request.status().toUpperCase();
@@ -363,33 +397,55 @@ public class AdminService {
             throw new BadRequestException("Trạng thái không hợp lệ: " + targetStatus + " (chỉ chấp nhận ACTIVE hoặc LOCKED)");
         }
 
-        user.setStatus(targetStatus);
-        user.setUpdatedAt(OffsetDateTime.now());
-        userRepository.save(user);
+        String operatorEmail = getCurrentAdminEmail();
+        User operator = operatorEmail != null ? userRepository.findByEmail(operatorEmail).orElse(null) : null;
 
-        log.info("Admin đã cập nhật trạng thái tài khoản #{} ({}) sang: {} (Lý do: {})", userId, user.getEmail(), targetStatus, request.reason());
+        // 1. Chặn Admin tự khóa tài khoản của chính mình
+        if (operator != null && operator.getId().equals(userId)) {
+            if ("LOCKED".equalsIgnoreCase(targetStatus)) {
+                throw new BadRequestException("Bạn không thể tự khóa tài khoản quản trị của chính mình!");
+            }
+        }
+
+        // 2. Chặn khóa SYSTEM_ADMIN cuối cùng
+        boolean isTargetAdmin = "SYSTEM_ADMIN".equalsIgnoreCase(targetUser.getRole()) || "ADMIN".equalsIgnoreCase(targetUser.getRole());
+        if (isTargetAdmin && "LOCKED".equalsIgnoreCase(targetStatus)) {
+            long activeAdminCount = countActiveAdmins();
+            if (activeAdminCount <= 1) {
+                throw new BadRequestException("Hệ thống phải có ít nhất một Quản trị viên hệ thống (SYSTEM_ADMIN) đang hoạt động! Không thể khóa quản trị viên cuối cùng.");
+            }
+        }
+
+        targetUser.setStatus(targetStatus);
+        targetUser.setUpdatedAt(OffsetDateTime.now());
+        userRepository.save(targetUser);
+
+        log.info("Audit: Admin [{}] đã cập nhật trạng thái tài khoản #{} ({}) sang: {} (Lý do: {})",
+                operatorEmail, userId, targetUser.getEmail(), targetStatus, request.reason());
 
         return new AdminUserDto(
-                user.getId(),
-                user.getFullName(),
-                user.getEmail(),
-                user.getPhone(),
-                user.getRole(),
-                user.getStatus(),
-                user.getProvider(),
-                user.getCreatedAt()
+                targetUser.getId(),
+                targetUser.getFullName(),
+                targetUser.getEmail(),
+                targetUser.getPhone(),
+                targetUser.getRole(),
+                targetUser.getStatus(),
+                targetUser.getProvider(),
+                targetUser.getCreatedAt()
         );
     }
 
     /**
-     * Danh sách giao dịch toàn hệ thống
+     * Danh sách giao dịch toàn hệ thống (Tối ưu Batch Loading - Giải quyết triệt để N+1 Queries)
      */
     @Transactional(readOnly = true)
     public List<AdminTransactionDto> getTransactions(String search, String provider, String status) {
         List<Payment> list = paymentRepository.findAll();
+        double currentCommissionRate = systemSettingService.getEffectiveCommissionRate();
 
-        return list.stream()
-                .map(this::toTransactionDto)
+        List<AdminTransactionDto> dtos = toBatchTransactionDtos(list, currentCommissionRate);
+
+        return dtos.stream()
                 .filter(t -> {
                     if (search != null && !search.isBlank()) {
                         String s = search.toLowerCase();
@@ -412,24 +468,29 @@ public class AdminService {
     }
 
     /**
-     * Lấy cài đặt hệ thống
+     * Lấy cài đặt hệ thống (Đọc từ Database)
      */
+    @Transactional(readOnly = true)
     public AdminSystemSettingsDto getSystemSettings() {
+        SystemSetting s = systemSettingService.getSetting();
+        List<String> amenities = parseAmenities(s.getSystemAmenitiesJson());
+
         return new AdminSystemSettingsDto(
-                this.commissionRatePercent,
-                this.holdMinutes,
-                "SmashCourt Badminton Booking Platform",
-                "1900 6868",
-                "support@smashcourt.vn",
-                this.broadcastAnnouncement,
-                this.maintenanceMode,
-                Collections.unmodifiableList(this.systemAmenities)
+                s.getCommissionRatePercent(),
+                s.getHoldMinutes(),
+                s.getPlatformName(),
+                s.getHotline(),
+                s.getSupportEmail(),
+                s.getBroadcastAnnouncement(),
+                Boolean.TRUE.equals(s.getMaintenanceMode()),
+                amenities
         );
     }
 
     /**
-     * Cập nhật cài đặt hệ thống
+     * Cập nhật cài đặt hệ thống (Lưu trực tiếp vào Database, tác động tức thì lên toàn sàn)
      */
+    @Transactional
     public AdminSystemSettingsDto updateSystemSettings(AdminSystemSettingsDto request) {
         if (request.commissionRatePercent() < 0 || request.commissionRatePercent() > 50) {
             throw new BadRequestException("Tỷ lệ hoa hồng phải từ 0% đến 50%!");
@@ -438,47 +499,132 @@ public class AdminService {
             throw new BadRequestException("Thời gian giữ chỗ phải từ 1 đến 60 phút!");
         }
 
-        this.commissionRatePercent = request.commissionRatePercent();
-        this.holdMinutes = request.holdMinutes();
-        if (request.broadcastAnnouncement() != null) {
-            this.broadcastAnnouncement = request.broadcastAnnouncement();
+        SystemSetting s = systemSettingService.getSetting();
+        s.setCommissionRatePercent(request.commissionRatePercent());
+        s.setHoldMinutes(request.holdMinutes());
+        if (request.platformName() != null && !request.platformName().isBlank()) {
+            s.setPlatformName(request.platformName());
         }
-        this.maintenanceMode = request.maintenanceMode();
+        if (request.supportHotline() != null) {
+            s.setHotline(request.supportHotline());
+        }
+        if (request.supportEmail() != null) {
+            s.setSupportEmail(request.supportEmail());
+        }
+        if (request.broadcastAnnouncement() != null) {
+            s.setBroadcastAnnouncement(request.broadcastAnnouncement());
+        }
+        s.setMaintenanceMode(request.maintenanceMode());
         if (request.systemAmenities() != null && !request.systemAmenities().isEmpty()) {
-            this.systemAmenities = new ArrayList<>(request.systemAmenities());
+            s.setSystemAmenitiesJson(serializeAmenities(request.systemAmenities()));
         }
 
-        log.info("Admin đã cập nhật cấu hình hệ thống: commission={}% holdMinutes={}min", this.commissionRatePercent, this.holdMinutes);
+        String operatorEmail = getCurrentAdminEmail();
+        systemSettingService.saveSetting(s, operatorEmail);
+
+        log.info("Audit: Admin [{}] đã cập nhật cấu hình hệ thống: commission={}% holdMinutes={}min maintenance={}",
+                operatorEmail, s.getCommissionRatePercent(), s.getHoldMinutes(), s.getMaintenanceMode());
+
         return getSystemSettings();
     }
 
-    private AdminTransactionDto toTransactionDto(Payment p) {
-        Booking booking = p.getBookingId() != null ? bookingRepository.findById(p.getBookingId()).orElse(null) : null;
-        Facility facility = booking != null && booking.getFacilityId() != null
-                ? facilityRepository.findById(booking.getFacilityId()).orElse(null)
-                : null;
-        User customer = booking != null && booking.getCustomerId() != null
-                ? userRepository.findById(booking.getCustomerId()).orElse(null)
-                : null;
+    private List<AdminTransactionDto> toBatchTransactionDtos(List<Payment> payments, double currentCommissionRate) {
+        if (payments.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-        BigDecimal fee = p.getAmount() != null
-                ? p.getAmount().multiply(BigDecimal.valueOf(commissionRatePercent / 100.0)).setScale(2, RoundingMode.HALF_UP)
-                : BigDecimal.ZERO;
+        Set<Long> bookingIds = payments.stream()
+                .map(Payment::getBookingId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
 
-        return new AdminTransactionDto(
-                p.getId(),
-                p.getBookingId(),
-                p.getProviderOrderCode(),
-                customer != null ? customer.getFullName() : "Khách vãng lai",
-                customer != null ? customer.getPhone() : "N/A",
-                facility != null ? facility.getName() : "CLB SmashCourt",
-                p.getProvider() != null ? p.getProvider().name() : "MOCK",
-                p.getAmount(),
-                fee,
-                p.getStatus() != null ? p.getStatus().name() : "PENDING",
-                p.getTransactionRef(),
-                p.getCreatedAt(),
-                p.getPaidAt()
-        );
+        Map<Long, Booking> bookingMap = bookingRepository.findAllById(bookingIds).stream()
+                .collect(Collectors.toMap(Booking::getId, b -> b, (a, b) -> a));
+
+        Set<Long> facilityIds = bookingMap.values().stream()
+                .map(Booking::getFacilityId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, Facility> facilityMap = facilityRepository.findAllById(facilityIds).stream()
+                .collect(Collectors.toMap(Facility::getId, f -> f, (a, b) -> a));
+
+        Set<Long> customerIds = bookingMap.values().stream()
+                .map(Booking::getCustomerId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, User> customerMap = userRepository.findAllById(customerIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u, (a, b) -> a));
+
+        List<AdminTransactionDto> dtos = new ArrayList<>();
+        for (Payment p : payments) {
+            Booking booking = p.getBookingId() != null ? bookingMap.get(p.getBookingId()) : null;
+            Facility facility = booking != null && booking.getFacilityId() != null ? facilityMap.get(booking.getFacilityId()) : null;
+            User customer = booking != null && booking.getCustomerId() != null ? customerMap.get(booking.getCustomerId()) : null;
+
+            // Sử dụng hoa hồng snapshot từ giao dịch, nếu chưa có thì dùng tỷ lệ tại thời điểm đó
+            BigDecimal fee;
+            if (p.getCommissionAmount() != null) {
+                fee = p.getCommissionAmount();
+            } else if (p.getAmount() != null) {
+                double rate = p.getCommissionRate() != null ? p.getCommissionRate() : currentCommissionRate;
+                fee = p.getAmount().multiply(BigDecimal.valueOf(rate / 100.0)).setScale(2, RoundingMode.HALF_UP);
+            } else {
+                fee = BigDecimal.ZERO;
+            }
+
+            dtos.add(new AdminTransactionDto(
+                    p.getId(),
+                    p.getBookingId(),
+                    p.getProviderOrderCode(),
+                    customer != null ? customer.getFullName() : "Khách vãng lai",
+                    customer != null ? customer.getPhone() : "N/A",
+                    facility != null ? facility.getName() : "CLB SmashCourt",
+                    p.getProvider() != null ? p.getProvider().name() : "MOCK",
+                    p.getAmount(),
+                    fee,
+                    p.getStatus() != null ? p.getStatus().name() : "PENDING",
+                    p.getTransactionRef(),
+                    p.getCreatedAt(),
+                    p.getPaidAt()
+            ));
+        }
+
+        return dtos;
+    }
+
+    private long countActiveAdmins() {
+        return userRepository.findAll().stream()
+                .filter(u -> ("SYSTEM_ADMIN".equalsIgnoreCase(u.getRole()) || "ADMIN".equalsIgnoreCase(u.getRole()))
+                        && "ACTIVE".equalsIgnoreCase(u.getStatus()))
+                .count();
+    }
+
+    private String getCurrentAdminEmail() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName()))
+                ? auth.getName()
+                : "SYSTEM_ADMIN";
+    }
+
+    private List<String> parseAmenities(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of("Đèn chiếu sáng BWF", "Điều hòa nhiệt độ", "Bãi đỗ xe", "Phòng tắm nóng lạnh");
+        }
+        try {
+            String clean = json.replace("[", "").replace("]", "").replace("\"", "");
+            return Arrays.stream(clean.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+        } catch (Exception e) {
+            return List.of("Đèn chiếu sáng BWF", "Điều hòa nhiệt độ");
+        }
+    }
+
+    private String serializeAmenities(List<String> amenities) {
+        if (amenities == null || amenities.isEmpty()) {
+            return "[]";
+        }
+        return "[" + amenities.stream().map(a -> "\"" + a.replace("\"", "") + "\"").collect(Collectors.joining(",")) + "]";
     }
 }

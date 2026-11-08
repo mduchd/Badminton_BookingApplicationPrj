@@ -1,5 +1,6 @@
 package com.badmintonbooking.booking.service;
 
+import com.badmintonbooking.admin.service.SystemSettingService;
 import com.badmintonbooking.booking.dto.CheckoutRequest;
 import com.badmintonbooking.booking.dto.CheckoutResponse;
 import com.badmintonbooking.booking.dto.PayOsWebhookRequest;
@@ -25,11 +26,14 @@ import com.badmintonbooking.court.repository.CourtRepository;
 import com.badmintonbooking.court.repository.FacilityRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +62,7 @@ public class PaymentService {
     private final FacilityRepository facilityRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PayOsHelper payOsHelper;
+    private SystemSettingService systemSettingService;
 
     public PaymentService(BookingRepository bookingRepository,
                           CourtOccupancyRepository occupancyRepository,
@@ -77,6 +82,11 @@ public class PaymentService {
         this.payOsHelper = payOsHelper;
     }
 
+    @Autowired(required = false)
+    public void setSystemSettingService(SystemSettingService systemSettingService) {
+        this.systemSettingService = systemSettingService;
+    }
+
     @Transactional
     public CheckoutResponse createCheckout(Long bookingId, CheckoutRequest request) {
         Booking booking = bookingRepository.findById(bookingId)
@@ -94,7 +104,7 @@ public class PaymentService {
         if (booking.getHoldExpiresAt() != null && booking.getHoldExpiresAt().isBefore(now)) {
             booking.setStatus(BookingStatus.EXPIRED);
             bookingRepository.save(booking);
-            throw new BadRequestException("Đã hết thời gian giữ chỗ 10 phút. Vui lòng chọn lại khung giờ mới!");
+            throw new BadRequestException("Đã hết thời gian giữ chỗ. Vui lòng chọn lại khung giờ mới!");
         }
 
         String method = request.getResolvedPaymentMethod();
@@ -188,7 +198,7 @@ public class PaymentService {
 
         OffsetDateTime now = OffsetDateTime.now();
 
-        // 1. Cập nhật Payment
+        // 1. Cập nhật Payment & Snapshot hoa hồng sàn tại thời điểm giao dịch thành công
         Payment payment = paymentRepository.findByBookingId(bookingId).orElseGet(() -> {
             Payment p = new Payment();
             p.setBookingId(bookingId);
@@ -198,9 +208,16 @@ public class PaymentService {
             return p;
         });
 
+        double currentRate = systemSettingService != null ? systemSettingService.getEffectiveCommissionRate() : 5.0;
+        BigDecimal fee = payment.getAmount() != null
+                ? payment.getAmount().multiply(BigDecimal.valueOf(currentRate / 100.0)).setScale(2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
         payment.setStatus(PaymentStatus.SUCCESS);
         payment.setPaidAt(now);
         payment.setTransactionRef("MOCK-TXN-" + System.currentTimeMillis());
+        payment.setCommissionRate(currentRate);
+        payment.setCommissionAmount(fee);
         paymentRepository.save(payment);
 
         // 2. Chuyển Booking sang CONFIRMED
@@ -219,7 +236,8 @@ public class PaymentService {
         // 4. Bắn Spring Event nội bộ cho TV1 (Notification, WebSocket, Calendar sync)
         publishConfirmedEvent(booking, payment.getProviderOrderCode(), "MOCK");
 
-        log.info("Mock payment completed successfully: bookingId={}, amount={}", bookingId, booking.getTotalAmount());
+        log.info("Mock payment completed successfully: bookingId={}, amount={}, fee={}",
+                bookingId, booking.getTotalAmount(), fee);
 
         return toCheckoutResponse(booking, payment.getProviderOrderCode(), "Thanh toán giả lập thành công! Lịch đã được xác nhận.");
     }
@@ -252,7 +270,7 @@ public class PaymentService {
             String expectedSignature = payOsHelper.calculateHmacSha256(rawData, payOsChecksumKey);
             if (expectedSignature == null || !expectedSignature.equalsIgnoreCase(payload.signature())) {
                 log.warn("Chữ ký Webhook payOS không khớp: expected={}, got={}", expectedSignature, payload.signature());
-                Map<String, Object> dataMap = new java.util.TreeMap<>();
+                Map<String, Object> dataMap = new TreeMap<>();
                 dataMap.put("accountNumber", data.accountNumber() != null ? data.accountNumber() : "");
                 dataMap.put("amount", data.amount().longValue());
                 dataMap.put("code", data.code() != null ? data.code() : "");
@@ -306,10 +324,17 @@ public class PaymentService {
             return true;
         }
 
-        // 5. Cập nhật Payment và Booking sang trạng thái thành công
+        // 5. Cập nhật Payment và Booking sang trạng thái thành công + Snapshot hoa hồng
+        double currentRate = systemSettingService != null ? systemSettingService.getEffectiveCommissionRate() : 5.0;
+        BigDecimal fee = payment.getAmount() != null
+                ? payment.getAmount().multiply(BigDecimal.valueOf(currentRate / 100.0)).setScale(2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
         payment.setStatus(PaymentStatus.SUCCESS);
         payment.setPaidAt(now);
         payment.setTransactionRef(reference);
+        payment.setCommissionRate(currentRate);
+        payment.setCommissionAmount(fee);
         paymentRepository.save(payment);
 
         booking.setStatus(BookingStatus.CONFIRMED);
@@ -334,7 +359,8 @@ public class PaymentService {
         // 7. Bắn Event cho TV1
         publishConfirmedEvent(booking, orderCode, "PAYOS");
 
-        log.info("payOS Webhook verified and processed successfully: bookingId={}, orderCode={}", booking.getId(), orderCode);
+        log.info("payOS Webhook verified and processed successfully: bookingId={}, orderCode={}, fee={}",
+                booking.getId(), orderCode, fee);
         return true;
     }
 

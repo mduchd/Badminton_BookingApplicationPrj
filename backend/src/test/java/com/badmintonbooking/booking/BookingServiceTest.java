@@ -1,5 +1,6 @@
 package com.badmintonbooking.booking;
 
+import com.badmintonbooking.admin.service.SystemSettingService;
 import com.badmintonbooking.booking.dto.BookingCreateRequest;
 import com.badmintonbooking.booking.dto.BookingResponse;
 import com.badmintonbooking.booking.dto.CheckAvailabilityResponse;
@@ -64,6 +65,9 @@ class BookingServiceTest {
     @Mock
     private SlotEventPublisher slotEventPublisher;
 
+    @Mock
+    private SystemSettingService systemSettingService;
+
     @InjectMocks
     private BookingService bookingService;
 
@@ -73,16 +77,19 @@ class BookingServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(bookingService, "holdDurationMinutes", 10);
+        bookingService.setSystemSettingService(systemSettingService);
 
         mockCourt = new Court();
         mockCourt.setId(1L);
         mockCourt.setFacilityId(10L);
         mockCourt.setName("Sân 1");
+        mockCourt.setStatus("ACTIVE");
 
         mockFacility = new Facility();
         mockFacility.setId(10L);
         mockFacility.setName("Cụm Sân Cầu Giấy");
         mockFacility.setAddress("123 Cầu Giấy");
+        mockFacility.setStatus("ACTIVE");
     }
 
     @Test
@@ -138,6 +145,48 @@ class BookingServiceTest {
                 .thenReturn(new CheckAvailabilityResponse(1L, false, BigDecimal.ZERO, "Khung giờ đã có người giữ chỗ", OffsetDateTime.now()));
 
         assertThrows(SlotConflictException.class, () -> bookingService.createHeldBooking(req));
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Chặn đặt sân khi Cụm sân đang tạm khóa hoặc chưa phê duyệt")
+    void shouldBlockBookingWhenFacilityIsPaused() {
+        mockFacility.setStatus("PAUSED");
+        LocalDate date = LocalDate.now().plusDays(1);
+        BookingCreateRequest req = new BookingCreateRequest(1L, date, LocalTime.of(8, 0), LocalTime.of(9, 0), null, 1L);
+
+        when(courtRepository.findById(1L)).thenReturn(Optional.of(mockCourt));
+        when(facilityRepository.findById(10L)).thenReturn(Optional.of(mockFacility));
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> bookingService.createHeldBooking(req));
+        assertTrue(ex.getMessage().contains("tạm ngưng hoạt động"));
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Chặn đặt sân khi Sân con đang bảo trì")
+    void shouldBlockBookingWhenCourtIsMaintenance() {
+        mockCourt.setStatus("MAINTENANCE");
+        LocalDate date = LocalDate.now().plusDays(1);
+        BookingCreateRequest req = new BookingCreateRequest(1L, date, LocalTime.of(8, 0), LocalTime.of(9, 0), null, 1L);
+
+        when(courtRepository.findById(1L)).thenReturn(Optional.of(mockCourt));
+        when(facilityRepository.findById(10L)).thenReturn(Optional.of(mockFacility));
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> bookingService.createHeldBooking(req));
+        assertTrue(ex.getMessage().contains("bảo trì hoặc tạm ngưng hoạt động"));
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Chặn đặt sân khi hệ thống đang trong chế độ bảo trì")
+    void shouldBlockBookingWhenSystemUnderMaintenance() {
+        when(systemSettingService.isMaintenanceMode()).thenReturn(true);
+        LocalDate date = LocalDate.now().plusDays(1);
+        BookingCreateRequest req = new BookingCreateRequest(1L, date, LocalTime.of(8, 0), LocalTime.of(9, 0), null, 1L);
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> bookingService.createHeldBooking(req));
+        assertTrue(ex.getMessage().contains("chế độ bảo trì"));
         verify(bookingRepository, never()).save(any());
     }
 

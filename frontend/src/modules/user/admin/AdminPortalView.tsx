@@ -225,7 +225,7 @@ export const AdminPortalView: React.FC = () => {
     }
     const updated = facilities.map((f) => {
       if (f.id === selectedFacility.id) {
-        return { ...f, isApproved: false, status: 'paused' as const }
+        return { ...f, isApproved: false, status: 'paused' as const, rejectionReason: reason }
       }
       return f
     })
@@ -770,32 +770,44 @@ export const AdminPortalView: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-3.5 font-bold text-slate-900">
-                        {fac.subCourts?.length || 4} sân
+                        {(fac as any).subCourtCount ?? fac.subCourts?.length ?? 0} sân
                       </td>
                       <td className="p-3.5 text-slate-700 font-medium">
                         {fac.openHours || '05:00 - 23:00'}
                       </td>
                       <td className="p-3.5">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
-                            fac.isApproved
-                              ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
-                              : 'bg-amber-50 text-amber-900 border-amber-200'
-                          }`}
-                        >
-                          {fac.isApproved ? 'Đã duyệt' : 'Chờ kiểm duyệt'}
-                        </span>
+                        {fac.status === 'REJECTED' || (fac as any).status === 'REJECTED' ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-rose-50 text-rose-900 border-rose-200">
+                            Bị từ chối
+                          </span>
+                        ) : fac.isApproved || fac.status === 'ACTIVE' || fac.status === 'active' ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-emerald-50 text-emerald-900 border-emerald-200">
+                            Đã duyệt
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-amber-50 text-amber-900 border-amber-200">
+                            Chờ kiểm duyệt
+                          </span>
+                        )}
                       </td>
                       <td className="p-3.5">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
-                            fac.status === 'active'
-                              ? 'bg-blue-50 text-blue-900 border-blue-200'
-                              : 'bg-rose-50 text-rose-900 border-rose-200'
-                          }`}
-                        >
-                          {fac.status === 'active' ? 'Đang mở' : 'Đang khóa'}
-                        </span>
+                        {fac.status === 'active' || fac.status === 'ACTIVE' ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-blue-50 text-blue-900 border-blue-200">
+                            Đang mở
+                          </span>
+                        ) : fac.status === 'paused' || fac.status === 'PAUSED' ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-rose-50 text-rose-900 border-rose-200">
+                            Đang khóa
+                          </span>
+                        ) : fac.status === 'REJECTED' || (fac as any).status === 'REJECTED' ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-slate-100 text-slate-700 border-slate-200">
+                            Ngừng HĐ
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-amber-50 text-amber-900 border-amber-200">
+                            Chờ mở
+                          </span>
+                        )}
                       </td>
                       <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
                         <button
@@ -1262,7 +1274,7 @@ export const AdminPortalView: React.FC = () => {
                   <div className="flex justify-between py-1.5 border-b border-slate-100">
                     <span className="text-slate-600 font-semibold">Số lượng sân con:</span>
                     <span className="text-slate-900 font-bold">
-                      {selectedFacility.subCourts?.length || 4} sân tiêu chuẩn BWF
+                      {(selectedFacility as any).subCourtCount ?? selectedFacility.subCourts?.length ?? 0} sân tiêu chuẩn BWF
                     </span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100">
@@ -1275,13 +1287,28 @@ export const AdminPortalView: React.FC = () => {
                     <span className="text-slate-600 font-semibold">Trạng thái duyệt:</span>
                     <span
                       className={`font-bold ${
-                        selectedFacility.isApproved ? 'text-emerald-700' : 'text-amber-800'
+                        selectedFacility.status === 'REJECTED' || (selectedFacility as any).status === 'REJECTED'
+                          ? 'text-rose-700'
+                          : selectedFacility.isApproved || selectedFacility.status === 'ACTIVE' || selectedFacility.status === 'active'
+                          ? 'text-emerald-700'
+                          : 'text-amber-800'
                       }`}
                     >
-                      {selectedFacility.isApproved ? 'Đã phê duyệt' : 'Chờ kiểm duyệt'}
+                      {selectedFacility.status === 'REJECTED' || (selectedFacility as any).status === 'REJECTED'
+                        ? 'Đã từ chối'
+                        : selectedFacility.isApproved || selectedFacility.status === 'ACTIVE' || selectedFacility.status === 'active'
+                        ? 'Đã phê duyệt'
+                        : 'Chờ kiểm duyệt'}
                     </span>
                   </div>
                 </div>
+
+                {(selectedFacility as any).rejectionReason && (
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-900">
+                    <strong className="block font-bold mb-0.5">Lý do từ chối kiểm duyệt trước đó:</strong>
+                    <span>{(selectedFacility as any).rejectionReason}</span>
+                  </div>
+                )}
 
                 {/* Tiện ích sân */}
                 <div>
