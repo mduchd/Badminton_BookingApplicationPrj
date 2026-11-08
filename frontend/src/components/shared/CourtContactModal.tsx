@@ -10,34 +10,35 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import type { BadmintonCourtItem } from '../../modules/user/mockData'
-import { appStore } from '../../lib/appStore'
+import type { BadmintonCourtItem } from '../../modules/types/court'
+import { useQuery } from '@tanstack/react-query'
+import { courtApi } from '../../modules/court/services/courtApi'
 
 interface CourtContactModalProps {
   isOpen: boolean
   onClose: () => void
   court?: BadmintonCourtItem | null
-  allCourts?: BadmintonCourtItem[]
 }
 
 export const CourtContactModal: React.FC<CourtContactModalProps> = ({
   isOpen,
   onClose,
   court,
-  allCourts = [],
 }) => {
   const [copied, setCopied] = useState(false)
 
+  const currentCourt = court
+  const { data } = useQuery({
+    queryKey: ['facilityDetail', court?.id],
+    queryFn: () => courtApi.getFacilityDetail(court!.id),
+    enabled: isOpen && Boolean(court),
+    retry: false,
+  })
   if (!isOpen) return null
 
-  // Directly link to the targeted court without any dropdown
-  const currentCourt = court || allCourts[0]
-  const facility = currentCourt ? appStore.getFacilityById(currentCourt.id) : null
-
-  const courtName = currentCourt?.name || 'Sân Cầu Lông SmashCourt'
-  const rawPhone = facility?.phone || '0988 234 567'
-  const cleanPhone = rawPhone.replace(/\D/g, '') || '0988234567'
-  const formattedPhone = rawPhone
+  const courtName = currentCourt?.name || 'Cụm sân'
+  const formattedPhone = (data?.facility.phone || currentCourt?.phone || '').split('|')[0].split(' - ')[0].trim()
+  const cleanPhone = formattedPhone.replace(/[^\d+]/g, '')
 
   // Pre-made quick message template for user convenience
   const sampleMessage = `Chào ${courtName}, mình liên hệ qua ứng dụng SmashCourt cần hỗ trợ tư vấn giờ chơi và đặt sân. Nhờ ban quản lý phản hồi giúp mình nhé!`
@@ -45,7 +46,7 @@ export const CourtContactModal: React.FC<CourtContactModalProps> = ({
   const handleCopyMessage = () => {
     navigator.clipboard.writeText(sampleMessage)
     setCopied(true)
-    toast.success('Đã sao chép tin nhắn mẫu! Bạn có thể dán vào Zalo hoặc Messenger.')
+    toast.success('Đã sao chép tin nhắn mẫu! Bạn có thể dán vào Zalo.')
     setTimeout(() => setCopied(false), 2500)
   }
 
@@ -72,7 +73,7 @@ export const CourtContactModal: React.FC<CourtContactModalProps> = ({
                 Nhắn tin với Chủ sân
               </h2>
               <p className="text-xs text-slate-600 font-medium truncate">
-                Liên hệ trực tiếp qua Zalo, Messenger hoặc Gọi điện
+                Liên hệ trực tiếp qua Zalo hoặc gọi điện
               </p>
             </div>
           </div>
@@ -108,7 +109,7 @@ export const CourtContactModal: React.FC<CourtContactModalProps> = ({
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-slate-600">
                   <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                  <span>Giờ mở cửa: {currentCourt.openHours || '05:00 - 23:00'}</span>
+                  <span>Giờ mở cửa: {currentCourt.openHours || 'Chưa cập nhật'}</span>
                 </div>
               </div>
             </div>
@@ -120,6 +121,8 @@ export const CourtContactModal: React.FC<CourtContactModalProps> = ({
               Kênh liên hệ trực tiếp:
             </span>
 
+            {cleanPhone ? (
+              <>
             {/* 1. Official Zalo Channel */}
             <a
               href={`https://zalo.me/${cleanPhone}`}
@@ -151,34 +154,6 @@ export const CourtContactModal: React.FC<CourtContactModalProps> = ({
               </div>
             </a>
 
-            {/* 2. Official Facebook Messenger Channel */}
-            <a
-              href="https://m.me/smashcourt.vietnam"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-between p-3.5 rounded-xl border border-sky-200 bg-white hover:bg-sky-50/50 transition-colors cursor-pointer group"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <img
-                  src="/logos/messenger.svg"
-                  alt="Messenger"
-                  className="w-11 h-11 object-contain shrink-0"
-                />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-bold text-slate-900">Facebook Messenger</span>
-                  </div>
-                  <p className="text-xs text-slate-600 font-medium truncate">
-                    Fanpage chính thức: SmashCourt Badminton
-                  </p>
-                </div>
-              </div>
-              <div className="px-3 py-1.5 rounded-lg bg-[#0084ff] hover:bg-[#0070da] text-white text-xs font-bold flex items-center gap-1 shrink-0 transition-colors">
-                <span>Mở chat</span>
-                <ExternalLink className="w-3 h-3 text-white" />
-              </div>
-            </a>
-
             {/* 3. Direct Phone Call */}
             <a
               href={`tel:${cleanPhone}`}
@@ -200,6 +175,8 @@ export const CourtContactModal: React.FC<CourtContactModalProps> = ({
                 <Phone className="w-3 h-3 text-white" />
               </div>
             </a>
+              </>
+            ) : <p className="text-sm text-slate-600">Cụm sân chưa công bố số điện thoại.</p>}
           </div>
 
           {/* Quick message template */}

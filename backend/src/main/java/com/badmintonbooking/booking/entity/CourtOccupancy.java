@@ -43,6 +43,12 @@ public class CourtOccupancy {
     @Column(name = "active_status", nullable = false)
     private ActiveStatus activeStatus = ActiveStatus.ACTIVE;
 
+    @Column(length = 500)
+    private String note;
+
+    @Column(name = "created_by")
+    private Long createdBy;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
@@ -84,6 +90,12 @@ public class CourtOccupancy {
 
     public ActiveStatus getActiveStatus() { return activeStatus; }
     public void setActiveStatus(ActiveStatus activeStatus) { this.activeStatus = activeStatus; }
+
+    public String getNote() { return note; }
+    public void setNote(String note) { this.note = note; }
+
+    public Long getCreatedBy() { return createdBy; }
+    public void setCreatedBy(Long createdBy) { this.createdBy = createdBy; }
 
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }

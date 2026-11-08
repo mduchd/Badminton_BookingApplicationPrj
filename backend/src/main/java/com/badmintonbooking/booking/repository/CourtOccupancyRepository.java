@@ -1,12 +1,15 @@
 package com.badmintonbooking.booking.repository;
 
 import com.badmintonbooking.booking.entity.CourtOccupancy;
+import com.badmintonbooking.booking.enums.ActiveStatus;
+import com.badmintonbooking.booking.enums.OccupancyType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,7 +35,17 @@ public interface CourtOccupancyRepository extends JpaRepository<CourtOccupancy, 
             @Param("endOfDay") OffsetDateTime endOfDay
     );
 
-    Optional<CourtOccupancy> findByBookingIdAndActiveStatus(Long bookingId, com.badmintonbooking.booking.enums.ActiveStatus activeStatus);
+    @Query("SELECT o FROM CourtOccupancy o WHERE o.courtId IN :courtIds " +
+           "AND o.occupancyType = :occupancyType " +
+           "AND o.activeStatus = :activeStatus " +
+           "ORDER BY o.startAt DESC")
+    List<CourtOccupancy> findByCourtIdInAndOccupancyTypeAndActiveStatus(
+            @Param("courtIds") Collection<Long> courtIds,
+            @Param("occupancyType") OccupancyType occupancyType,
+            @Param("activeStatus") ActiveStatus activeStatus
+    );
+
+    Optional<CourtOccupancy> findByBookingIdAndActiveStatus(Long bookingId, ActiveStatus activeStatus);
 
     List<CourtOccupancy> findByBookingId(Long bookingId);
 }

@@ -1,6 +1,7 @@
 package com.badmintonbooking.court.entity;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -18,14 +19,26 @@ public class Court {
     @JoinColumn(name = "facility_id", insertable = false, updatable = false)
     private Facility facility;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(name = "court_type", nullable = false)
-    private String courtType = "STANDARD";
+    @Column(name = "court_number", nullable = false)
+    private Integer courtNumber = 1;
 
-    @Column(nullable = false)
-    private String status = "ACTIVE";
+    @Column(name = "court_type", nullable = false, length = 50)
+    private String courtType = "STANDARD"; // STANDARD, VIP, TRAINING
+
+    @Column(name = "base_price_per_hour", nullable = false, precision = 12, scale = 2)
+    private BigDecimal basePricePerHour = BigDecimal.valueOf(100000);
+
+    @Column(name = "surface_type", length = 100)
+    private String surfaceType = "Thảm BWF tiêu chuẩn";
+
+    @Column(length = 500)
+    private String description;
+
+    @Column(nullable = false, length = 50)
+    private String status = "ACTIVE"; // ACTIVE, MAINTENANCE, INACTIVE
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
@@ -47,8 +60,20 @@ public class Court {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
+    public Integer getCourtNumber() { return courtNumber; }
+    public void setCourtNumber(Integer courtNumber) { this.courtNumber = courtNumber; }
+
     public String getCourtType() { return courtType; }
     public void setCourtType(String courtType) { this.courtType = courtType; }
+
+    public BigDecimal getBasePricePerHour() { return basePricePerHour; }
+    public void setBasePricePerHour(BigDecimal basePricePerHour) { this.basePricePerHour = basePricePerHour; }
+
+    public String getSurfaceType() { return surfaceType; }
+    public void setSurfaceType(String surfaceType) { this.surfaceType = surfaceType; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
@@ -59,4 +84,8 @@ public class Court {
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
 
+    @Transient
+    public BigDecimal getPricePerHour() {
+        return basePricePerHour != null ? basePricePerHour : BigDecimal.valueOf(100000.0);
+    }
 }

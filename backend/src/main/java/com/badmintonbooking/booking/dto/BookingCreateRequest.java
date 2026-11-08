@@ -19,7 +19,5 @@ public record BookingCreateRequest(
     @NotNull(message = "endTime không được để trống")
     LocalTime endTime,
 
-    String note,
-
-    Long customerId // Nếu chưa tích hợp JWT context thì truyền hoặc fallback id mặc định 1
+    String note
 ) {}

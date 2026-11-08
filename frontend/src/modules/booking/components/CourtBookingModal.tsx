@@ -47,8 +47,7 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
         startTime: selectedSlot.startTime,
         endTime: selectedSlot.endTime,
         note,
-        customerId: 1,
-      });
+            });
     },
     onSuccess: (booking) => {
       queryClient.invalidateQueries({ queryKey: ['courtAvailability'] });
@@ -110,6 +109,12 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
               Khung giờ trống màu xanh, bấm chọn để xem giá snapshot
             </p>
           </div>
+
+          {createBookingMutation.isError && (
+            <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+              {createBookingMutation.error.message}
+            </p>
+          )}
 
           {/* Lưới giờ & Card tóm tắt */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">

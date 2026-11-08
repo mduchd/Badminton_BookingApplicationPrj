@@ -7,7 +7,6 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.UUID;
 
 @Component
 public class JwtTokenProvider {
@@ -49,19 +48,18 @@ public class JwtTokenProvider {
                 return false;
             }
 
-            // Check expiration
             String payloadJson = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
             int expIdx = payloadJson.indexOf("\"exp\":");
             if (expIdx != -1) {
                 int start = expIdx + 6;
                 int commaIdx = payloadJson.indexOf(',', start);
-            int braceIdx = payloadJson.indexOf('}', start);
-            int end;
-            if (commaIdx != -1 && (braceIdx == -1 || commaIdx < braceIdx)) {
-                end = commaIdx;
-            } else {
-                end = braceIdx;
-            }
+                int braceIdx = payloadJson.indexOf('}', start);
+                int end;
+                if (commaIdx != -1 && (braceIdx == -1 || commaIdx < braceIdx)) {
+                    end = commaIdx;
+                } else {
+                    end = braceIdx;
+                }
                 long exp = Long.parseLong(payloadJson.substring(start, end).trim());
                 if (System.currentTimeMillis() / 1000 > exp) {
                     return false;
@@ -71,6 +69,21 @@ public class JwtTokenProvider {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    public Long getUserIdFromToken(String token) {
+        try {
+            String[] parts = token.split("\\.");
+            String payloadJson = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
+            int subIdx = payloadJson.indexOf("\"sub\":\"");
+            if (subIdx != -1) {
+                int start = subIdx + 7;
+                int end = payloadJson.indexOf("\"", start);
+                return Long.parseLong(payloadJson.substring(start, end).trim());
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 
     public String getEmailFromToken(String token) {

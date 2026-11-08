@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { AIMessage, SearchCriteria } from '../../types/user'
-import type { BadmintonCourtItem } from '../mockData'
+import type { BadmintonCourtItem } from '../../types/court'
 import { formatPrice } from '../../../lib/utils'
 import { authStorage } from '../auth/authApi'
 import { optimizeVietnameseSpeech, pickBestAlternative } from './vietnameseSpeechOptimizer'

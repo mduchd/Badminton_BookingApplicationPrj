@@ -34,7 +34,6 @@ export interface BookingCreateRequest {
   startTime: string;   // HH:mm:ss
   endTime: string;     // HH:mm:ss
   note?: string;
-  customerId?: number;
 }
 
 export interface BookingResponse {

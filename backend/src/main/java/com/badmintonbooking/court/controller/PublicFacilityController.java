@@ -1,40 +1,88 @@
 package com.badmintonbooking.court.controller;
 
 import com.badmintonbooking.common.ApiResponse;
-import com.badmintonbooking.court.repository.CourtRepository;
-import com.badmintonbooking.court.repository.FacilityRepository;
-import com.badmintonbooking.court.repository.PriceRuleRepository;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import java.time.LocalDate;
-import java.time.ZoneId;
+import com.badmintonbooking.common.exception.ResourceNotFoundException;
+import com.badmintonbooking.court.dto.*;
+import com.badmintonbooking.court.service.FacilityQueryService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/public/facilities")
 public class PublicFacilityController {
-    private final FacilityRepository facilities;
-    private final CourtRepository courts;
-    private final PriceRuleRepository prices;
-    public PublicFacilityController(FacilityRepository facilities, CourtRepository courts, PriceRuleRepository prices) {
-        this.facilities = facilities; this.courts = courts; this.prices = prices;
+
+    private final FacilityQueryService facilityQueryService;
+
+    public PublicFacilityController(FacilityQueryService facilityQueryService) {
+        this.facilityQueryService = facilityQueryService;
     }
-    public record FacilitySummary(Long id, String name, String address, String district,
-                                  Double latitude, Double longitude, String openHours, Double minPricePerHour) {}
-    @GetMapping
-    public ApiResponse<List<FacilitySummary>> list() {
-        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
-        var result = facilities.findByStatus("ACTIVE").stream().map(f -> {
-            var ids = courts.findByFacilityIdAndStatus(f.getId(), "ACTIVE").stream().map(c -> c.getId()).toList();
-            Double min = ids.isEmpty() ? null : prices.findByCourtIdIn(ids).stream()
-                .filter(p -> p.getPricePerSlot() != null && p.getSlotDurationMinutes() != null && p.getSlotDurationMinutes() > 0)
-                .filter(p -> (p.getEffectiveFrom() == null || !p.getEffectiveFrom().isAfter(today)) && (p.getEffectiveTo() == null || !p.getEffectiveTo().isBefore(today)))
-                .map(p -> p.getPricePerSlot().doubleValue() * 60 / p.getSlotDurationMinutes())
-                .min(Double::compareTo).orElse(null);
-            return new FacilitySummary(f.getId(), f.getName(), f.getAddress(), f.getDistrict(), f.getLatitude(), f.getLongitude(),
-                f.getOpenTime() + " - " + f.getCloseTime(), min);
-        }).toList();
-        return ApiResponse.success(result, "Danh sách cụm sân");
+
+    public record LegacyFacilitySummary(Long id, String name, String address, String district,
+                                        Double latitude, Double longitude, String openHours, BigDecimal minPricePerHour) {}
+
+    @GetMapping("/api/v1/public/facilities")
+    public ApiResponse<List<LegacyFacilitySummary>> list() {
+        var results = facilityQueryService.searchFacilities(
+                null, null, null, null, null, null, null, null, null, null, null, "rating_desc"
+        ).stream().map(f -> new LegacyFacilitySummary(
+                f.id(), f.name(), f.address(), f.district(), f.latitude(), f.longitude(), f.openHours(), f.minPrice()
+        )).toList();
+        return ApiResponse.success(results, "Danh sách cụm sân");
+    }
+
+    @GetMapping("/api/facilities")
+    public ResponseEntity<List<FacilitySummaryDto>> searchFacilities(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false) String district,
+            @RequestParam(required = false) String ward,
+            @RequestParam(required = false) String sportType,
+            @RequestParam(required = false) List<String> amenities,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng,
+            @RequestParam(required = false) Double radiusKm,
+            @RequestParam(required = false, defaultValue = "rating_desc") String sortBy
+    ) {
+        List<FacilitySummaryDto> result = facilityQueryService.searchFacilities(
+                keyword, city, district, ward, sportType, amenities, minPrice, maxPrice, lat, lng, radiusKm, sortBy
+        );
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/api/facilities/metadata")
+    public ResponseEntity<FacilityFilterMetadataDto> getFilterMetadata() {
+        return ResponseEntity.ok(facilityQueryService.getFilterMetadata());
+    }
+
+    @GetMapping("/api/facilities/{id}")
+    public ResponseEntity<FacilityDetailDto> getFacilityDetail(
+            @PathVariable Long id,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng
+    ) {
+        FacilityDetailDto detail = facilityQueryService.getFacilityDetail(id, lat, lng);
+        requirePublicFacility(detail.facility());
+        return ResponseEntity.ok(detail);
+    }
+
+    @GetMapping("/api/facilities/{id}/courts")
+    public ResponseEntity<List<CourtDto>> getFacilityCourts(@PathVariable Long id) {
+        requirePublicFacility(facilityQueryService.getFacilityDetail(id, null, null).facility());
+        return ResponseEntity.ok(facilityQueryService.getFacilityCourts(id));
+    }
+
+    @GetMapping("/api/facilities/{id}/price-rules")
+    public ResponseEntity<List<PriceRuleDto>> getFacilityPriceRules(@PathVariable Long id) {
+        requirePublicFacility(facilityQueryService.getFacilityDetail(id, null, null).facility());
+        return ResponseEntity.ok(facilityQueryService.getFacilityPriceRules(id));
+    }
+    private void requirePublicFacility(FacilitySummaryDto facility) {
+        if (!Boolean.TRUE.equals(facility.isApproved()) || "INACTIVE".equalsIgnoreCase(facility.status())) {
+            throw new ResourceNotFoundException("Không tìm thấy cụm sân.");
+        }
     }
 }

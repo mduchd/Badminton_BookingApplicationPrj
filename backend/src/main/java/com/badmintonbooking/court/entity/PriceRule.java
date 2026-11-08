@@ -14,11 +14,23 @@ public class PriceRule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "court_id", nullable = false)
-    private Long courtId;
+    @Column(name = "facility_id")
+    private Long facilityId;
+
+    @Column(name = "court_id")
+    private Long courtId; // null = áp dụng toàn cụm sân
+
+    @Column(nullable = false, length = 150)
+    private String name = "Khung giờ tiêu chuẩn";
 
     @Column(name = "day_of_week", nullable = false)
-    private Integer dayOfWeek = 0; // 0: all, 1: Mon, ... 7: Sun
+    private Integer dayOfWeek = 0; // 0: all/grouped, 1: Mon ... 7: Sun
+
+    @Column(name = "day_type", nullable = false, length = 30)
+    private String dayType = "ALL"; // ALL, WEEKDAY, WEEKEND, MON..SUN
+
+    @Column(name = "customer_type", nullable = false, length = 30)
+    private String customerType = "CASUAL"; // CASUAL (vãng lai), FIXED_MONTHLY (cố định tháng)
 
     @Column(name = "start_time", nullable = false)
     private LocalTime startTime;
@@ -46,11 +58,23 @@ public class PriceRule {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
+    public Long getFacilityId() { return facilityId; }
+    public void setFacilityId(Long facilityId) { this.facilityId = facilityId; }
+
     public Long getCourtId() { return courtId; }
     public void setCourtId(Long courtId) { this.courtId = courtId; }
 
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
     public Integer getDayOfWeek() { return dayOfWeek; }
     public void setDayOfWeek(Integer dayOfWeek) { this.dayOfWeek = dayOfWeek; }
+
+    public String getDayType() { return dayType; }
+    public void setDayType(String dayType) { this.dayType = dayType; }
+
+    public String getCustomerType() { return customerType; }
+    public void setCustomerType(String customerType) { this.customerType = customerType; }
 
     public LocalTime getStartTime() { return startTime; }
     public void setStartTime(LocalTime startTime) { this.startTime = startTime; }

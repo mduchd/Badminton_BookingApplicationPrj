@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <circle cx="60" cy="60" r="58" fill="#0d4a2d" stroke="#16b877" stroke-width="4"/>
+  <circle cx="60" cy="60" r="48" fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1.5"/>
+  <path d="M60 24L45 56H75L60 24Z" fill="#ffffff" fill-opacity="0.92"/>
+  <path d="M51 36L60 56M69 36L60 56M60 24V56" stroke="#0d4a2d" stroke-width="2" stroke-linecap="round"/>
+  <rect x="49" y="56" width="22" height="5" rx="2.5" fill="#dfb03b"/>
+  <path d="M52 61C52 67 55.5 71 60 71C64.5 71 68 67 68 61H52Z" fill="#ffffff"/>
+  <text x="60" y="90" text-anchor="middle" fill="#ffffff" font-family="system-ui, sans-serif" font-size="11" font-weight="800" letter-spacing="1.2">BADMINTON</text>
+</svg>
