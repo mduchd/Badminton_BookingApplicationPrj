@@ -51,6 +51,7 @@ export interface AdminFacilityItem {
   status: 'ACTIVE' | 'PENDING_APPROVAL' | 'PAUSED' | 'REJECTED' | string
   isApproved: boolean
   subCourtCount: number
+  rejectionReason?: string
   imageUrl?: string
   createdAt?: string
 }

@@ -1,5 +1,6 @@
 package com.badmintonbooking.booking.service;
 
+import com.badmintonbooking.admin.service.SystemSettingService;
 import com.badmintonbooking.booking.dto.BookingCreateRequest;
 import com.badmintonbooking.booking.dto.BookingResponse;
 import com.badmintonbooking.booking.dto.CheckAvailabilityResponse;
@@ -21,6 +22,7 @@ import com.badmintonbooking.court.repository.FacilityRepository;
 import com.badmintonbooking.user.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +46,7 @@ public class BookingService {
     private final UserRepository userRepository;
     private final AvailabilityService availabilityService;
     private final SlotEventPublisher slotEventPublisher;
+    private SystemSettingService systemSettingService;
 
     public BookingService(BookingRepository bookingRepository,
                           CourtOccupancyRepository occupancyRepository,
@@ -61,8 +64,18 @@ public class BookingService {
         this.slotEventPublisher = slotEventPublisher;
     }
 
+    @Autowired(required = false)
+    public void setSystemSettingService(SystemSettingService systemSettingService) {
+        this.systemSettingService = systemSettingService;
+    }
+
     @Transactional
     public BookingResponse createHeldBooking(BookingCreateRequest request, Long customerId) {
+        // 0. Kiểm tra chế độ bảo trì toàn hệ thống
+        if (systemSettingService != null && systemSettingService.isMaintenanceMode()) {
+            throw new BadRequestException("Hệ thống đang trong chế độ bảo trì định kỳ. Quý khách vui lòng thử lại sau ít phút!");
+        }
+
         if (!request.startTime().isBefore(request.endTime())) {
             throw new BadRequestException("Giờ bắt đầu phải trước giờ kết thúc!");
         }
@@ -77,8 +90,22 @@ public class BookingService {
         Facility facility = facilityRepository.findById(court.getFacilityId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cụm sân"));
 
-        if (!userRepository.existsById(customerId)) {
-            throw new ResourceNotFoundException("Không tìm thấy tài khoản khách hàng với id: " + customerId);
+        // Kiểm tra trạng thái vận hành của Cụm sân
+        if (!"ACTIVE".equalsIgnoreCase(facility.getStatus())) {
+            throw new BadRequestException("Cụm sân \"" + facility.getName() + "\" hiện đang tạm ngưng hoạt động hoặc chưa được phê duyệt, không thể đặt sân!");
+        }
+
+        // Kiểm tra trạng thái vận hành của Sân con
+        if (!"ACTIVE".equalsIgnoreCase(court.getStatus())) {
+            throw new BadRequestException("Sân con \"" + court.getName() + "\" hiện đang bảo trì hoặc tạm ngưng hoạt động, không thể đặt sân!");
+        }
+
+        Long effectiveCustomerId = customerId;
+        if (effectiveCustomerId == null) {
+            throw new BadRequestException("Cần đăng nhập để đặt sân");
+        }
+        if (!userRepository.existsById(effectiveCustomerId)) {
+            throw new ResourceNotFoundException("Không tìm thấy tài khoản khách hàng với id: " + effectiveCustomerId);
         }
 
         // 1. Kiểm tra tính khả dụng của khoảng giờ
@@ -94,11 +121,16 @@ public class BookingService {
         }
 
         // 2. Snapshot giá chính xác do backend tự tính (không phụ thuộc client)
+        // Lấy thời gian giữ chỗ thực tế do Admin cấu hình (mặc định 10 phút)
+        int effectiveHoldMinutes = systemSettingService != null
+                ? systemSettingService.getEffectiveHoldMinutes()
+                : holdDurationMinutes;
+
         OffsetDateTime now = OffsetDateTime.now();
-        OffsetDateTime holdExpiresAt = now.plusMinutes(holdDurationMinutes);
+        OffsetDateTime holdExpiresAt = now.plusMinutes(effectiveHoldMinutes);
 
         Booking booking = new Booking();
-        booking.setCustomerId(customerId);
+        booking.setCustomerId(effectiveCustomerId);
         booking.setFacilityId(facility.getId());
         booking.setCourtId(court.getId());
         booking.setBookingDate(request.bookingDate());
@@ -130,8 +162,8 @@ public class BookingService {
 
         occupancyRepository.save(occupancy);
 
-        log.info("Booking HELD created successfully: id={}, court={}, price={}, expiresAt={}",
-                savedBooking.getId(), court.getId(), savedBooking.getTotalAmount(), holdExpiresAt);
+        log.info("Booking HELD created successfully: id={}, court={}, price={}, expiresAt={} (holdDuration={}m)",
+                savedBooking.getId(), court.getId(), savedBooking.getTotalAmount(), holdExpiresAt, effectiveHoldMinutes);
 
         // Phát sự kiện WebSocket STOMP
         slotEventPublisher.publishSlotChange(
@@ -155,10 +187,17 @@ public class BookingService {
     }
 
     @Transactional(readOnly = true)
-    public BookingResponse getBookingById(Long id, Long customerId) {
+    public BookingResponse getBookingById(Long id) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt sân với id: " + id));
-        if (!booking.getCustomerId().equals(customerId)) {
+        return toResponseWithLookups(booking);
+    }
+
+    @Transactional(readOnly = true)
+    public BookingResponse getBookingById(Long id, Long customerId) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt sân"));
+        if (customerId != null && !customerId.equals(booking.getCustomerId())) {
             throw new ResourceNotFoundException("Không tìm thấy đơn đặt sân");
         }
         return toResponseWithLookups(booking);
@@ -169,7 +208,7 @@ public class BookingService {
         Booking booking = bookingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt sân với id: " + id));
 
-        if (customerId == null || !booking.getCustomerId().equals(customerId)) {
+        if (customerId != null && !booking.getCustomerId().equals(customerId)) {
             throw new BadRequestException("Bạn không có quyền hủy đơn đặt sân này!");
         }
 

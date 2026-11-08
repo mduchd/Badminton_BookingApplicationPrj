@@ -93,6 +93,8 @@ public class Facility {
     @CollectionTable(name = "facility_amenities", joinColumns = @JoinColumn(name = "facility_id"))
     @Column(name = "amenity", length = 150)
     private Set<String> amenitySet = new LinkedHashSet<>();
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
@@ -198,6 +200,8 @@ public class Facility {
         }
         return List.of();
     }
+    public String getRejectionReason() { return rejectionReason; }
+    public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
 
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }

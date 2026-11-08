@@ -39,6 +39,12 @@ public class Payment {
     @Column(name = "transaction_ref")
     private String transactionRef;
 
+    @Column(name = "commission_rate")
+    private Double commissionRate;
+
+    @Column(name = "commission_amount", precision = 12, scale = 2)
+    private BigDecimal commissionAmount;
+
     @Column(name = "paid_at")
     private OffsetDateTime paidAt;
 
@@ -70,6 +76,12 @@ public class Payment {
 
     public String getTransactionRef() { return transactionRef; }
     public void setTransactionRef(String transactionRef) { this.transactionRef = transactionRef; }
+
+    public Double getCommissionRate() { return commissionRate; }
+    public void setCommissionRate(Double commissionRate) { this.commissionRate = commissionRate; }
+
+    public BigDecimal getCommissionAmount() { return commissionAmount; }
+    public void setCommissionAmount(BigDecimal commissionAmount) { this.commissionAmount = commissionAmount; }
 
     public OffsetDateTime getPaidAt() { return paidAt; }
     public void setPaidAt(OffsetDateTime paidAt) { this.paidAt = paidAt; }

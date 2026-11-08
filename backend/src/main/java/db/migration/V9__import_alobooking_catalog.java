@@ -6,7 +6,7 @@ import org.flywaydb.core.api.migration.Context;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-public class V8__import_alobooking_catalog extends BaseJavaMigration {
+public class V9__import_alobooking_catalog extends BaseJavaMigration {
 
     private static final String IMPORT_CATALOG = """
             WITH venues AS (

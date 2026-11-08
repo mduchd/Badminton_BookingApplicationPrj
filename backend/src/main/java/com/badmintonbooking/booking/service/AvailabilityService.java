@@ -1,5 +1,6 @@
 package com.badmintonbooking.booking.service;
 
+import com.badmintonbooking.admin.service.SystemSettingService;
 import com.badmintonbooking.booking.dto.CheckAvailabilityResponse;
 import com.badmintonbooking.booking.dto.CourtAvailabilityResponse;
 import com.badmintonbooking.booking.dto.TimeSlotDto;
@@ -14,6 +15,7 @@ import com.badmintonbooking.court.entity.PriceRule;
 import com.badmintonbooking.court.repository.CourtRepository;
 import com.badmintonbooking.court.repository.FacilityRepository;
 import com.badmintonbooking.court.repository.PriceRuleRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ public class AvailabilityService {
     private final FacilityRepository facilityRepository;
     private final PriceRuleRepository priceRuleRepository;
     private final CourtOccupancyRepository occupancyRepository;
+    private SystemSettingService systemSettingService;
 
     public AvailabilityService(CourtRepository courtRepository,
                                FacilityRepository facilityRepository,
@@ -42,6 +45,11 @@ public class AvailabilityService {
         this.facilityRepository = facilityRepository;
         this.priceRuleRepository = priceRuleRepository;
         this.occupancyRepository = occupancyRepository;
+    }
+
+    @Autowired(required = false)
+    public void setSystemSettingService(SystemSettingService systemSettingService) {
+        this.systemSettingService = systemSettingService;
     }
 
     public CourtAvailabilityResponse getCourtAvailability(Long courtId, LocalDate date) {
@@ -62,8 +70,9 @@ public class AvailabilityService {
         List<PriceRule> rules = priceRuleRepository.findRulesForCourtAndDay(courtId, dayOfWeek);
         BigDecimal fallbackRate = court.getPricePerHour();
 
-        boolean courtUnderMaintenance = !"ACTIVE".equalsIgnoreCase(court.getStatus())
-                || !"ACTIVE".equalsIgnoreCase(facility.getStatus());
+        boolean facilityNotActive = !"ACTIVE".equalsIgnoreCase(facility.getStatus());
+        boolean courtNotActive = !"ACTIVE".equalsIgnoreCase(court.getStatus());
+        boolean isSystemMaintenance = systemSettingService != null && systemSettingService.isMaintenanceMode();
 
         List<TimeSlotDto> slots = new ArrayList<>();
         LocalTime currentStart = openTime;
@@ -79,8 +88,12 @@ public class AvailabilityService {
 
             BigDecimal slotPrice = calculatePriceForInterval(rules, currentStart, currentEnd, fallbackRate);
 
-            if (courtUnderMaintenance) {
-                slots.add(new TimeSlotDto(currentStart, currentEnd, slotPrice, false, "MAINTENANCE", "Sân đang tạm ngưng bảo trì"));
+            if (isSystemMaintenance) {
+                slots.add(new TimeSlotDto(currentStart, currentEnd, slotPrice, false, "MAINTENANCE", "Hệ thống đang bảo trì"));
+            } else if (facilityNotActive) {
+                slots.add(new TimeSlotDto(currentStart, currentEnd, slotPrice, false, "PAUSED", "Cụm sân đang tạm ngừng hoạt động"));
+            } else if (courtNotActive) {
+                slots.add(new TimeSlotDto(currentStart, currentEnd, slotPrice, false, "MAINTENANCE", "Sân đang bảo trì"));
             } else {
                 CourtOccupancy conflict = findConflict(activeOccupancies, slotStart, slotEnd);
                 if (conflict == null) {
@@ -116,18 +129,32 @@ public class AvailabilityService {
             throw new BadRequestException("Giờ bắt đầu phải trước giờ kết thúc!");
         }
 
+        if (systemSettingService != null && systemSettingService.isMaintenanceMode()) {
+            return new CheckAvailabilityResponse(courtId, false, BigDecimal.ZERO, "Hệ thống đang trong chế độ bảo trì định kỳ.", OffsetDateTime.now());
+        }
+
         Court court = courtRepository.findById(courtId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sân với id: " + courtId));
 
         Facility facility = facilityRepository.findById(court.getFacilityId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cụm sân"));
 
-        if (!"ACTIVE".equalsIgnoreCase(facility.getStatus()) || !"ACTIVE".equalsIgnoreCase(court.getStatus())) {
+        if (!"ACTIVE".equalsIgnoreCase(facility.getStatus())) {
             return new CheckAvailabilityResponse(
                     courtId,
                     false,
                     BigDecimal.ZERO,
-                    "Sân hiện đang tạm đóng để bảo trì",
+                    "Cụm sân \"" + facility.getName() + "\" đang tạm ngưng hoạt động hoặc chưa được phê duyệt.",
+                    OffsetDateTime.now()
+            );
+        }
+
+        if (!"ACTIVE".equalsIgnoreCase(court.getStatus())) {
+            return new CheckAvailabilityResponse(
+                    courtId,
+                    false,
+                    BigDecimal.ZERO,
+                    "Sân con \"" + court.getName() + "\" đang bảo trì hoặc tạm ngưng hoạt động.",
                     OffsetDateTime.now()
             );
         }
