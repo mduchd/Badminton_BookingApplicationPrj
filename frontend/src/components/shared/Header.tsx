@@ -13,7 +13,6 @@ interface HeaderProps {
   onOpenOwnerChat?: () => void
   onMarkAllNotificationsRead: () => void
   onMarkNotificationRead: (id: string) => void
-  onSimulateNewNotification: () => void
   onNavigateHome?: () => void
   isHome?: boolean
 }
@@ -26,7 +25,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenOwnerChat,
   onMarkAllNotificationsRead,
   onMarkNotificationRead,
-  onSimulateNewNotification,
   onNavigateHome,
   isHome = false,
 }) => {
@@ -267,7 +265,6 @@ export const Header: React.FC<HeaderProps> = ({
             notifications={notifications}
             onMarkAllAsRead={onMarkAllNotificationsRead}
             onMarkAsRead={onMarkNotificationRead}
-            onSimulateNewNotification={onSimulateNewNotification}
           />
 
           {/* Vertical divider */}

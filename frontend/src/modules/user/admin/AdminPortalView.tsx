@@ -18,7 +18,6 @@ import {
   Trash2,
   Save,
 } from 'lucide-react'
-import { appStore } from '../../../lib/appStore'
 import type { Facility } from '../../types/court'
 import type { UserRole } from '../../types/user'
 import { toast } from 'sonner'
@@ -26,6 +25,7 @@ import { ROUTES } from '../../../app/router'
 import {
   adminApi,
   type AdminDashboardMetrics,
+  type AdminFacilityItem,
   type AdminUserItem,
   type AdminTransaction,
   type AdminSystemSettings,
@@ -38,8 +38,7 @@ export const AdminPortalView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard')
   const [loading, setLoading] = useState<boolean>(false)
 
-  // Local state initialized with appStore data as fallback
-  const [facilities, setFacilities] = useState<Facility[]>(() => appStore.getFacilities())
+  const [facilities, setFacilities] = useState<Facility[]>([])
   const [metrics, setMetrics] = useState<AdminDashboardMetrics | null>(null)
   const [transactions, setTransactions] = useState<AdminTransaction[]>([])
   const [settings, setSettings] = useState<AdminSystemSettings>({
@@ -62,54 +61,7 @@ export const AdminPortalView: React.FC = () => {
     ],
   })
 
-  // Users data with real sync
-  const [users, setUsers] = useState<AdminUserItem[]>([
-    {
-      id: 'usr_001',
-      fullName: 'Nguyễn Văn Đức (Super Admin)',
-      email: 'ducnguyen.dev@gmail.com',
-      role: 'SYSTEM_ADMIN',
-      phone: '0988 123 456',
-      status: 'ACTIVE',
-      joinedDate: '01/10/2026',
-    },
-    {
-      id: 'usr_owner_1',
-      fullName: 'Trần Văn Long (Chủ sân Cầu Giấy)',
-      email: 'phuclong.badminton@gmail.com',
-      role: 'COURT_OWNER',
-      phone: '0912 345 678',
-      status: 'ACTIVE',
-      joinedDate: '05/10/2026',
-    },
-    {
-      id: 'usr_003',
-      fullName: 'Hoàng Minh Quân',
-      email: 'quan.hoang@gmail.com',
-      role: 'CUSTOMER',
-      phone: '0977 654 321',
-      status: 'ACTIVE',
-      joinedDate: '12/10/2026',
-    },
-    {
-      id: 'usr_004',
-      fullName: 'Lê Thu Trang',
-      email: 'thutrang.le@gmail.com',
-      role: 'CUSTOMER',
-      phone: '0933 222 111',
-      status: 'LOCKED',
-      joinedDate: '15/10/2026',
-    },
-    {
-      id: 'usr_005',
-      fullName: 'Phạm Việt Tuấn',
-      email: 'viettuan.pham@gmail.com',
-      role: 'CUSTOMER',
-      phone: '0984 018 529',
-      status: 'ACTIVE',
-      joinedDate: '02/11/2026',
-    },
-  ])
+  const [users, setUsers] = useState<AdminUserItem[]>([])
 
   // Filters
   const [facSearch, setFacSearch] = useState<string>('')
@@ -130,77 +82,46 @@ export const AdminPortalView: React.FC = () => {
   const [showRejectModal, setShowRejectModal] = useState<boolean>(false)
   const [newAmenityInput, setNewAmenityInput] = useState<string>('')
 
-  // Load data from Backend API or fall back to store
+  const toFacility = (f: AdminFacilityItem): Facility => ({
+    id: String(f.id), name: f.name, logoUrl: '', imageUrl: f.imageUrl || '', galleryImages: [],
+    distance: '', address: f.address || '', district: f.district || '', city: f.city || '',
+    openHours: `${f.openTime || ''} - ${f.closeTime || ''}`, rating: 0, reviewCount: 0,
+    pricePerHour: 0, amenities: [], latitude: 0, longitude: 0, phone: f.ownerPhone || '',
+    description: '', ownerId: String(f.ownerId || ''), isApproved: f.isApproved,
+    status: f.status === 'ACTIVE' ? 'active' : 'paused',
+    subCourts: Array.from({ length: f.subCourtCount }, (_, i) => ({
+      id: String(i), facilityId: String(f.id), name: `Sân ${i + 1}`, courtType: 'standard' as const, status: 'active' as const,
+    })),
+  })
+
   const loadDashboardData = async () => {
     setLoading(true)
     try {
-      const data = await adminApi.getDashboardMetrics()
-      setMetrics(data)
-      if (data.recentTransactions?.length) {
-        setTransactions(data.recentTransactions)
-      }
+      const [dashboard, facilityData, userData, transactionData, settingsData] = await Promise.all([
+        adminApi.getDashboardMetrics(), adminApi.getFacilities(), adminApi.getUsers(),
+        adminApi.getTransactions(), adminApi.getSystemSettings(),
+      ])
+      setMetrics(dashboard)
+      setFacilities(facilityData.map(toFacility))
+      setUsers(userData)
+      setTransactions(transactionData)
+      setSettings(settingsData)
     } catch {
-      // Fallback calculation from appStore
-      const currentBookings = appStore.getBookings()
-      const totalGmv = currentBookings
-        .filter((b) => b.status === 'CONFIRMED')
-        .reduce((sum, b) => sum + (b.totalAmount || 0), 0)
-
-      const fallbackMetrics: AdminDashboardMetrics = {
-        totalUsers: users.length,
-        totalCustomers: users.filter((u) => u.role === 'CUSTOMER').length,
-        totalCourtOwners: users.filter((u) => u.role === 'COURT_OWNER').length,
-        totalAdmins: users.filter((u) => u.role === 'SYSTEM_ADMIN').length,
-        totalFacilities: facilities.length,
-        activeFacilities: facilities.filter((f) => f.status === 'active' && f.isApproved).length,
-        pendingFacilities: facilities.filter((f) => !f.isApproved).length,
-        pausedFacilities: facilities.filter((f) => f.status === 'paused').length,
-        totalBookings: currentBookings.length,
-        confirmedBookings: currentBookings.filter((b) => b.status === 'CONFIRMED').length,
-        cancelledBookings: currentBookings.filter((b) => b.status === 'CANCELLED').length,
-        totalGmv: totalGmv > 0 ? totalGmv : 3850000,
-        platformRevenue: Math.round((totalGmv > 0 ? totalGmv : 3850000) * 0.05),
-        platformCommissionPercent: settings.commissionRatePercent,
-        recentTransactions: currentBookings.map((b) => ({
-          id: b.id,
-          bookingId: b.id,
-          orderCode: b.bookingCode,
-          customerName: b.customerName || 'Khách hàng',
-          customerPhone: b.customerPhone || '0988 123 456',
-          facilityName: b.facilityName || 'CLB Cầu Lông',
-          provider: (b.paymentMethod || 'PAYOS') as any,
-          amount: b.totalAmount,
-          platformFee: Math.round(b.totalAmount * 0.05),
-          status: b.status === 'CONFIRMED' ? 'SUCCESS' : b.status === 'HELD' ? 'PENDING' : 'FAILED',
-          transactionRef: 'TX-' + b.bookingCode,
-          createdAt: b.createdAt || new Date().toISOString(),
-          paidAt: b.status === 'CONFIRMED' ? b.createdAt || new Date().toISOString() : undefined,
-        })),
-        bookingsByDistrict: {
-          'Cầu Giấy': 18,
-          'Đống Đa': 12,
-          'Nam Từ Liêm': 8,
-          'Thanh Xuân': 6,
-          'Tây Hồ': 4,
-        },
-      }
-      setMetrics(fallbackMetrics)
-      setTransactions(fallbackMetrics.recentTransactions)
+      toast.error('Không thể tải dữ liệu quản trị. Vui lòng thử lại.')
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    loadDashboardData()
-  }, [])
+  useEffect(() => { void loadDashboardData() }, [])
 
   // Moderation Handlers
   const handleApproveFacility = async (fac: Facility) => {
     try {
       await adminApi.approveFacility(fac.id, 'APPROVE')
     } catch {
-      // client-side fallback
+      toast.error('Không thể cập nhật. Vui lòng thử lại.')
+      return
     }
     const updated = facilities.map((f) => {
       if (f.id === fac.id) {
@@ -209,7 +130,6 @@ export const AdminPortalView: React.FC = () => {
       return f
     })
     setFacilities(updated)
-    appStore.saveFacilities(updated)
     toast.success(`Đã phê duyệt cụm sân: ${fac.name}`)
     setSelectedFacility(null)
     loadDashboardData()
@@ -221,7 +141,8 @@ export const AdminPortalView: React.FC = () => {
     try {
       await adminApi.approveFacility(selectedFacility.id, 'REJECT', reason)
     } catch {
-      // client-side fallback
+      toast.error('Không thể cập nhật. Vui lòng thử lại.')
+      return
     }
     const updated = facilities.map((f) => {
       if (f.id === selectedFacility.id) {
@@ -230,7 +151,6 @@ export const AdminPortalView: React.FC = () => {
       return f
     })
     setFacilities(updated)
-    appStore.saveFacilities(updated)
     toast.info(`Đã từ chối kiểm duyệt cụm sân: ${selectedFacility.name}`)
     setShowRejectModal(false)
     setSelectedFacility(null)
@@ -243,7 +163,8 @@ export const AdminPortalView: React.FC = () => {
     try {
       await adminApi.updateFacilityStatus(fac.id, nextStatus)
     } catch {
-      // client-side fallback
+      toast.error('Không thể cập nhật. Vui lòng thử lại.')
+      return
     }
     const updated = facilities.map((f) => {
       if (f.id === fac.id) {
@@ -252,7 +173,6 @@ export const AdminPortalView: React.FC = () => {
       return f
     })
     setFacilities(updated)
-    appStore.saveFacilities(updated)
     toast.success(
       nextStatus === 'active'
         ? `Đã mở lại hoạt động cho cụm sân: ${fac.name}`
@@ -266,7 +186,8 @@ export const AdminPortalView: React.FC = () => {
     try {
       await adminApi.updateUserRole(userId, newRole)
     } catch {
-      // client-side fallback
+      toast.error('Không thể cập nhật. Vui lòng thử lại.')
+      return
     }
     setUsers((prev) =>
       prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
@@ -280,7 +201,8 @@ export const AdminPortalView: React.FC = () => {
     try {
       await adminApi.updateUserStatus(user.id, nextStatus)
     } catch {
-      // client-side fallback
+      toast.error('Không thể cập nhật. Vui lòng thử lại.')
+      return
     }
     setUsers((prev) =>
       prev.map((u) => (u.id === user.id ? { ...u, status: nextStatus } : u))
@@ -356,8 +278,13 @@ export const AdminPortalView: React.FC = () => {
   }
 
   // Settings Handlers
-  const handleSaveSettings = () => {
-    toast.success('Đã lưu cấu hình nền tảng thành công!')
+  const handleSaveSettings = async () => {
+    try {
+      setSettings(await adminApi.updateSystemSettings(settings))
+      toast.success('Đã cập nhật cấu hình cho phiên hoạt động hiện tại.')
+    } catch {
+      toast.error('Không thể cập nhật cấu hình. Vui lòng thử lại.')
+    }
   }
 
   const handleAddAmenity = () => {
@@ -372,7 +299,7 @@ export const AdminPortalView: React.FC = () => {
       systemAmenities: [...prev.systemAmenities, val],
     }))
     setNewAmenityInput('')
-    toast.success(`Đã thêm tiện ích mới: ${val}`)
+    toast.info('Đã thêm vào danh sách. Hãy lưu cấu hình để áp dụng.')
   }
 
   const handleRemoveAmenity = (item: string) => {
@@ -380,7 +307,7 @@ export const AdminPortalView: React.FC = () => {
       ...prev,
       systemAmenities: prev.systemAmenities.filter((a) => a !== item),
     }))
-    toast.info(`Đã gỡ tiện ích: ${item}`)
+    toast.info('Đã cập nhật danh sách. Hãy lưu cấu hình để áp dụng.')
   }
 
   return (
@@ -510,12 +437,12 @@ export const AdminPortalView: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-2xl font-black text-slate-900">
-                  {formatVND(metrics?.totalGmv || 3850000)}
+                  {formatVND(metrics?.totalGmv ?? 0)}
                 </div>
                 <div className="text-xs font-medium text-slate-600 pt-1 border-t border-slate-100 flex items-center justify-between">
                   <span>Hoa hồng sàn ({settings.commissionRatePercent}%):</span>
                   <strong className="text-[#1b7a42] font-bold">
-                    {formatVND(metrics?.platformRevenue || 192500)}
+                    {formatVND(metrics?.platformRevenue ?? 0)}
                   </strong>
                 </div>
               </div>
@@ -529,12 +456,12 @@ export const AdminPortalView: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-2xl font-black text-slate-900">
-                  {metrics?.totalBookings || 24} đơn
+                  {metrics?.totalBookings ?? 0} đơn
                 </div>
                 <div className="text-xs font-medium text-slate-600 pt-1 border-t border-slate-100 flex items-center justify-between">
                   <span>Thành công:</span>
                   <span className="text-emerald-700 font-bold">
-                    {metrics?.confirmedBookings || 21} đơn
+                    {metrics?.confirmedBookings ?? 0} đơn
                   </span>
                 </div>
               </div>
@@ -586,7 +513,7 @@ export const AdminPortalView: React.FC = () => {
                 </div>
 
                 <div className="space-y-3">
-                  {Object.entries(metrics?.bookingsByDistrict || { 'Cầu Giấy': 18, 'Đống Đa': 12, 'Nam Từ Liêm': 8, 'Thanh Xuân': 6 }).map(
+                  {Object.entries(metrics?.bookingsByDistrict ?? {}).map(
                     ([district, count]) => (
                       <div key={district} className="space-y-1">
                         <div className="flex items-center justify-between text-xs">
@@ -933,7 +860,7 @@ export const AdminPortalView: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-3.5 text-slate-600 font-medium">
-                        {u.joinedDate || '10/2026'}
+                        {u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : 'Chưa có thông tin'}
                       </td>
                       <td className="p-3.5 text-right whitespace-nowrap">
                         <button

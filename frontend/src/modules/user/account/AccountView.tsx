@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -28,6 +28,7 @@ import {
 import type { User } from '../../types/user'
 import { toast } from 'sonner'
 import { ROUTES } from '../../../app/router'
+import { bookingApi } from '../../booking/services/bookingApi'
 
 export interface UserBooking {
   id: string
@@ -108,58 +109,23 @@ export const AccountView: React.FC<AccountViewProps> = ({
   const [editName, setEditName] = useState(currentUser?.fullName || '')
   const [editPhone, setEditPhone] = useState(currentUser?.phone || '')
 
-  // Bookings list state inspired by the reference design
-  const [bookings] = useState<UserBooking[]>([
-    {
-      id: 'bk_101',
-      facilityName: 'Phúc Long Badminton Arena',
-      courtName: 'Yard 5',
-      address: 'đường Tân Triều Mới, Tân Triều, Thanh Trì, Hà Nội',
-      date: 'May 30, 2026',
-      dayLabel: 'Day',
-      timeRange: '22h00 - 24h00',
-      totalPrice: 280000,
-      status: 'CONFIRMED',
-      sportType: 'Cầu lông',
-    },
-    {
-      id: 'bk_102',
-      facilityName: 'Thắng Lĩnh Sport',
-      courtName: 'Yard 2',
-      address: 'đường Tân Triều Mới, Tân Triều, Thanh Trì, Hà Nội',
-      date: 'May 29, 2026',
-      dayLabel: 'Day',
-      timeRange: '22h00 - 24h00',
-      totalPrice: 240000,
-      status: 'CANCELLED',
-      sportType: 'Cầu lông',
-      statusMessage: 'Cancel due to payment timeout',
-    },
-    {
-      id: 'bk_103',
-      facilityName: 'Thắng Lĩnh Sport',
-      courtName: 'C.Lông 2',
-      address: '948 Quang Trung, Hà Đông, Hà Nội',
-      date: 'May 21, 2026',
-      dayLabel: 'Day',
-      timeRange: '17h30 - 18h00, C.Lông 2: 18h00 - 19h30',
-      totalPrice: 210000,
-      status: 'CONFIRMED',
-      sportType: 'Cầu lông',
-    },
-    {
-      id: 'bk_104',
-      facilityName: 'CLB Cầu Giấy Star Sport',
-      courtName: 'Yard 5',
-      address: 'đường Tân Triều Mới, Tân Triều, Thanh Trì, Hà Nội',
-      date: 'May 3, 2026',
-      dayLabel: 'Day',
-      timeRange: '22h00 - 23h30',
-      totalPrice: 195000,
-      status: 'COMPLETED',
-      sportType: 'Cầu lông',
-    },
-  ])
+  const [bookings, setBookings] = useState<UserBooking[]>([])
+  useEffect(() => {
+    let active = true
+    setBookings([])
+    if (currentUser) {
+      bookingApi.getMyBookings().then((items) => {
+        if (!active) return
+        setBookings(items.filter((b) => ['CONFIRMED', 'COMPLETED', 'CANCELLED', 'EXPIRED'].includes(b.status)).map((b) => ({
+          id: String(b.id), facilityName: b.facilityName, courtName: b.courtName,
+          address: '', date: b.bookingDate, dayLabel: '',
+          timeRange: `${b.startTime.slice(0, 5)} - ${b.endTime.slice(0, 5)}`,
+          totalPrice: b.totalAmount, status: b.status === 'EXPIRED' ? 'CANCELLED' : b.status as UserBooking['status'], sportType: 'Cầu lông',
+        })))
+      }).catch(() => { if (active) toast.error('Không thể tải lịch đặt sân.') })
+    }
+    return () => { active = false }
+  }, [currentUser?.id])
 
   // Filtered bookings
   const filteredBookings = bookings.filter((b) => {

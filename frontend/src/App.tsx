@@ -22,6 +22,7 @@ import { CourtContactModal } from './components/shared/CourtContactModal'
 import { BookingConfirmModal } from './modules/user/ai-search/BookingConfirmModal'
 import { AuthModal } from './modules/user/auth/AuthModal'
 import { authApi, authStorage } from './modules/user/auth/authApi'
+import { API_BASE_URL } from './lib/apiConfig'
 import { ProfileModal } from './modules/user/profile/ProfileModal'
 import { BottomNav } from './components/shared/BottomNav'
 import { KhamPhaView } from './modules/user/ai-search/KhamPhaView'
@@ -32,7 +33,6 @@ import { CourtDetailSidebar } from './modules/court/facility/CourtDetailSidebar'
 import { CourtBookingGridView } from './modules/booking/availability/CourtBookingGridView'
 import { CheckoutView } from './modules/booking/payment/CheckoutView'
 import { BookingSuccessView } from './modules/booking/payment/BookingSuccessView'
-import { BookingHistoryView } from './modules/booking/history/BookingHistoryView'
 import { OwnerDashboardView } from './modules/court/management/OwnerDashboardView'
 import { OwnerFacilitiesView } from './modules/court/management/OwnerFacilitiesView'
 import { OwnerPricingView } from './modules/court/pricing/OwnerPricingView'
@@ -54,7 +54,6 @@ import { bookingApi } from './modules/booking/services/bookingApi'
 import type { BookingResponse } from './modules/booking/types'
 
 import {
-  mockBadmintonCourts,
   defaultCriteria,
   type BadmintonCourtItem,
 } from './modules/user/mockData'
@@ -102,6 +101,7 @@ export function MainApp() {
 
   // State
   const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [authLoading, setAuthLoading] = useState(() => !!authStorage.getToken())
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [criteria, setCriteria] = useState<SearchCriteria>(defaultCriteria)
   const [searchTerm, setSearchTerm] = useState('')
@@ -120,6 +120,7 @@ export function MainApp() {
         .catch(() => {
           authStorage.removeToken()
         })
+        .finally(() => setAuthLoading(false))
     }
   }, [])
 
@@ -172,8 +173,9 @@ export function MainApp() {
 
   // Query My Bookings (TV3 Real Data)
   const { data: myBookings = [], isLoading: isLoadingBookings } = useQuery({
-    queryKey: ['myBookings'],
-    queryFn: () => bookingApi.getMyBookings(1),
+    queryKey: ['myBookings', currentUser?.id],
+    queryFn: () => bookingApi.getMyBookings(),
+    enabled: !!currentUser,
   })
 
   // Mutation Hủy đơn (TV3)
@@ -193,9 +195,24 @@ export function MainApp() {
     },
   })
 
+  const { data: courts = [], isLoading: courtsLoading, isError: courtsError } = useQuery<BadmintonCourtItem[]>({
+    queryKey: ['publicFacilities'],
+    queryFn: async () => {
+      const response = await fetch(`${API_BASE_URL}/v1/public/facilities`)
+      if (!response.ok) throw new Error('Không thể tải danh sách sân')
+      const body = await response.json()
+      if (!body.success || !Array.isArray(body.data)) throw new Error('Dữ liệu sân không hợp lệ')
+      return body.data.map((f: { id: number; name: string; address: string; district: string | null; latitude: number | null; longitude: number | null; openHours: string; minPricePerHour: number | null }) => ({
+        id: String(f.id), name: f.name, address: f.address, district: f.district || '',
+        latitude: f.latitude ?? 0, longitude: f.longitude ?? 0, openHours: f.openHours,
+        imageUrl: '', logoUrl: '', distance: '', tags: [], pricePerHour: f.minPricePerHour ?? 0, amenities: [], sportType: 'badminton' as const,
+      }))
+    },
+  })
+
   // Filtered courts based on search term, activeTab, and criteria
   const filteredCourts = useMemo(() => {
-    return mockBadmintonCourts.filter((court) => {
+    return courts.filter((court) => {
       // Search term filter
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase()
@@ -209,7 +226,7 @@ export function MainApp() {
       if (activeTab === 'favorite' && !court.isFavorite) {
         return false
       }
-      if (activeTab === 'booked' && court.id !== 'court_1' && court.id !== 'court_2') {
+      if (activeTab === 'booked') {
         return false
       }
 
@@ -219,7 +236,7 @@ export function MainApp() {
       }
 
       // Max price filter
-      if (criteria.maxPricePerHour && court.pricePerHour > criteria.maxPricePerHour) {
+      if (criteria.maxPricePerHour && (!court.pricePerHour || court.pricePerHour > criteria.maxPricePerHour)) {
         return false
       }
 
@@ -231,7 +248,7 @@ export function MainApp() {
 
       return true
     })
-  }, [searchTerm, activeTab, criteria])
+  }, [courts, searchTerm, activeTab, criteria])
 
   // Count active filters
   const activeFilterCount = useMemo(() => {
@@ -251,21 +268,6 @@ export function MainApp() {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
     )
-  }
-
-  const handleSimulateNewNotification = () => {
-    const newNotif: NotificationItem = {
-      id: 'notif_' + Date.now(),
-      type: 'BOOKING_CONFIRMED',
-      title: 'Đơn đặt sân mới đã xác nhận!',
-      body: 'Bạn vừa đặt thành công Sân 2 tại CLB Cầu Lông Cầu Giấy Pro. Giữ chỗ trong 10 phút.',
-      isRead: false,
-      createdAt: 'Vừa xong',
-    }
-    setNotifications((prev) => [newNotif, ...prev])
-    toast.success('Thông báo mới từ hệ thống SmashCourt!', {
-      description: newNotif.body,
-    })
   }
 
   // Booking action: Điều hướng trực tiếp sang trang đặt sân (không dùng popup modal)
@@ -409,9 +411,9 @@ export function MainApp() {
         filteredCourts.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center border border-slate-200/80 max-w-md mx-auto">
             <Activity className="w-8 h-8 text-[#1b7a42] mx-auto mb-2" />
-            <h3 className="font-bold text-slate-800 text-sm">Không tìm thấy sân phù hợp</h3>
+            <h3 className="font-bold text-slate-800 text-sm">{courtsLoading ? 'Đang tải danh sách sân' : courtsError ? 'Không thể tải danh sách sân' : 'Không tìm thấy sân phù hợp'}</h3>
             <p className="text-xs text-slate-600 font-medium mt-1 mb-4">
-              Thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc để xem tất cả sân.
+              {courtsError ? 'Vui lòng thử lại sau.' : 'Thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc để xem tất cả sân.'}
             </p>
             <button
               type="button"
@@ -475,7 +477,6 @@ export function MainApp() {
           }}
           onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
           onMarkNotificationRead={handleMarkNotificationRead}
-          onSimulateNewNotification={handleSimulateNewNotification}
           onNavigateHome={() => navigate(ROUTES.HOME)}
         />
       )}
@@ -505,7 +506,7 @@ export function MainApp() {
             }`}
           >
             <CourtMapView
-              courts={mockBadmintonCourts}
+              courts={courts.filter((c) => c.latitude !== 0 && c.longitude !== 0)}
               onSelectCourt={handleOpenCourtSidebar}
               onBookCourt={handleOpenBooking}
               onOpenAIChat={() => setIsAIChatOpen(true)}
@@ -578,17 +579,17 @@ export function MainApp() {
               />
               <Route path={ROUTES.CHECKOUT} element={<CheckoutView />} />
               <Route path={ROUTES.BOOKING_SUCCESS} element={<BookingSuccessView />} />
-              <Route path={ROUTES.BOOKED} element={<BookingHistoryView />} />
+              <Route path={ROUTES.BOOKED} element={currentUser ? <MyBookingsList bookings={myBookings} onCancelBooking={(id) => cancelBookingMutation.mutate(id)} onPayBooking={(b) => setCheckoutBooking(b)} isLoading={isLoadingBookings} /> : <Navigate to={ROUTES.ACCOUNT} replace />} />
 
               {/* Court Owner Portal */}
-              <Route path={ROUTES.OWNER_DASHBOARD} element={<OwnerDashboardView />} />
-              <Route path={ROUTES.OWNER_FACILITIES} element={<OwnerFacilitiesView />} />
-              <Route path={ROUTES.OWNER_PRICING} element={<OwnerPricingView />} />
-              <Route path={ROUTES.OWNER_BLOCKS} element={<OwnerBlocksView />} />
-              <Route path={ROUTES.OWNER_BOOKINGS} element={<OwnerBookingsView />} />
+              <Route path={ROUTES.OWNER_DASHBOARD} element={authLoading ? null : currentUser && ['COURT_OWNER', 'SYSTEM_ADMIN'].includes(currentUser.role) ? <OwnerDashboardView /> : <Navigate to={ROUTES.ACCOUNT} replace />} />
+              <Route path={ROUTES.OWNER_FACILITIES} element={authLoading ? null : currentUser && ['COURT_OWNER', 'SYSTEM_ADMIN'].includes(currentUser.role) ? <OwnerFacilitiesView /> : <Navigate to={ROUTES.ACCOUNT} replace />} />
+              <Route path={ROUTES.OWNER_PRICING} element={authLoading ? null : currentUser && ['COURT_OWNER', 'SYSTEM_ADMIN'].includes(currentUser.role) ? <OwnerPricingView /> : <Navigate to={ROUTES.ACCOUNT} replace />} />
+              <Route path={ROUTES.OWNER_BLOCKS} element={authLoading ? null : currentUser && ['COURT_OWNER', 'SYSTEM_ADMIN'].includes(currentUser.role) ? <OwnerBlocksView /> : <Navigate to={ROUTES.ACCOUNT} replace />} />
+              <Route path={ROUTES.OWNER_BOOKINGS} element={authLoading ? null : currentUser && ['COURT_OWNER', 'SYSTEM_ADMIN'].includes(currentUser.role) ? <OwnerBookingsView /> : <Navigate to={ROUTES.ACCOUNT} replace />} />
 
               {/* System Admin Portal */}
-              <Route path={ROUTES.ADMIN_PORTAL} element={<AdminPortalView />} />
+              <Route path={ROUTES.ADMIN_PORTAL} element={authLoading ? null : currentUser?.role === 'SYSTEM_ADMIN' ? <AdminPortalView /> : <Navigate to={ROUTES.ACCOUNT} replace />} />
 
               {/* View 2: Khám phá */}
               <Route
@@ -634,7 +635,7 @@ export function MainApp() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-                      {mockBadmintonCourts
+                      {courts
                         .filter((c) => (c.rating || 0) >= 4.8)
                         .map((court, index) => (
                           <CourtCardItem
@@ -722,7 +723,7 @@ export function MainApp() {
         isOpen={isCourtContactOpen}
         onClose={() => setIsCourtContactOpen(false)}
         court={contactTargetCourt}
-        allCourts={mockBadmintonCourts}
+        allCourts={courts}
       />
 
       {/* AI Court Finder Chat Panel (Spring AI Orchestrator) - Tuyệt đối không xuất hiện trên Chủ sân & Admin */}

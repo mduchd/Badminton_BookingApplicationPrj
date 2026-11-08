@@ -328,7 +328,7 @@ public class AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng #" + userId));
 
         String targetRole = request.role().toUpperCase();
-        if (!List.of("CUSTOMER", "COURT_OWNER", "OWNER", "SYSTEM_ADMIN", "ADMIN").contains(targetRole)) {
+        if (!List.of("CUSTOMER", "COURT_OWNER", "SYSTEM_ADMIN").contains(targetRole)) {
             throw new BadRequestException("Vai trò không hợp lệ: " + targetRole);
         }
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { X, User as UserIcon, Mail, Phone, Shield, Bell, Calendar, Download, Check, AlertCircle, LogOut } from 'lucide-react'
+import { X, User as UserIcon, Mail, Phone, Shield, Bell, Calendar, Check, AlertCircle, LogOut } from 'lucide-react'
 import type { User } from '../../types/user'
 import { toast } from 'sonner'
 
@@ -77,29 +77,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       })
       toast.info('Đã hủy liên kết Google Calendar.')
     }
-  }
-
-  const handleDownloadIcs = () => {
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Badminton Booking//VN
-CALSCALE:GREGORIAN
-BEGIN:VEVENT
-SUMMARY:Cầu lông: CLB Cầu Giấy Star (Sân 2)
-DESCRIPTION:Lịch đặt sân cầu lông qua hệ thống Badminton Booking
-LOCATION:35 Tran Thai Tong, Cau Giay, Ha Noi
-STATUS:CONFIRMED
-END:VEVENT
-END:VCALENDAR`
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', 'badminton-booking-sample.ics')
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    toast.success('Đã tải xuống file .ics mẫu cho lịch cá nhân!')
   }
 
   return (
@@ -294,15 +271,6 @@ END:VCALENDAR`
                     {calendarConnected ? 'Ngắt kết nối Calendar' : 'Kết nối Google Calendar'}
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={handleDownloadIcs}
-                    className="px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-200 hover:bg-white text-slate-600 transition-colors flex items-center gap-1.5 cursor-pointer"
-                    title="Phương án dự phòng khi chưa cấp quyền Google"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Tải file .ics dự phòng
-                  </button>
                 </div>
               </div>
 

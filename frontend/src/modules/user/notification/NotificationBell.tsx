@@ -8,14 +8,12 @@ interface NotificationBellProps {
   notifications: NotificationItem[]
   onMarkAllAsRead: () => void
   onMarkAsRead: (id: string) => void
-  onSimulateNewNotification: () => void
 }
 
 export const NotificationBell: React.FC<NotificationBellProps> = ({
   notifications,
   onMarkAllAsRead,
   onMarkAsRead,
-  onSimulateNewNotification,
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -190,13 +188,6 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
               {/* Footer */}
               <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span className="text-slate-600 text-[11px] font-medium">Thông báo tức thời</span>
-                <button
-                  type="button"
-                  onClick={onSimulateNewNotification}
-                  className="text-xs font-medium text-[#1b7a42] hover:underline cursor-pointer"
-                >
-                  + Giả lập nhận thông báo
-                </button>
               </div>
             </div>
           </div>,

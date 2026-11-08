@@ -59,12 +59,7 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
     >
       {/* Top Image & Floating Badges */}
       <div className="relative h-44 sm:h-48 w-full overflow-hidden bg-slate-100">
-        <img
-          src={court.imageUrl}
-          alt={court.name}
-          className="w-full h-full object-cover "
-          loading="lazy"
-        />
+        {court.imageUrl && <img src={court.imageUrl} alt={court.name} className="w-full h-full object-cover" loading="lazy" />}
 
         {/* Top-Left Badges */}
         <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap z-10">
@@ -74,12 +69,6 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
               <span>{court.rating}</span>
             </span>
           )}
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#10b981] text-white shadow-xs">
-            Đơn ngày
-          </span>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#d946ef] text-white shadow-xs">
-            Sự kiện
-          </span>
         </div>
 
         {/* Top-Right Action Buttons */}
@@ -111,11 +100,7 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
       <div className="p-3.5 flex items-center gap-3">
         {/* Round Logo */}
         <div className="w-12 h-12 rounded-full border border-slate-200 overflow-hidden flex-shrink-0 bg-slate-50 shadow-2xs">
-          <img
-            src={court.logoUrl}
-            alt={court.name}
-            className="w-full h-full object-cover"
-          />
+          {court.logoUrl && <img src={court.logoUrl} alt={court.name} className="w-full h-full object-cover" />}
         </div>
 
         {/* Text Details */}
@@ -125,7 +110,7 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
           </h3>
 
           <div className="text-[11px] text-slate-700 font-medium truncate mt-0.5">
-            <span className="text-[#ea580c] font-semibold mr-1">[{court.distance}]</span>
+            {court.distance && <span className="text-[#ea580c] font-semibold mr-1">[{court.distance}]</span>}
             <span>{court.address}</span>
           </div>
 

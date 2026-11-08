@@ -11,6 +11,8 @@ import java.util.List;
 @Repository
 public interface PriceRuleRepository extends JpaRepository<PriceRule, Long> {
 
+    List<PriceRule> findByCourtIdIn(List<Long> courtIds);
+
     @Query("SELECT p FROM PriceRule p WHERE p.courtId = :courtId " +
            "AND (p.dayOfWeek = :dayOfWeek OR p.dayOfWeek = 0) " +
            "ORDER BY p.startTime ASC")

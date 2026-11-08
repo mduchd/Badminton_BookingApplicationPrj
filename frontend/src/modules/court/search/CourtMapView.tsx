@@ -436,18 +436,12 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
               className="flex gap-4 cursor-pointer group"
               title="Nhấn để xem thông tin sân"
             >
-              <img
-                src={selectedCourt.imageUrl}
-                alt={selectedCourt.name}
-                className="w-24 h-24 rounded-2xl object-cover flex-shrink-0 "
-              />
+              {selectedCourt.imageUrl && <img src={selectedCourt.imageUrl} alt={selectedCourt.name} className="w-24 h-24 rounded-2xl object-cover flex-shrink-0" />}
               <div className="flex-1 min-w-0 pr-4">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-[#1b7a42] mb-1">
-                  <Star className="w-4 h-4 fill-[#e5a92c] text-[#e5a92c]" />
-                  <span className="font-extrabold text-slate-900">{selectedCourt.rating || 4.8}</span>
-                  <span className="text-slate-600 font-medium">({selectedCourt.reviewCount || 100})</span>
-                  <span className="mx-1 text-slate-300">|</span>
-                  <span className="text-[#ea580c] font-black">{selectedCourt.distance}</span>
+                  {selectedCourt.rating != null && <><Star className="w-4 h-4 fill-[#e5a92c] text-[#e5a92c]" /><span className="font-extrabold text-slate-900">{selectedCourt.rating}</span></>}
+                  {selectedCourt.reviewCount != null && <span className="text-slate-600 font-medium">({selectedCourt.reviewCount})</span>}
+                  {selectedCourt.distance && <span className="text-[#ea580c] font-black">{selectedCourt.distance}</span>}
                 </div>
                 <h4 className="font-black text-slate-900 text-sm sm:text-base line-clamp-1 group-hover:text-emerald-700 transition-colors">
                   {selectedCourt.name}
@@ -467,11 +461,7 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
 
             <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
               <div>
-                <span className="text-xs text-slate-700 font-semibold">Giá chỉ từ:</span>
-                <div className="text-base sm:text-lg font-black text-[#1b7a42]">
-                  {selectedCourt.pricePerHour.toLocaleString('vi-VN')}đ
-                  <span className="text-xs font-semibold text-slate-600"> / giờ</span>
-                </div>
+                {selectedCourt.pricePerHour > 0 ? <div className="text-base font-bold text-[#1b7a42]">{selectedCourt.pricePerHour.toLocaleString('vi-VN')}đ / giờ</div> : <span className="text-xs text-slate-700">Chưa có thông tin giá</span>}
               </div>
               <div className="flex items-center gap-2">
                 {onSelectCourt && (

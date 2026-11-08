@@ -10,10 +10,8 @@ import {
   Mic,
   MicOff,
   MapPin,
-  Star,
   Clock,
   Calendar,
-  ChevronRight,
   Check,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -21,7 +19,6 @@ import type { AIMessage, SearchCriteria } from '../../types/user'
 import type { BadmintonCourtItem } from '../mockData'
 import { formatPrice } from '../../../lib/utils'
 import { authStorage } from '../auth/authApi'
-import { parseUserQuery } from './aiKnowledgeAndParser'
 import { optimizeVietnameseSpeech, pickBestAlternative } from './vietnameseSpeechOptimizer'
 import { API_BASE_URL as API_ROOT_URL } from '../../../lib/apiConfig'
 
@@ -60,8 +57,6 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
   isOpen,
   onClose,
   onApplyCriteria,
-  onSelectCourt,
-  onBookCourt,
   currentCriteria,
 }) => {
   const [messages, setMessages] = useState<AIMessage[]>([
@@ -348,76 +343,49 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
     if (!textToSend) setInputValue('')
     setIsThinking(true)
 
-    // Parse with smart client-side knowledge & NLP first
-    const clientResult = parseUserQuery(query, currentCriteria)
-
-    // 1. Try real Backend AI Orchestrator
     try {
       const token = authStorage.getToken()
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      }
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
-
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
       const res = await fetch(`${API_BASE_URL}/ai/search`, {
-        method: 'POST',
-        headers,
+        method: 'POST', headers,
         body: JSON.stringify({
           message: query,
-          conversationId: 'conv_' + Date.now(),
-          currentCriteria,
+          currentCriteria: currentCriteria ? {
+            district: currentCriteria.district || null,
+            startTime: currentCriteria.startTime || null,
+            endTime: currentCriteria.endTime || null,
+            maxPricePerHour: currentCriteria.maxPricePerHour ?? null,
+            amenities: currentCriteria.amenities || [],
+          } : null,
         }),
       })
-
-      if (res.ok) {
-        const body = await res.json()
-        if (body.success && body.data) {
-          const aiData = body.data
-          const criteria = aiData.extractedCriteria || clientResult.extractedCriteria || {}
-
-          const aiMsg: AIMessage = {
-            id: 'ai_' + Date.now(),
-            sender: 'ai',
-            text: aiData.reply || clientResult.replyText,
-            extractedCriteria: Object.keys(criteria).length > 0 ? (criteria as SearchCriteria) : undefined,
-            recommendedCourts: clientResult.recommendedCourts,
-            followUpChips: clientResult.followUpChips,
-            timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-          }
-
-          setMessages((prev) => [...prev, aiMsg])
-          if (Object.keys(criteria).length > 0) {
-            onApplyCriteria(criteria)
-          }
-          setIsThinking(false)
-          return
-        }
+      if (!res.ok) throw new Error('Không thể xử lý yêu cầu')
+      const body = await res.json()
+      if (!body.success || !body.data) throw new Error('Không thể xử lý yêu cầu')
+      const data = body.data
+      const criteria: Partial<SearchCriteria> = {}
+      for (const key of ['district', 'startTime', 'endTime', 'maxPricePerHour', 'amenities'] as const) {
+        if (data.extractedCriteria?.[key] != null) (criteria as Record<string, unknown>)[key] = data.extractedCriteria[key]
       }
-    } catch {
-      // Graceful fallback to rich local NLP engine below
-    }
-
-    // 2. Client-side NLP fallback with 600ms latency simulation
-    setTimeout(() => {
-      setIsThinking(false)
-
-      const aiMsg: AIMessage = {
-        id: 'ai_' + Date.now(),
-        sender: 'ai',
-        text: clientResult.replyText,
-        extractedCriteria: clientResult.extractedCriteria,
-        recommendedCourts: clientResult.recommendedCourts,
-        followUpChips: clientResult.followUpChips,
+      setMessages((prev) => [...prev, {
+        id: 'ai_' + Date.now(), sender: 'ai',
+        text: data.recommendedCourts?.length === 0 && (criteria.district || criteria.maxPricePerHour || criteria.amenities?.length)
+          ? `${data.reply}\n\nKhông tìm thấy sân phù hợp trong dữ liệu hiện có.` : data.reply,
+        extractedCriteria: Object.keys(criteria).length ? criteria : undefined,
+        recommendedCourts: data.recommendedCourts || [],
         timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-      }
-
-      setMessages((prev) => [...prev, aiMsg])
-      if (clientResult.extractedCriteria && Object.keys(clientResult.extractedCriteria).length > 0) {
-        onApplyCriteria(clientResult.extractedCriteria)
-      }
-    }, 600)
+      }])
+      if (Object.keys(criteria).length) onApplyCriteria(criteria)
+    } catch {
+      setMessages((prev) => [...prev, {
+        id: 'ai_' + Date.now(), sender: 'ai', isError: true,
+        text: 'Không thể kết nối trợ lý lúc này. Vui lòng thử lại sau.',
+        timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      }])
+    } finally {
+      setIsThinking(false)
+    }
   }
 
   return (
@@ -626,67 +594,12 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     </div>
 
                     {msg.recommendedCourts.map((court) => (
-                      <div
-                        key={court.id}
-                        className="bg-white rounded-xl border border-slate-200 p-2.5 sm:p-3 hover:border-emerald-600 transition-colors flex flex-col gap-2.5"
-                      >
-                        <div className="flex gap-2.5">
-                          <img
-                            src={court.imageUrl}
-                            alt={court.name}
-                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover shrink-0 border border-slate-100"
-                          />
-                          <div className="min-w-0 flex-1 flex flex-col justify-between">
-                            <div>
-                              <h4 className="font-bold text-slate-900 text-xs sm:text-sm truncate">
-                                {court.name}
-                              </h4>
-                              <p className="text-[11px] text-slate-600 flex items-center gap-1 mt-0.5 truncate">
-                                <MapPin className="w-3 h-3 text-slate-500 shrink-0" />
-                                <span>{court.district} • {court.distance}</span>
-                              </p>
-                            </div>
-
-                            <div className="flex items-center justify-between pt-1">
-                              <div className="flex items-center gap-1 text-[11px] font-bold text-slate-800">
-                                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                                <span>{court.rating || 4.8}</span>
-                              </div>
-                              <span className="text-xs sm:text-sm font-black text-[#168039]">
-                                {formatPrice(court.pricePerHour)}/h
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Action buttons inside card */}
-                        <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-                          {onSelectCourt && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onSelectCourt(court)
-                              }}
-                              className="flex-1 py-1.5 px-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                            >
-                              <span>Xem chi tiết</span>
-                              <ChevronRight className="w-3 h-3 text-slate-500" />
-                            </button>
-                          )}
-                          {onBookCourt && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onBookCourt(court)
-                                onClose()
-                              }}
-                              className="flex-1 py-1.5 px-3 rounded-lg bg-[#168039] hover:bg-[#136c30] text-white text-xs font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                            >
-                              <Calendar className="w-3 h-3 text-white" />
-                              <span>Đặt ngay</span>
-                            </button>
-                          )}
-                        </div>
+                      <div key={court.facilityId} className="border border-slate-200 rounded-lg p-3">
+                        <p className="font-bold text-slate-900">{court.facilityName}</p>
+                        <p className="text-slate-700 mt-1">{court.address}</p>
+                        <p className="text-slate-700 mt-1">Giờ mở cửa: {court.openHours}</p>
+                        <p className="text-slate-700 mt-1">{court.minPricePerHour != null ? `Giá từ ${formatPrice(court.minPricePerHour)}/h` : 'Chưa có bảng giá'}</p>
+                        <p className="text-slate-700 mt-1">{court.matchReason}</p>
                       </div>
                     ))}
                   </div>
