@@ -195,6 +195,16 @@ public class BookingService {
         return toResponseWithLookups(booking);
     }
 
+    @Transactional(readOnly = true)
+    public BookingResponse getBookingById(Long id, Long customerId) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt sân"));
+        if (customerId != null && !customerId.equals(booking.getCustomerId())) {
+            throw new ResourceNotFoundException("Không tìm thấy đơn đặt sân");
+        }
+        return toResponseWithLookups(booking);
+    }
+
     @Transactional
     public BookingResponse cancelBooking(Long id, Long customerId) {
         Booking booking = bookingRepository.findById(id)
