@@ -92,6 +92,73 @@ function resolveMapTileConfig(style: MapLayerStyle): {
   }
 }
 
+function ScrollableMapFilters({ label, children }: { label: string; children: React.ReactNode }) {
+  const rowRef = useRef<HTMLDivElement>(null)
+  const drag = useRef<{ pointerId: number; x: number; scrollLeft: number } | null>(null)
+  const dragged = useRef(false)
+
+  useEffect(() => {
+    const row = rowRef.current
+    if (!row) return
+    const scrollWithWheel = (event: WheelEvent) => {
+      if (event.ctrlKey || event.shiftKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)
+        || row.scrollWidth <= row.clientWidth) return
+      event.preventDefault()
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? row.clientWidth : 1
+      row.scrollLeft += event.deltaY * unit
+    }
+    row.addEventListener('wheel', scrollWithWheel, { passive: false })
+    return () => row.removeEventListener('wheel', scrollWithWheel)
+  }, [])
+
+  return (
+    <div
+      ref={rowRef}
+      role="group"
+      aria-label={label}
+      tabIndex={0}
+      className="max-w-full overflow-x-auto overscroll-x-contain touch-pan-x select-none no-scrollbar focus-visible:outline-2 focus-visible:outline-[#168039]"
+      onKeyDown={(event) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+        event.preventDefault()
+        event.currentTarget.scrollLeft += event.key === 'ArrowRight' ? 100 : -100
+      }}
+      onPointerDown={(event) => {
+        dragged.current = false
+        const row = event.currentTarget
+        if (event.pointerType === 'mouse' && event.button === 0 && row.scrollWidth > row.clientWidth) {
+          drag.current = { pointerId: event.pointerId, x: event.clientX, scrollLeft: row.scrollLeft }
+        }
+      }}
+      onPointerMove={(event) => {
+        const start = drag.current
+        if (!start || start.pointerId !== event.pointerId) return
+        const offset = event.clientX - start.x
+        if (!dragged.current && Math.abs(offset) < 5) return
+        if (!dragged.current) {
+          dragged.current = true
+          event.currentTarget.setPointerCapture(event.pointerId)
+        }
+        event.currentTarget.scrollLeft = start.scrollLeft - offset
+      }}
+      onPointerLeave={() => { if (!dragged.current) drag.current = null }}
+      onPointerUp={() => { drag.current = null }}
+      onPointerCancel={() => { drag.current = null }}
+      onClickCapture={(event) => {
+        if (dragged.current && event.detail > 0) {
+          event.preventDefault()
+          event.stopPropagation()
+          dragged.current = false
+        }
+      }}
+    >
+      <div className="flex w-max min-w-full items-center justify-center gap-1.5 py-0.5">
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export const CourtMapView: React.FC<CourtMapViewProps> = ({
   courts,
   onSelectCourt,
@@ -448,7 +515,7 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
           </div>
 
           {/* Badminton Quick Filter Chips */}
-          <div className="flex items-center sm:justify-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <ScrollableMapFilters label="Bộ lọc nhanh">
             {QUICK_FILTER_OPTIONS.map((item) => {
               const isActive = selectedQuickFilter === item.id
               return (
@@ -470,10 +537,10 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
                 </button>
               )
             })}
-          </div>
+          </ScrollableMapFilters>
 
           {/* City/District Quick Jump Pills */}
-          <div className="flex items-center sm:justify-center gap-1.5 overflow-x-auto no-scrollbar">
+          <ScrollableMapFilters label="Chọn khu vực trên bản đồ">
             {AREA_SHORTCUTS.map((area) => (
               <button
                 key={area.label}
@@ -485,7 +552,7 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
                 <span>{area.label}</span>
               </button>
             ))}
-          </div>
+          </ScrollableMapFilters>
         </div>
       </div>
 

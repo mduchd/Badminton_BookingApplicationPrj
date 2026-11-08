@@ -49,7 +49,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
 }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const catFromUrl = searchParams.get('category')
-  const activeCategory = catFromUrl || 'Social'
+  const activeCategory = catFromUrl || 'CumSan'
 
   const setActiveCategory = (category: string) => {
     setSearchParams(
@@ -63,6 +63,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
   }
 
   const categories = [
+    { id: 'CumSan', label: 'Cụm sân', icon: <Building2 className="w-3.5 h-3.5" /> },
     { id: 'Social', label: 'Buổi chơi giao lưu', icon: <Sparkles className="w-3.5 h-3.5" /> },
     { id: 'NoiBat', label: 'Nổi bật hôm nay', icon: <Flame className="w-3.5 h-3.5" /> },
     { id: 'SuKien', label: 'Sự kiện', icon: <Ticket className="w-3.5 h-3.5" /> },
@@ -105,7 +106,8 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
     { id: 'golf', label: 'Golf', icon: <Flag className="w-3.5 h-3.5" /> },
   ]
 
-  const trendingCourts = courts.filter((c) => (c.rating || 0) >= 4.8)
+  const showAllCourts = activeCategory === 'CumSan'
+  const visibleCourts = showAllCourts ? courts : courts.filter((court) => (court.rating || 0) >= 4.8)
 
   return (
     <div className="w-full space-y-5">
@@ -173,7 +175,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
       </div>
 
       {/* 2. Unified Workplace Canvas (Toàn bộ thao tác nằm trong MỘT khung làm việc thống nhất, không chia vụn thành cục lơ lửng) */}
-      {activeCategory === 'NoiBat' ? (
+      {showAllCourts || activeCategory === 'NoiBat' ? (
         <div className="space-y-6">
           {/* Section 1: Cụm sân đánh giá cao */}
           <div className="space-y-3.5">
@@ -181,21 +183,21 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
               <div className="flex items-center gap-2.5">
                 <Flame className="w-5 h-5 text-amber-600 shrink-0" />
                 <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                  Cụm sân được đánh giá cao nhất (Từ 4.8★ trở lên)
+                  {showAllCourts ? 'Danh sách cụm sân' : 'Cụm sân được đánh giá cao nhất (từ 4.8★)'}
                 </h2>
               </div>
               <span className="text-xs font-semibold text-slate-600">
-                {trendingCourts.length} cụm sân tiêu chuẩn
+                {visibleCourts.length} cụm sân
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-              {trendingCourts.map((court, index) => (
+              {visibleCourts.map((court, index) => (
                 <CourtCardItem
                   key={court.id}
                   court={court}
                   index={index}
-                  onSelectCourt={onSelectCourt || (() => {})}
+                  onSelectCourt={onSelectCourt}
                   onBook={onBookCourtDirect}
                 />
               ))}
