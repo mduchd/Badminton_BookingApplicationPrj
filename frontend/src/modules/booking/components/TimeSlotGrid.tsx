@@ -116,7 +116,7 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
                   </span>
                 ) : (
                   <span className="text-[10px] font-bold">
-                    {slot.slotStatus === 'HELD' ? 'Đang giữ' : slot.slotStatus === 'MAINTENANCE' ? 'Bảo trì' : 'Đã đặt'}
+                    {slot.reason || (slot.slotStatus === 'HELD' ? 'Đang giữ' : slot.slotStatus === 'MAINTENANCE' ? 'Bảo trì' : 'Đã đặt')}
                   </span>
                 )}
               </div>

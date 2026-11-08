@@ -51,7 +51,7 @@ import {
 import { MyBookingsList } from './modules/booking/components/MyBookingsList'
 import { PaymentCheckoutModal } from './modules/booking/components/PaymentCheckoutModal'
 import { bookingApi } from './modules/booking/services/bookingApi'
-import type { BookingResponse } from './modules/booking/types'
+import type { BookingResponse, TimeSlot } from './modules/booking/types'
 
 import { defaultCriteria } from './modules/user/ai-search/searchDefaults'
 import type { BadmintonCourtItem } from './modules/types/court'
@@ -151,6 +151,8 @@ export function MainApp() {
     courtName: string
     facilityName: string
     facilityAddress?: string
+    initialDate: string
+    initialSlot: TimeSlot
   } | null>(null)
   const [selectedCourtForSidebar, setSelectedCourtForSidebar] = useState<BadmintonCourtItem | null>(null)
   const [isCourtSidebarOpen, setIsCourtSidebarOpen] = useState(false)

@@ -12,6 +12,8 @@ interface CourtBookingModalProps {
   courtName: string;
   facilityName: string;
   facilityAddress?: string;
+  initialDate: string;
+  initialSlot: TimeSlot;
   onClose: () => void;
   onBookingSuccess: (booking: BookingResponse) => void;
 }
@@ -22,13 +24,15 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
   courtName,
   facilityName,
   facilityAddress,
+  initialDate,
+  initialSlot,
   onClose,
   onBookingSuccess,
 }) => {
   const queryClient = useQueryClient();
-  const todayStr = new Date().toISOString().split('T')[0];
-  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
-  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+  const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const [selectedDate, setSelectedDate] = useState<string>(initialDate);
+  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(initialSlot);
 
   // Lấy dữ liệu availability của sân
   const { data: availability, isLoading } = useQuery({
@@ -37,15 +41,29 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
     enabled: isOpen && !!courtId,
   });
 
+  const visibleAvailability = availability && {
+    ...availability,
+    slots: availability.slots.map((slot) =>
+      new Date(`${selectedDate}T${slot.startTime}+07:00`).getTime() <= Date.now()
+        ? { ...slot, available: false, reason: 'Đã qua' }
+        : slot
+    ),
+  };
+
+  // Only confirm a slot that the latest availability response still marks available.
+  const currentSlot = visibleAvailability?.slots.find((slot) =>
+    slot.startTime === selectedSlot?.startTime && slot.endTime === selectedSlot?.endTime && slot.available
+  ) ?? null;
+
   // Mutation tạo đơn giữ chỗ HELD
   const createBookingMutation = useMutation({
     mutationFn: (note: string) => {
-      if (!selectedSlot) throw new Error('Vui lòng chọn khung giờ trống!');
+      if (!currentSlot) throw new Error('Khung giờ không còn trống. Vui lòng chọn lại!');
       return bookingApi.createHeldBooking({
         courtId,
         bookingDate: selectedDate,
-        startTime: selectedSlot.startTime,
-        endTime: selectedSlot.endTime,
+        startTime: currentSlot.startTime,
+        endTime: currentSlot.endTime,
         note,
             });
     },
@@ -120,7 +138,7 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
             <div className="lg:col-span-2">
               <TimeSlotGrid
-                availability={availability}
+                availability={visibleAvailability}
                 selectedSlot={selectedSlot}
                 onSelectSlot={(slot) => setSelectedSlot(slot)}
                 isLoading={isLoading}
@@ -132,7 +150,7 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
                 courtName={courtName}
                 facilityName={facilityName}
                 selectedDate={selectedDate}
-                selectedSlot={selectedSlot}
+                selectedSlot={currentSlot}
                 onConfirmBooking={(note) => createBookingMutation.mutate(note)}
                 isSubmitting={createBookingMutation.isPending}
               />

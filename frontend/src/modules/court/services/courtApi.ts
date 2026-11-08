@@ -157,7 +157,7 @@ function mapFacilityDto(dto: any): Facility {
     amenities: Array.isArray(dto.amenities) ? dto.amenities : [],
     latitude: lat,
     longitude: lng,
-    phone: dto.phone || '0912 345 678',
+    phone: dto.phone || '',
     description: dto.description || '',
     ownerId: String(dto.ownerId ?? '2'),
     isApproved: dto.isApproved !== false,
