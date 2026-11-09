@@ -36,6 +36,7 @@ server:
 booking:
   hold-duration-minutes: ${BOOKING_HOLD_DURATION_MINUTES:10}
 payos:
+  enabled: ${PAYOS_ENABLED:true}
   client-id: ${PAYOS_CLIENT_ID:}
   api-key: ${PAYOS_API_KEY:}
   checksum-key: ${PAYOS_CHECKSUM_KEY:}

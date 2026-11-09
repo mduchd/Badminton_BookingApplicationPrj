@@ -2,6 +2,7 @@ package com.badmintonbooking.booking;
 
 import com.badmintonbooking.admin.service.SystemSettingService;
 import com.badmintonbooking.booking.dto.CheckoutRequest;
+import com.badmintonbooking.booking.dto.CheckoutResponse;
 import com.badmintonbooking.booking.entity.*;
 import com.badmintonbooking.booking.enums.*;
 import com.badmintonbooking.booking.repository.*;
@@ -63,6 +64,7 @@ class PaymentServiceTest {
         booking.setCustomerId(1L);
         booking.setStatus(BookingStatus.PENDING_PAYMENT);
         booking.setHoldExpiresAt(OffsetDateTime.now().plusMinutes(5));
+        booking.setTotalAmount(new BigDecimal("120000"));
 
         payment = new Payment();
         payment.setBookingId(100L);
@@ -105,15 +107,39 @@ class PaymentServiceTest {
         assertThrows(BadRequestException.class, () -> service.processMockSuccess(100L, 10L, 1L));
         verifyNoInteractions(bookings, payments);
     }
-    @Test void otherUserCannotReadOrCreatePayment() {
+
+    @Test
+    void otherUserCannotReadOrCreatePayment() {
         when(bookings.findByIdForUpdate(100L)).thenReturn(Optional.of(booking));
-        assertThrows(ResourceNotFoundException.class,()->service.createCheckout(100L,new CheckoutRequest("PAYOS",null,null),2L));
+        assertThrows(ResourceNotFoundException.class, () -> service.createCheckout(100L, new CheckoutRequest("PAYOS", null, null), 2L));
         when(bookings.findById(100L)).thenReturn(Optional.of(booking));
-        assertThrows(ResourceNotFoundException.class,()->service.getPaymentByBookingId(100L,2L)); verifyNoInteractions(payments);
+        assertThrows(ResourceNotFoundException.class, () -> service.getPaymentByBookingId(100L, 2L));
+        verifyNoInteractions(payments);
     }
-    @Test void missingPayosConfigurationCannotGenerateFallback() {
-        booking.setStatus(BookingStatus.HELD); when(bookings.findByIdForUpdate(100L)).thenReturn(Optional.of(booking));
-        assertThrows(BadRequestException.class,()->service.createCheckout(100L,new CheckoutRequest("PAYOS",null,null),1L)); verifyNoInteractions(payments);
+
+    @Test
+    void missingPayosConfigurationCannotGenerateFallback() {
+        booking.setStatus(BookingStatus.HELD);
+        when(bookings.findByIdForUpdate(100L)).thenReturn(Optional.of(booking));
+        assertThrows(BadRequestException.class, () -> service.createCheckout(100L, new CheckoutRequest("PAYOS", null, null), 1L));
+        verifyNoInteractions(payments);
+    }
+
+    @Test
+    void idempotentCheckoutReusesPendingSession() {
+        ReflectionTestUtils.setField(service, "payOsClientId", "client-id");
+        ReflectionTestUtils.setField(service, "payOsApiKey", "api-key");
+        ReflectionTestUtils.setField(service, "payOsChecksumKey", "checksum-key");
+
+        booking.setStatus(BookingStatus.PENDING_PAYMENT);
+        when(bookings.findByIdForUpdate(100L)).thenReturn(Optional.of(booking));
+        when(payments.findByBookingId(100L)).thenReturn(Optional.of(payment));
+
+        CheckoutResponse response = service.createCheckout(100L, new CheckoutRequest("PAYOS", null, null), 1L);
+        assertNotNull(response);
+        assertEquals("https://pay.payos.vn/web/link123", response.checkoutUrl());
+        assertEquals(123456L, response.orderCode());
+        verify(payments).save(payment);
     }
 
     @Test
@@ -147,10 +173,16 @@ class PaymentServiceTest {
         verify(payments, never()).save(any());
         verifyNoInteractions(bookings);
     }
-    @Test void latePaymentRecordedForRefund() {
-        when(payments.findByProviderOrderCode(123456L)).thenReturn(Optional.of(payment)); when(bookings.findByIdForUpdate(100L)).thenReturn(Optional.of(booking)); booking.setHoldExpiresAt(OffsetDateTime.now().minusMinutes(1));
-        assertTrue(service.processPayOsWebhook(payload(Map.of()))); assertEquals(PaymentStatus.FAILED,payment.getStatus());
-        verify(events).save(argThat(e -> "MANUAL_REFUND_REQUIRED".equals(e.getResult()))); verify(bookings,never()).save(any());
+
+    @Test
+    void latePaymentRecordedForRefund() {
+        when(payments.findByProviderOrderCode(123456L)).thenReturn(Optional.of(payment));
+        when(bookings.findByIdForUpdate(100L)).thenReturn(Optional.of(booking));
+        booking.setHoldExpiresAt(OffsetDateTime.now().minusMinutes(1));
+        assertTrue(service.processPayOsWebhook(payload(Map.of())));
+        assertEquals(PaymentStatus.FAILED, payment.getStatus());
+        verify(events).save(argThat(e -> "MANUAL_REFUND_REQUIRED".equals(e.getResult())));
+        verify(bookings, never()).save(any());
         when(events.existsByProviderEventKey("PAYOS-123456-REF-999")).thenReturn(true);
         assertTrue(service.processPayOsWebhook(payload(Map.of())));
         verify(events, times(1)).save(any());

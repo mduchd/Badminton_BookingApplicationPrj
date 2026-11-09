@@ -57,7 +57,7 @@ public class PaymentService {
     @Value("${payos.checksum-key:}")
     private String payOsChecksumKey;
 
-    @Value("${PAYOS_ENABLED:false}")
+    @Value("${PAYOS_ENABLED:${payos.enabled:true}}")
     private boolean payOsEnabled;
 
     @Value("${payment.mock-enabled:false}")
@@ -126,24 +126,24 @@ public class PaymentService {
         if (method.equals("MOCK") && !mockAllowed()) throw new BadRequestException("Thanh toán thử nghiệm không khả dụng");
         PaymentProvider provider = method.equals("PAYOS") ? PaymentProvider.PAYOS : PaymentProvider.MOCK;
         if (provider == PaymentProvider.PAYOS && (!payOsEnabled || isBlank(payOsClientId) || isBlank(payOsApiKey) || isBlank(payOsChecksumKey))) {
-            throw new BadRequestException("Thanh toán trực tuyến tạm thời chưa khả dụng");
+            throw new BadRequestException("Thanh toán trực tuyến tạm thời chưa khả dụng. Cấu hình cổng thanh toán chưa hoàn tất.");
         }
-
-        // Sinh orderCode ngẫu nhiên duy nhất (dương 9-10 chữ số)
-        long orderCode = (System.currentTimeMillis() % 1000000000L) + (long) (Math.random() * 1000);
 
         Optional<Payment> existing = paymentRepository.findByBookingId(bookingId);
-        if (existing.isPresent() && existing.get().getStatus() == PaymentStatus.PENDING) {
-            throw new BadRequestException("Đơn đã có phiên thanh toán đang chờ. Vui lòng hoàn tất phiên đã mở.");
-        }
         if (existing.isPresent() && existing.get().getStatus() == PaymentStatus.SUCCESS) {
-            throw new BadRequestException("Đơn này đã thanh toán.");
+            throw new BadRequestException("Đơn đặt sân này đã được thanh toán xác nhận thành công!");
         }
+
+        // Tái sử dụng Payment record nếu đã tồn tại để đảm bảo Idempotent Checkout
         Payment payment = existing.orElseGet(() -> {
             Payment p = new Payment();
             p.setBookingId(bookingId);
             return p;
         });
+
+        long orderCode = payment.getProviderOrderCode() != null
+                ? payment.getProviderOrderCode()
+                : (System.currentTimeMillis() % 1000000000L) + (long) (Math.random() * 1000);
 
         payment.setProvider(provider);
         payment.setProviderOrderCode(orderCode);
@@ -159,20 +159,40 @@ public class PaymentService {
         String qrUrl = null;
 
         if (provider == PaymentProvider.PAYOS) {
-            String returnUrl = frontendUrl + "/payment/success";
-            String cancelUrl = frontendUrl + "/payment/cancel";
-            String desc = "SmashCourt #" + booking.getId();
-            PayOsHelper.PayOsPaymentLinkResult payOsRes = payOsHelper.createPaymentLink(
-                    payOsClientId, payOsApiKey, payOsChecksumKey,
-                    orderCode, booking.getTotalAmount().longValueExact(), desc, returnUrl, cancelUrl);
-            if (!payOsRes.success() || isBlank(payOsRes.checkoutUrl()) || !payOsRes.checkoutUrl().startsWith("https://")) {
-                throw new BadRequestException("Không thể tạo phiên thanh toán. Vui lòng thử lại sau.");
-            }
-            checkoutUrl = payOsRes.checkoutUrl();
-            qrUrl = payOsRes.qrCode();
-            if (!isBlank(payOsRes.paymentLinkId())) {
-                payment.setTransactionRef(payOsRes.paymentLinkId());
-                paymentRepository.save(payment);
+            // Nếu phiên cũ đã có paymentLinkId hợp lệ, tái sử dụng link checkout trực tiếp
+            if (!isBlank(payment.getTransactionRef()) && payment.getTransactionRef().length() > 5) {
+                checkoutUrl = "https://pay.payos.vn/web/" + payment.getTransactionRef();
+            } else {
+                String returnUrl = !isBlank(request.returnUrl()) ? request.returnUrl() : (frontendUrl + "/payment/success");
+                String cancelUrl = !isBlank(request.cancelUrl()) ? request.cancelUrl() : (frontendUrl + "/payment/cancel");
+                // Chuẩn payOS: tối đa 25 ký tự, không dấu, không chứa ký tự đặc biệt như #
+                String desc = "SMC " + booking.getId();
+
+                PayOsHelper.PayOsPaymentLinkResult payOsRes = payOsHelper.createPaymentLink(
+                        payOsClientId, payOsApiKey, payOsChecksumKey,
+                        orderCode, booking.getTotalAmount().longValueExact(), desc, returnUrl, cancelUrl);
+
+                // Nếu payOS báo mã đơn hàng đã tồn tại, tự động cấp mã orderCode mới và thử lại
+                if (!payOsRes.success() && payOsRes.message() != null && payOsRes.message().toLowerCase().contains("tồn tại")) {
+                    orderCode = (System.currentTimeMillis() % 1000000000L) + (long) (Math.random() * 10000);
+                    payment.setProviderOrderCode(orderCode);
+                    payOsRes = payOsHelper.createPaymentLink(
+                            payOsClientId, payOsApiKey, payOsChecksumKey,
+                            orderCode, booking.getTotalAmount().longValueExact(), desc, returnUrl, cancelUrl);
+                }
+
+                if (!payOsRes.success() || isBlank(payOsRes.checkoutUrl()) || !payOsRes.checkoutUrl().startsWith("https://")) {
+                    String msg = !isBlank(payOsRes.message()) ? payOsRes.message() : "Không thể tạo phiên thanh toán. Vui lòng thử lại sau.";
+                    log.error("Tạo link thanh toán payOS thất bại cho đơn #{}: {}", booking.getId(), msg);
+                    throw new BadRequestException("Không thể tạo phiên thanh toán payOS: " + msg);
+                }
+
+                checkoutUrl = payOsRes.checkoutUrl();
+                qrUrl = payOsRes.qrCode();
+                if (!isBlank(payOsRes.paymentLinkId())) {
+                    payment.setTransactionRef(payOsRes.paymentLinkId());
+                    paymentRepository.save(payment);
+                }
             }
         }
 
