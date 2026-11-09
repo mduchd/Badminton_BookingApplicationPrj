@@ -789,6 +789,9 @@ export function MainApp() {
         onLoginSuccess={(user) => {
           setCurrentUser(user)
           setIsAuthOpen(false)
+          if (user.role === 'SYSTEM_ADMIN') {
+            navigate(ROUTES.ADMIN_PORTAL, { replace: true })
+          }
         }}
       />
       </Suspense>}
