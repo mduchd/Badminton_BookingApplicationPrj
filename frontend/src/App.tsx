@@ -474,6 +474,16 @@ export function MainApp() {
     </div>
   )
 
+  if (authLoading && !isManagementRoute) {
+    return <p className="p-6 text-center text-slate-600" role="status">Đang xác thực tài khoản…</p>
+  }
+  if (currentUser?.role === 'SYSTEM_ADMIN' && !location.pathname.startsWith('/admin')) {
+    return <Navigate to={ROUTES.ADMIN_PORTAL} replace />
+  }
+  if (currentUser?.role === 'COURT_OWNER' && !location.pathname.startsWith('/owner')) {
+    return <Navigate to={ROUTES.OWNER_DASHBOARD} replace />
+  }
+
   return (
     <div
       className={`min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 antialiased selection:bg-emerald-100 selection:text-emerald-900 ${

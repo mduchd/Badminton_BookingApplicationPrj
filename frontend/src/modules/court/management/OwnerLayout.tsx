@@ -97,11 +97,11 @@ export const OwnerLayout: React.FC<OwnerLayoutProps> = ({
 
             <button
               type="button"
-              onClick={() => navigate(ROUTES.HOME)}
+              onClick={() => { authStorage.removeToken(); window.location.assign(ROUTES.HOME) }}
               className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-bold transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4 text-slate-600" />
-              <span>Giao diện đặt sân</span>
+              <span>Đăng xuất</span>
             </button>
           </div>
         </div>

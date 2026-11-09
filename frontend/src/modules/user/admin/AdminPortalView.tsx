@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { authStorage } from '../auth/authApi'
 import {
   LayoutDashboard,
   Building2,
@@ -37,7 +37,6 @@ import {
 type AdminTab = 'dashboard' | 'facilities' | 'users' | 'transactions' | 'settings'
 
 export const AdminPortalView: React.FC = () => {
-  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard')
   const [loading, setLoading] = useState<boolean>(false)
 
@@ -367,11 +366,11 @@ export const AdminPortalView: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => navigate(ROUTES.HOME)}
+              onClick={() => { authStorage.removeToken(); window.location.assign(ROUTES.HOME) }}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 text-xs font-bold transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5 text-slate-600" />
-              <span>Về trang người dùng</span>
+              <span>Đăng xuất</span>
             </button>
           </div>
         </div>
