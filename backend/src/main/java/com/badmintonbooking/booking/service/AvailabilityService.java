@@ -78,10 +78,8 @@ public class AvailabilityService {
         LocalTime currentStart = openTime;
 
         while (currentStart.isBefore(closeTime)) {
-            LocalTime currentEnd = currentStart.plusHours(1);
-            if (currentEnd.isAfter(closeTime)) {
-                currentEnd = closeTime;
-            }
+            LocalTime currentEnd = Duration.between(currentStart, closeTime).compareTo(Duration.ofHours(1)) <= 0
+                    ? closeTime : currentStart.plusHours(1);
 
             OffsetDateTime slotStart = date.atTime(currentStart).atZone(ZONE_VN).toOffsetDateTime();
             OffsetDateTime slotEnd = date.atTime(currentEnd).atZone(ZONE_VN).toOffsetDateTime();
@@ -205,10 +203,8 @@ public class AvailabilityService {
         LocalTime current = start;
 
         while (current.isBefore(end)) {
-            LocalTime next = current.plusMinutes(30);
-            if (next.isAfter(end)) {
-                next = end;
-            }
+            LocalTime next = Duration.between(current, end).compareTo(Duration.ofMinutes(30)) <= 0
+                    ? end : current.plusMinutes(30);
 
             LocalTime midPoint = current.plusMinutes(Duration.between(current, next).toMinutes() / 2);
             BigDecimal hourlyRate = fallbackHourly;

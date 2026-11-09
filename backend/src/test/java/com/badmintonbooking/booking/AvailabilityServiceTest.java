@@ -74,6 +74,22 @@ class AvailabilityServiceTest {
     }
 
     @Test
+    @DisplayName("Availability: kết thúc đúng giờ đóng cửa gần nửa đêm")
+    void shouldStopAtLateClosingTime() {
+        mockFacility.setOpenTime(LocalTime.of(23, 0));
+        mockFacility.setCloseTime(LocalTime.of(23, 59));
+        when(courtRepository.findById(1L)).thenReturn(Optional.of(mockCourt));
+        when(facilityRepository.findById(10L)).thenReturn(Optional.of(mockFacility));
+        when(occupancyRepository.findActiveForCourtInDateRange(eq(1L), any(), any())).thenReturn(List.of());
+        when(priceRuleRepository.findRulesForCourtAndDay(eq(1L), anyInt())).thenReturn(List.of(defaultPriceRule));
+
+        var result = assertTimeoutPreemptively(java.time.Duration.ofSeconds(2),
+                () -> availabilityService.getCourtAvailability(1L, LocalDate.now().plusDays(1)));
+        assertEquals(1, result.slots().size());
+        assertEquals(LocalTime.of(23, 59), result.slots().get(0).endTime());
+    }
+
+    @Test
     @DisplayName("Availability: Tạo đúng danh sách slot theo khung giờ hoạt động của cơ sở")
     void shouldGenerateSlotsCorrectly() {
         LocalDate date = LocalDate.now().plusDays(1);
