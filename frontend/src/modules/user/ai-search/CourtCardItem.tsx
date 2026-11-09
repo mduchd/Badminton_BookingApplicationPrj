@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { Heart, Navigation, Clock, Star } from 'lucide-react'
 import type { BadmintonCourtItem } from '../../types/court'
-import { venueThumbnail } from '../../../lib/venueThumbnail'
+import { logoThumbnail, venueThumbnail } from '../../../lib/venueThumbnail'
 
 interface CourtCardItemProps {
   court: BadmintonCourtItem
@@ -99,7 +99,7 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
       <div className="p-3.5 flex items-center gap-3">
         {/* Round Logo */}
         <div className="w-12 h-12 rounded-full border border-slate-200 overflow-hidden flex-shrink-0 bg-slate-50 shadow-2xs">
-          {court.logoUrl && <img src={court.logoUrl} alt={court.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />}
+          {court.logoUrl && <img src={logoThumbnail(court.logoUrl)} alt={court.name} width={48} height={48} className="w-full h-full object-cover" loading="lazy" decoding="async" onError={(event) => { if (event.currentTarget.getAttribute('src') !== court.logoUrl) event.currentTarget.src = court.logoUrl }} />}
         </div>
 
         {/* Text Details */}

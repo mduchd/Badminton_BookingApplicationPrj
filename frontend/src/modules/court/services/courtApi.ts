@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../../../lib/apiConfig'
+import { fetchPublicCatalog } from '../../../lib/publicCatalog'
 import { authStorage } from '../../user/auth/authApi'
 import {
   buildGoogleMapsDirectionsUrl,
@@ -274,7 +275,7 @@ export const courtApi = {
     params.ids?.forEach((id) => qs.append('ids', id))
     qs.set('page', String(params.page ?? 0))
     qs.set('size', String(params.size ?? 24))
-    const data = await apiRequest<{ content: unknown[]; totalElements: number; totalPages: number }>(`/facilities/page?${qs}`)
+    const data = await fetchPublicCatalog(qs.toString())
     return { ...data, content: data.content.map(mapFacilityDto) }
   },
   getFavorites: async (): Promise<string[]> =>

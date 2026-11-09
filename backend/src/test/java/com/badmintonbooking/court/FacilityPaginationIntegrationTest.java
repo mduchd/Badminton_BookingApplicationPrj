@@ -56,7 +56,10 @@ class FacilityPaginationIntegrationTest {
         var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         mvc.perform(get("/api/facilities/page").param("keyword", "Pagination").param("amenities", "wifi").param("size", "10").param("page", "1"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(13))
-                .andExpect(jsonPath("$.content.length()").value(3));
+                .andExpect(jsonPath("$.content.length()").value(3))
+                .andExpect(jsonPath("$.content[0].minPrice").value(80000))
+                .andExpect(jsonPath("$.content[0].courts").doesNotExist())
+                .andExpect(jsonPath("$.content[0].galleryImages").doesNotExist());
         mvc.perform(get("/api/v1/admin/facilities/page").with(user("admin").roles("SYSTEM_ADMIN"))
                         .param("search", "Pagination").param("district", "Quan B").param("size", "5"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(12))

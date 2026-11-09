@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { lazy, Suspense, useState, useMemo, useRef, useEffect } from 'react'
 import {
   Routes,
   Route,
@@ -18,29 +18,9 @@ import { TopLoadingBar } from './components/shared/TopLoadingBar'
 import { CourtSearchBar } from './components/shared/CourtSearchBar'
 import { Pagination } from './components/shared/Pagination'
 import { CourtCardItem } from './modules/user/ai-search/CourtCardItem'
-import { SmartFilterModal } from './modules/user/ai-search/SmartFilterModal'
-import { AIChatPanel } from './modules/user/ai-search/AIChatPanel'
-import { CourtContactModal } from './components/shared/CourtContactModal'
-import { CourtBookingModal } from './modules/booking/components/CourtBookingModal'
 import { courtApi, facilityToCourtItem } from './modules/court/services/courtApi'
-import { AuthModal } from './modules/user/auth/AuthModal'
 import { authApi, authStorage } from './modules/user/auth/authApi'
-import { ProfileModal } from './modules/user/profile/ProfileModal'
 import { BottomNav } from './components/shared/BottomNav'
-import { KhamPhaView } from './modules/user/ai-search/KhamPhaView'
-import { CourtMapView } from './modules/court/search/CourtMapView'
-import { AccountView } from './modules/user/account/AccountView'
-import { CourtDetailView } from './modules/court/facility/CourtDetailView'
-import { CourtDetailSidebar } from './modules/court/facility/CourtDetailSidebar'
-import { CourtBookingGridView } from './modules/booking/availability/CourtBookingGridView'
-import { CheckoutView } from './modules/booking/payment/CheckoutView'
-import { BookingSuccessView } from './modules/booking/payment/BookingSuccessView'
-import { OwnerDashboardView } from './modules/court/management/OwnerDashboardView'
-import { OwnerFacilitiesView } from './modules/court/management/OwnerFacilitiesView'
-import { OwnerPricingView } from './modules/court/pricing/OwnerPricingView'
-import { OwnerBlocksView } from './modules/court/management/OwnerBlocksView'
-import { OwnerBookingsView } from './modules/court/management/OwnerBookingsView'
-import { AdminPortalView } from './modules/user/admin/AdminPortalView'
 import {
   ROUTES,
   getNavTabFromPath,
@@ -50,14 +30,44 @@ import {
 } from './app/router'
 
 // TV3 Booking & Payment components
-import { MyBookingsList } from './modules/booking/components/MyBookingsList'
-import { PaymentCheckoutModal } from './modules/booking/components/PaymentCheckoutModal'
-import { bookingApi } from './modules/booking/services/bookingApi'
 import type { BookingResponse, TimeSlot } from './modules/booking/types'
 
 import { defaultCriteria } from './modules/user/ai-search/searchDefaults'
 import type { BadmintonCourtItem } from './modules/types/court'
 import type { User, NotificationItem, CourtResult, SearchCriteria } from './modules/types/user'
+
+const SmartFilterModal = lazy(() => import('./modules/user/ai-search/SmartFilterModal').then((module) => ({ default: module.SmartFilterModal })))
+const AIChatPanel = lazy(() => import('./modules/user/ai-search/AIChatPanel').then((module) => ({ default: module.AIChatPanel })))
+const CourtContactModal = lazy(() => import('./components/shared/CourtContactModal').then((module) => ({ default: module.CourtContactModal })))
+const CourtBookingModal = lazy(() => import('./modules/booking/components/CourtBookingModal').then((module) => ({ default: module.CourtBookingModal })))
+const AuthModal = lazy(() => import('./modules/user/auth/AuthModal').then((module) => ({ default: module.AuthModal })))
+const ProfileModal = lazy(() => import('./modules/user/profile/ProfileModal').then((module) => ({ default: module.ProfileModal })))
+const KhamPhaView = lazy(() => import('./modules/user/ai-search/KhamPhaView').then((module) => ({ default: module.KhamPhaView })))
+const CourtMapView = lazy(() => import('./modules/court/search/CourtMapView').then((module) => ({ default: module.CourtMapView })))
+const AccountView = lazy(() => import('./modules/user/account/AccountView').then((module) => ({ default: module.AccountView })))
+const CourtDetailView = lazy(() => import('./modules/court/facility/CourtDetailView').then((module) => ({ default: module.CourtDetailView })))
+const CourtDetailSidebar = lazy(() => import('./modules/court/facility/CourtDetailSidebar').then((module) => ({ default: module.CourtDetailSidebar })))
+const CourtBookingGridView = lazy(() => import('./modules/booking/availability/CourtBookingGridView').then((module) => ({ default: module.CourtBookingGridView })))
+const CheckoutView = lazy(() => import('./modules/booking/payment/CheckoutView').then((module) => ({ default: module.CheckoutView })))
+const BookingSuccessView = lazy(() => import('./modules/booking/payment/BookingSuccessView').then((module) => ({ default: module.BookingSuccessView })))
+const OwnerDashboardView = lazy(() => import('./modules/court/management/OwnerDashboardView').then((module) => ({ default: module.OwnerDashboardView })))
+const OwnerFacilitiesView = lazy(() => import('./modules/court/management/OwnerFacilitiesView').then((module) => ({ default: module.OwnerFacilitiesView })))
+const OwnerPricingView = lazy(() => import('./modules/court/pricing/OwnerPricingView').then((module) => ({ default: module.OwnerPricingView })))
+const OwnerBlocksView = lazy(() => import('./modules/court/management/OwnerBlocksView').then((module) => ({ default: module.OwnerBlocksView })))
+const OwnerBookingsView = lazy(() => import('./modules/court/management/OwnerBookingsView').then((module) => ({ default: module.OwnerBookingsView })))
+const AdminPortalView = lazy(() => import('./modules/user/admin/AdminPortalView').then((module) => ({ default: module.AdminPortalView })))
+const MyBookingsList = lazy(() => import('./modules/booking/components/MyBookingsList').then((module) => ({ default: module.MyBookingsList })))
+const PaymentCheckoutModal = lazy(() => import('./modules/booking/components/PaymentCheckoutModal').then((module) => ({ default: module.PaymentCheckoutModal })))
+
+function DeferredLoading() {
+  return <div role="status" className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700">Đang mở...</div>
+}
+
+function LoadOnOpen({ open, children }: { open: boolean; children: React.ReactNode }) {
+  const [hasOpened, setHasOpened] = useState(open)
+  if (open && !hasOpened) setHasOpened(true)
+  return hasOpened || open ? children : null
+}
 
 const NAV_TAB_INDEX: Record<MainNavTab, number> = {
   home: 0,
@@ -184,13 +194,13 @@ export function MainApp() {
   // Query My Bookings (TV3 Real Data)
   const { data: myBookings = [], isLoading: isLoadingBookings } = useQuery({
     queryKey: ['myBookings', currentUser?.id],
-    queryFn: () => bookingApi.getMyBookings(),
-    enabled: !!currentUser,
+    queryFn: () => import('./modules/booking/services/bookingApi').then(({ bookingApi }) => bookingApi.getMyBookings()),
+    enabled: !!currentUser && (location.pathname === ROUTES.BOOKED || activeTab === 'booked'),
   })
 
   // Mutation Hủy đơn (TV3)
   const cancelBookingMutation = useMutation({
-    mutationFn: (id: number) => bookingApi.cancelBooking(id),
+    mutationFn: (id: number) => import('./modules/booking/services/bookingApi').then(({ bookingApi }) => bookingApi.cancelBooking(id)),
     onSuccess: (b) => {
       qc.invalidateQueries({ queryKey: ['myBookings'] })
       qc.invalidateQueries({ queryKey: ['courtAvailability'] })
@@ -240,12 +250,12 @@ export function MainApp() {
     initialDataUpdatedAt: cachedHomePage?.savedAt,
     queryFn: async () => {
       const result = await courtApi.searchFacilitiesPage({
-      keyword: searchTerm.trim() || undefined,
-      district: criteria.district || undefined,
-      maxPrice: criteria.maxPricePerHour || undefined,
-      amenities: criteria.amenities,
-      ids: activeTab === 'favorite' ? favoriteIds : undefined,
-      page: currentCourtPage,
+        keyword: searchTerm.trim() || undefined,
+        district: criteria.district || undefined,
+        maxPrice: criteria.maxPricePerHour || undefined,
+        amenities: criteria.amenities,
+        ids: activeTab === 'favorite' ? favoriteIds : undefined,
+        page: currentCourtPage,
       })
       if (isDefaultHomePage) writeHomeFacilityCache(result)
       return result
@@ -540,7 +550,7 @@ export function MainApp() {
               isManagementRoute ? '' : slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
             }`}
           >
-            <Routes>
+            <Suspense fallback={<CourtListSkeleton />}><Routes>
               {/* View 4: Tài khoản (Edge-to-edge full width, không Header) */}
               <Route
                 path={`${ROUTES.ACCOUNT}/*`}
@@ -559,7 +569,7 @@ export function MainApp() {
               />
               <Route path={ROUTES.PROFILE} element={<Navigate to={ROUTES.ACCOUNT} replace />} />
               <Route path="*" element={<Navigate to={ROUTES.ACCOUNT} replace />} />
-            </Routes>
+            </Routes></Suspense>
           </main>
         ) : (
           <main
@@ -576,7 +586,7 @@ export function MainApp() {
               isManagementRoute ? '' : slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
             }`}
           >
-            <Routes>
+            <Suspense fallback={<CourtListSkeleton />}><Routes>
               {/* Home & Sub-tab routes */}
               <Route path={ROUTES.HOME} element={renderHomeView()} />
               <Route path={ROUTES.FAVORITES} element={renderHomeView()} />
@@ -669,7 +679,7 @@ export function MainApp() {
 
               {/* Catch all / 404 fallback */}
               <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
-            </Routes>
+            </Routes></Suspense>
           </main>
         )}
       </div>
@@ -691,6 +701,7 @@ export function MainApp() {
       )}
 
       {/* Modals */}
+      <Suspense fallback={<DeferredLoading />}>
 
       {/* TV3 Payment Checkout Modal (payOS & Mock) */}
       {checkoutBooking && (
@@ -706,6 +717,7 @@ export function MainApp() {
       )}
 
       {/* Smart Filter Drawer/Modal */}
+      {isFilterModalOpen && <Suspense fallback={<DeferredLoading />}>
       <SmartFilterModal
         isOpen={isFilterModalOpen}
         criteria={criteria}
@@ -717,9 +729,10 @@ export function MainApp() {
           toast.info('Đã đặt lại bộ lọc')
         }}
       />
+      </Suspense>}
 
       {/* Court Detail Sidebar (Slide-in Drawer khi ấn vào sân) */}
-      <CourtDetailSidebar
+      <LoadOnOpen open={isCourtSidebarOpen}><CourtDetailSidebar
         court={selectedCourtForSidebar && {
           ...selectedCourtForSidebar,
           isFavorite: favoriteIds.includes(selectedCourtForSidebar.id),
@@ -735,23 +748,27 @@ export function MainApp() {
         onToggleFavorite={handleToggleFavorite}
       />
 
+      </LoadOnOpen>
+
       {/* Court Contact Modal (Nhắn tin với chủ sân qua Zalo, Messenger, Hotline) */}
+      {isCourtContactOpen && <Suspense fallback={<DeferredLoading />}>
       <CourtContactModal
         isOpen={isCourtContactOpen}
         onClose={() => setIsCourtContactOpen(false)}
         court={contactTargetCourt}
       />
+      </Suspense>}
 
       {/* AI Court Finder Chat Panel (Spring AI Orchestrator) - Tuyệt đối không xuất hiện trên Chủ sân & Admin */}
       {!isManagementRoute && (
-        <AIChatPanel
+        <LoadOnOpen open={isAIChatOpen}><AIChatPanel
           isOpen={isAIChatOpen}
           onClose={() => setIsAIChatOpen(false)}
           onApplyCriteria={handleApplyCriteriaFromAI}
           onSelectCourt={handleOpenCourtSidebar}
           onBookCourt={handleOpenBooking}
           currentCriteria={criteria}
-        />
+        /></LoadOnOpen>
       )}
 
       {bookingCourt && currentUser && (
@@ -764,6 +781,7 @@ export function MainApp() {
       )}
 
       {/* Auth Modal (Login / Register / Google OIDC) */}
+      {isAuthOpen && <Suspense fallback={<DeferredLoading />}>
       <AuthModal
         isOpen={isAuthOpen}
         initialTab={authInitialTab}
@@ -773,9 +791,10 @@ export function MainApp() {
           setIsAuthOpen(false)
         }}
       />
+      </Suspense>}
 
       {/* Profile Modal (FCM Web Push & Google Calendar Sync) */}
-      {currentUser && (
+      {currentUser && isProfileOpen && (
         <ProfileModal
           isOpen={isProfileOpen}
           user={currentUser}
@@ -787,6 +806,7 @@ export function MainApp() {
           }}
         />
       )}
+      </Suspense>
     </div>
   )
 }

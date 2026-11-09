@@ -21,12 +21,12 @@ export const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
   onApply,
   onReset,
 }) => {
-  if (!isOpen) return null
-
   const { data: metadata } = useQuery({
     queryKey: ['facilityFilterMetadata'],
     queryFn: courtApi.getFilterMetadata,
+    enabled: isOpen,
   })
+  if (!isOpen) return null
   const availableDistricts = metadata?.districts ?? []
   const availableAmenities = metadata?.amenities ?? []
 

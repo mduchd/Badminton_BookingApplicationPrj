@@ -17,7 +17,6 @@ import com.badmintonbooking.court.repository.FacilityRepository;
 import com.badmintonbooking.court.repository.PriceRuleRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -133,7 +132,7 @@ public class FacilityQueryService {
         return dtos.stream().sorted(comparator).toList();
     }
 
-    public Page<FacilitySummaryDto> searchFacilitiesPage(String keyword, String district, BigDecimal maxPrice,
+    public Page<FacilityCardDto> searchFacilitiesPage(String keyword, String district, BigDecimal maxPrice,
             List<String> amenities, BigDecimal minRating, List<Long> ids, int page, int size) {
         Specification<Facility> spec = (root, query, cb) -> {
             List<jakarta.persistence.criteria.Predicate> conditions = new ArrayList<>();
@@ -163,7 +162,17 @@ public class FacilityQueryService {
         };
         Page<Facility> result = facilityRepository.findAll(spec, PageRequest.of(Math.max(0, page), Math.clamp(size, 1, 100),
                 Sort.by(Sort.Order.desc("rating"), Sort.Order.asc("id"))));
-        return new PageImpl<>(toFacilitySummaries(result.getContent(), null, null), result.getPageable(), result.getTotalElements());
+        List<Long> missingCovers = result.getContent().stream()
+                .filter(f -> f.getImageUrl() == null || f.getImageUrl().isBlank()).map(Facility::getId).toList();
+        Map<Long, String> fallbackCovers = new HashMap<>();
+        if (!missingCovers.isEmpty()) {
+            for (FacilityImage image : facilityImageRepository.findByFacilityIdInOrderBySortOrderAscIdAsc(missingCovers)) {
+                if (image.getImageUrl() != null && !image.getImageUrl().isBlank())
+                    fallbackCovers.putIfAbsent(image.getFacilityId(), image.getImageUrl());
+            }
+        }
+        return result.map(f -> FacilityCardDto.from(f,
+                f.getImageUrl() == null || f.getImageUrl().isBlank() ? fallbackCovers.get(f.getId()) : f.getImageUrl()));
     }
 
     public FacilityDetailDto getFacilityDetail(Long facilityId, Double userLat, Double userLng) {

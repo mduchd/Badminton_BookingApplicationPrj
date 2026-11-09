@@ -60,7 +60,7 @@ public class PublicFacilityController {
     }
 
     @GetMapping("/api/facilities/page")
-    public PageResponse<FacilitySummaryDto> searchFacilitiesPage(
+    public PageResponse<FacilityCardDto> searchFacilitiesPage(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String district,
             @RequestParam(required = false) BigDecimal maxPrice,

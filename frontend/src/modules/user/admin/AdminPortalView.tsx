@@ -23,7 +23,7 @@ import type { UserRole } from '../../types/user'
 import { toast } from 'sonner'
 import { ROUTES } from '../../../app/router'
 import { Pagination } from '../../../components/shared/Pagination'
-import { venueThumbnail } from '../../../lib/venueThumbnail'
+import { logoThumbnail, venueThumbnail } from '../../../lib/venueThumbnail'
 import {
   adminApi,
   type AdminDashboardMetrics,
@@ -706,7 +706,7 @@ export const AdminPortalView: React.FC = () => {
                         <div className="flex min-w-0 items-center gap-3">
                           <div className="w-11 h-11 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex-shrink-0">
                             <img
-                              src={venueThumbnail(fac.logoUrl || fac.imageUrl || '/images/logos/badminton-club-logo.svg')}
+                              src={logoThumbnail(venueThumbnail(fac.logoUrl || fac.imageUrl || '/images/logos/badminton-club-logo.svg'))}
                               loading="lazy"
                               onError={(event) => {
                                 event.currentTarget.onerror = null
