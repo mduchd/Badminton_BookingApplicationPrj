@@ -18,6 +18,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringJUnitConfig(SecurityHttpTest.Config.class) @WebAppConfiguration
+@org.springframework.test.context.TestPropertySource(properties = "app.cors.allowed-origins=https://smashcourt-booking.netlify.app")
 class SecurityHttpTest {
  @Configuration @EnableWebMvc @Import(SecurityConfig.class) static class Config {
   @Bean JwtTokenProvider tokens() { return mock(JwtTokenProvider.class); }
@@ -33,6 +34,18 @@ class SecurityHttpTest {
  @Autowired JwtTokenProvider tokens;
  @Autowired UserRepository users;
  MockMvc mvc;
+ @Test void vercelProductionPreflightWorksWithLegacyHostingConfiguration() throws Exception {
+  mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/api/v1/ai/search")
+    .header("Origin", "https://smashcourt-booking.vercel.app")
+    .header("Access-Control-Request-Method", "POST")
+    .header("Access-Control-Request-Headers", "content-type,authorization"))
+    .andExpect(status().isOk())
+    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Access-Control-Allow-Origin", "https://smashcourt-booking.vercel.app"));
+  mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/api/v1/ai/search")
+    .header("Origin", "https://unrelated-project.vercel.app")
+    .header("Access-Control-Request-Method", "POST"))
+    .andExpect(status().isForbidden());
+ }
  @BeforeEach void setup() {
   reset(tokens,users); mvc=MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
   when(tokens.validateToken("valid")).thenReturn(true);
