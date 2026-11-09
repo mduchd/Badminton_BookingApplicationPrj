@@ -31,11 +31,11 @@ interface CourtMapViewProps {
 type QuickFilterCategory = 'all' | 'open_247' | 'budget' | 'car_parking'
 type MapLayerStyle = 'google_road' | 'light_vector' | 'google_satellite'
 
-const QUICK_FILTER_OPTIONS: { id: QuickFilterCategory; label: string; color: string }[] = [
-  { id: 'all', label: 'Tất cả sân cầu lông', color: '#168039' },
-  { id: 'open_247', label: 'Mở cửa 24/7', color: '#168039' },
-  { id: 'budget', label: 'Giá tốt ≤110k/h', color: '#168039' },
-  { id: 'car_parking', label: 'Bãi đỗ ô tô', color: '#168039' },
+const QUICK_FILTER_OPTIONS: { id: QuickFilterCategory; label: string }[] = [
+  { id: 'all', label: 'Tất cả sân cầu lông' },
+  { id: 'open_247', label: 'Mở cửa 24/7' },
+  { id: 'budget', label: 'Giá tốt ≤110k/h' },
+  { id: 'car_parking', label: 'Bãi đỗ ô tô' },
 ]
 
 const AREA_SHORTCUTS: { label: string; lat: number; lng: number; zoom: number }[] = [
@@ -524,17 +524,13 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
                   key={item.id}
                   type="button"
                   onClick={() => setSelectedQuickFilter(item.id)}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors cursor-pointer border ${
+                  className={`inline-flex items-center px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors cursor-pointer border ${
                     isActive
                       ? 'bg-[#168039] text-white border-[#168039]'
                       : 'bg-white text-slate-800 hover:bg-slate-50 border-slate-200'
                   }`}
                 >
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ backgroundColor: isActive ? '#ffffff' : item.color }}
-                  />
-                  <span>{item.label}</span>
+                  {item.label}
                 </button>
               )
             })}

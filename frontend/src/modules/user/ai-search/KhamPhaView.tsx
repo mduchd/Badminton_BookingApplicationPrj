@@ -8,22 +8,11 @@ import {
   Building2,
   Calendar,
   Sparkles,
-  Ticket,
   Flag,
   Clock,
   ChevronRight,
-  Crown,
-  BookOpen,
-  Bell,
-  Gift,
-  RefreshCw,
   CircleDot,
   Activity,
-  Trophy,
-  Target,
-  Waves,
-  Layers,
-  LogIn,
   Flame,
 } from 'lucide-react'
 import type { CourtResult, User } from '../../types/user'
@@ -43,15 +32,15 @@ export interface KhamPhaViewProps {
 
 export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
   onOpenAIChat,
-  currentUser = null,
-  onOpenAuth,
   onSelectCourt,
   onBookCourtDirect,
 }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [pagination, setPagination] = useState({ category: '', page: 0 })
   const catFromUrl = searchParams.get('category')
-  const activeCategory = catFromUrl || 'CumSan'
+  const activeCategory = catFromUrl === 'Social' ? 'Social' : 'CumSan'
+
+  const [onlyHighRating, setOnlyHighRating] = useState(catFromUrl === 'NoiBat')
 
   const setActiveCategory = (category: string) => {
     setSearchParams(
@@ -65,15 +54,8 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
   }
 
   const categories = [
-    { id: 'CumSan', label: 'Cụm sân', icon: <Building2 className="w-3.5 h-3.5" /> },
-    { id: 'Social', label: 'Buổi chơi giao lưu', icon: <Sparkles className="w-3.5 h-3.5" /> },
-    { id: 'NoiBat', label: 'Nổi bật hôm nay', icon: <Flame className="w-3.5 h-3.5" /> },
-    { id: 'SuKien', label: 'Sự kiện', icon: <Ticket className="w-3.5 h-3.5" /> },
-    { id: 'GoiHoiVien', label: 'Gói hội viên', icon: <Crown className="w-3.5 h-3.5" /> },
-    { id: 'KhoaHoc', label: 'Khóa học', icon: <BookOpen className="w-3.5 h-3.5" /> },
-    { id: 'ThongBao', label: 'Thông báo', icon: <Bell className="w-3.5 h-3.5" /> },
-    { id: 'UuDai', label: 'Ưu đãi', icon: <Gift className="w-3.5 h-3.5" /> },
-    { id: 'PassSan', label: 'Pass sân', icon: <RefreshCw className="w-3.5 h-3.5" /> },
+    { id: 'CumSan', label: 'Cụm sân', icon: <Building2 className="w-4 h-4" /> },
+    { id: 'Social', label: 'Buổi chơi giao lưu', icon: <Sparkles className="w-4 h-4" /> },
   ]
 
   // Filter state
@@ -97,23 +79,16 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
 
   const sportsList = [
     { id: 'all', label: 'Tất cả môn', icon: <SlidersHorizontal className="w-3.5 h-3.5" /> },
-    { id: 'pickleball', label: 'Pickleball', icon: <CircleDot className="w-3.5 h-3.5" /> },
     { id: 'badminton', label: 'Cầu lông', icon: <Activity className="w-3.5 h-3.5 text-[#168039]" /> },
-    { id: 'football', label: 'Bóng đá', icon: <Trophy className="w-3.5 h-3.5" /> },
-    { id: 'basketball', label: 'Bóng rổ', icon: <CircleDot className="w-3.5 h-3.5" /> },
-    { id: 'tennis', label: 'Quần vợt', icon: <Target className="w-3.5 h-3.5" /> },
-    { id: 'multi', label: 'Đa năng', icon: <Layers className="w-3.5 h-3.5" /> },
-    { id: 'swimming', label: 'Bơi lội', icon: <Waves className="w-3.5 h-3.5" /> },
-    { id: 'volleyball', label: 'Bóng chuyền', icon: <CircleDot className="w-3.5 h-3.5" /> },
-    { id: 'golf', label: 'Golf', icon: <Flag className="w-3.5 h-3.5" /> },
+    { id: 'pickleball', label: 'Pickleball', icon: <CircleDot className="w-3.5 h-3.5" /> },
   ]
 
-  const showAllCourts = activeCategory === 'CumSan'
+  const isCourtView = activeCategory === 'CumSan'
   const currentPage = pagination.category === activeCategory ? pagination.page : 0
   const { data: courtPage, isLoading, isError } = useQuery({
-    queryKey: ['exploreFacilitiesPage', activeCategory, currentPage],
-    enabled: showAllCourts || activeCategory === 'NoiBat',
-    queryFn: () => courtApi.searchFacilitiesPage({ page: currentPage, minRating: showAllCourts ? undefined : 4.8 }),
+    queryKey: ['exploreFacilitiesPage', onlyHighRating, currentPage],
+    enabled: isCourtView,
+    queryFn: () => courtApi.searchFacilitiesPage({ page: currentPage, minRating: onlyHighRating ? 4.8 : undefined }),
   })
   const visibleCourts = (courtPage?.content ?? []).map(facilityToCourtItem)
 
@@ -127,11 +102,11 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
               Khám phá & Nổi bật
             </h1>
             <p className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5">
-              Khám phá các buổi chơi giao lưu cộng đồng và cụm sân đạt chuẩn đánh giá từ 4.8★.
+              Khám phá các cụm sân cầu lông chất lượng và buổi chơi giao lưu cộng đồng.
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={onOpenAIChat}
@@ -140,41 +115,28 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
               <Sparkles className="w-4 h-4 text-emerald-100" />
               <span>Hỏi AI gợi ý</span>
             </button>
-
-            {currentUser ? (
-              <div className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-800 text-xs font-bold flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#168039]" />
-                <span className="truncate max-w-[140px]">{currentUser.fullName}</span>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => onOpenAuth?.('login')}
-                className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-900 text-xs sm:text-sm font-bold transition-colors cursor-pointer flex items-center gap-1.5"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Đăng nhập</span>
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Category Tab Strip: Dạng thanh tabs phẳng hiện đại, trực tiếp trên layout */}
-        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pt-1">
+        {/* Category Tab Strip: Tinh gọn 2 tabs phẳng hiện đại, trực tiếp trên layout */}
+        <div className="flex items-center gap-2 pt-1">
           {categories.map((cat) => {
             const isActive = activeCategory === cat.id
             return (
               <button
                 key={cat.id}
                 type="button"
-                onClick={() => setActiveCategory(cat.id)}
-                className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer ${
+                onClick={() => {
+                  setActiveCategory(cat.id)
+                  setPagination({ category: cat.id, page: 0 })
+                }}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-colors flex items-center gap-2 cursor-pointer ${
                   isActive
                     ? 'bg-[#168039] text-white'
                     : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
                 }`}
               >
-                <span>{cat.icon}</span>
+                {cat.icon}
                 <span>{cat.label}</span>
               </button>
             )
@@ -182,21 +144,41 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Unified Workplace Canvas (Toàn bộ thao tác nằm trong MỘT khung làm việc thống nhất, không chia vụn thành cục lơ lửng) */}
-      {showAllCourts || activeCategory === 'NoiBat' ? (
+      {/* 2. Unified Workplace Canvas */}
+      {isCourtView ? (
         <div className="space-y-6">
-          {/* Section 1: Cụm sân đánh giá cao */}
+          {/* Section 1: Cụm sân */}
           <div className="space-y-3.5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2.5">
                 <Flame className="w-5 h-5 text-amber-600 shrink-0" />
                 <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                  {showAllCourts ? 'Danh sách cụm sân' : 'Cụm sân được đánh giá cao nhất (từ 4.8★)'}
+                  {onlyHighRating ? 'Cụm sân được đánh giá cao nhất (từ 4.8★)' : 'Danh sách cụm sân'}
                 </h2>
               </div>
-              <span className="text-xs font-semibold text-slate-600">
-                {courtPage?.totalElements ?? 0} cụm sân
-              </span>
+
+              <div className="flex items-center gap-2.5 flex-wrap">
+                {/* Chip lọc nhanh Nổi bật 4.8★ */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOnlyHighRating((prev) => !prev)
+                    setPagination({ category: activeCategory, page: 0 })
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer border ${
+                    onlyHighRating
+                      ? 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600'
+                      : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
+                  }`}
+                >
+                  <Flame className={`w-3.5 h-3.5 ${onlyHighRating ? 'text-white' : 'text-amber-500'}`} />
+                  <span>Nổi bật (≥ 4.8★)</span>
+                </button>
+
+                <span className="text-xs font-semibold text-slate-600">
+                  {courtPage?.totalElements ?? 0} cụm sân
+                </span>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
@@ -226,7 +208,10 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setActiveCategory('Social')}
+                onClick={() => {
+                  setActiveCategory('Social')
+                  setPagination({ category: 'Social', page: 0 })
+                }}
                 className="text-xs font-bold text-[#168039] hover:underline cursor-pointer self-start sm:self-auto"
               >
                 Xem tất cả lịch giao lưu →
@@ -237,7 +222,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
           </div>
         </div>
       ) : (
-        /* Unified Workspace Container: Chia 2 phân vùng liền mạch trong MỘT Canvas duy nhất */
+        /* Unified Workplace Container: Chia 2 phân vùng liền mạch trong MỘT Canvas duy nhất */
         <div className="bg-white rounded-2xl border border-slate-200 divide-y lg:divide-y-0 lg:divide-x divide-slate-200 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
           
           {/* Phân vùng 1 (Trái): BỘ LỌC TÌM KIẾM LIỀN MẠCH */}
@@ -354,10 +339,10 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
                 )}
               </div>
 
-              {/* Section: Môn thể thao */}
+              {/* Section: Môn thể thao (tập trung Cầu lông & Pickleball) */}
               <div className="space-y-2 pt-2 border-t border-slate-200">
                 <h3 className="text-xs font-bold text-slate-900">Môn thể thao</h3>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-3 gap-1.5">
                   {sportsList.map((sport) => {
                     const isSelected = selectedSport === sport.id
                     return (
@@ -365,7 +350,7 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
                         key={sport.id}
                         type="button"
                         onClick={() => setSelectedSport(sport.id)}
-                        className={`py-2 px-2.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5 border transition-colors cursor-pointer ${
+                        className={`py-2 px-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 border transition-colors cursor-pointer ${
                           isSelected
                             ? 'border-[#168039] bg-emerald-50 text-[#168039]'
                             : 'border-slate-200 text-slate-700 bg-white hover:bg-slate-50'
@@ -446,7 +431,6 @@ export const KhamPhaView: React.FC<KhamPhaViewProps> = ({
               <p className="col-span-full py-8 text-center text-sm text-slate-600">
                 Chưa có lịch giao lưu được công bố.
               </p>
-
             </div>
           </section>
         </div>
