@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+﻿import React, { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { authStorage } from '../auth/authApi'
 import {
@@ -745,36 +745,36 @@ export const AdminPortalView: React.FC = () => {
                         <span className="block text-[11px] text-slate-600 md:hidden">Giờ mở cửa</span>
                         {fac.openHours || 'Chưa cập nhật'}
                       </td>
-                      <td className="min-w-0 md:p-3.5">
+                      <td className="whitespace-nowrap md:p-3.5">
                         {fac.status === 'REJECTED' || (fac as any).status === 'REJECTED' ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-rose-50 text-rose-900 border-rose-200">
+                          <span className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-bold leading-none border bg-rose-50 text-rose-900 border-rose-200">
                             Bị từ chối
                           </span>
                         ) : fac.isApproved || fac.status === 'ACTIVE' || fac.status === 'active' ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-emerald-50 text-emerald-900 border-emerald-200">
+                          <span className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-bold leading-none border bg-emerald-50 text-emerald-900 border-emerald-200">
                             Đã duyệt
                           </span>
                         ) : (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-amber-50 text-amber-900 border-amber-200">
+                          <span className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-bold leading-none border bg-amber-50 text-amber-900 border-amber-200">
                             Chờ kiểm duyệt
                           </span>
                         )}
                       </td>
-                      <td className="min-w-0 md:p-3.5">
+                      <td className="whitespace-nowrap md:p-3.5">
                         {fac.status === 'active' || fac.status === 'ACTIVE' ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-blue-50 text-blue-900 border-blue-200">
+                          <span className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-bold leading-none border bg-blue-50 text-blue-900 border-blue-200">
                             Đang mở
                           </span>
                         ) : fac.status === 'paused' || fac.status === 'PAUSED' ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-rose-50 text-rose-900 border-rose-200">
+                          <span className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-bold leading-none border bg-rose-50 text-rose-900 border-rose-200">
                             Đang khóa
                           </span>
                         ) : fac.status === 'REJECTED' || (fac as any).status === 'REJECTED' ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-slate-100 text-slate-700 border-slate-200">
+                          <span className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-bold leading-none border bg-slate-100 text-slate-700 border-slate-200">
                             Ngừng HĐ
                           </span>
                         ) : (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-amber-50 text-amber-900 border-amber-200">
+                          <span className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-bold leading-none border bg-amber-50 text-amber-900 border-amber-200">
                             Chờ mở
                           </span>
                         )}
