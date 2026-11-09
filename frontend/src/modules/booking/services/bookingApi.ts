@@ -17,6 +17,10 @@ client.interceptors.request.use((config) => {
 });
 
 export const bookingApi = {
+  async checkInterval(courtId: number, date: string, startTime: string, endTime: string): Promise<{ isAvailable: boolean; calculatedPrice: number; reason: string }> {
+    const response = await client.post('/courts/check-availability', { courtId, date, startTime, endTime });
+    return response.data.data;
+  },
   // Lấy danh sách slot và trạng thái sân theo ngày
   async getCourtAvailability(courtId: number, date: string): Promise<CourtAvailability> {
     const response = await client.get<ApiResponse<CourtAvailability>>(
@@ -27,8 +31,8 @@ export const bookingApi = {
   },
 
   // Tạo đơn giữ chỗ (HELD 10 phút)
-  async createHeldBooking(payload: BookingCreateRequest): Promise<BookingResponse> {
-    const response = await client.post<ApiResponse<BookingResponse>>('/bookings', payload);
+  async createHeldBooking(payload: BookingCreateRequest, idempotencyKey?: string): Promise<BookingResponse> {
+    const response = await client.post<ApiResponse<BookingResponse>>('/bookings', payload, { headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {} });
     return response.data.data;
   },
 

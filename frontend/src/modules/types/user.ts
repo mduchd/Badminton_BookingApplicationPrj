@@ -14,6 +14,10 @@ export interface User {
 }
 
 export interface SearchCriteria {
+  city?: string
+  maxTotalPrice?: number
+  durationMinutes?: number
+  sportType?: 'badminton' | 'pickleball'
   locationText: string
   district: string
   date: string
@@ -63,6 +67,22 @@ export interface AIMessage {
   extractedCriteria?: Partial<SearchCriteria>
   matchedCount?: number
   isError?: boolean
-  recommendedCourts?: any[]
+  recommendedCourts?: AiCourtRecommendation[]
   followUpChips?: string[]
+}
+
+export interface AiCourtRecommendation {
+  facilityId: number
+  facilityName: string
+  address: string
+  openHours: string
+  minPricePerHour?: number
+  matchReason: string
+  courtId?: number
+  courtName?: string
+  date?: string
+  startTime?: string
+  endTime?: string
+  totalPrice?: number
+  checkedAt?: string
 }

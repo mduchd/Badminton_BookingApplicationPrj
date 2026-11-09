@@ -67,10 +67,10 @@ public class AvailabilityService {
 
         List<CourtOccupancy> activeOccupancies = occupancyRepository.findActiveForCourtInDateRange(courtId, startOfDay, endOfDay);
         int dayOfWeek = date.getDayOfWeek().getValue(); // 1 = Mon ... 7 = Sun
-        List<PriceRule> rules = priceRuleRepository.findRulesForCourtAndDay(courtId, dayOfWeek);
+        List<PriceRule> rules = effectiveRules(priceRuleRepository.findRulesForCourtAndDay(courtId, dayOfWeek), date);
         BigDecimal fallbackRate = court.getPricePerHour();
 
-        boolean facilityNotActive = !"ACTIVE".equalsIgnoreCase(facility.getStatus());
+        boolean facilityNotActive = !"ACTIVE".equalsIgnoreCase(facility.getStatus()) || !Boolean.TRUE.equals(facility.getIsApproved());
         boolean courtNotActive = !"ACTIVE".equalsIgnoreCase(court.getStatus());
         boolean isSystemMaintenance = systemSettingService != null && systemSettingService.isMaintenanceMode();
 
@@ -127,6 +127,10 @@ public class AvailabilityService {
             throw new BadRequestException("Giờ bắt đầu phải trước giờ kết thúc!");
         }
 
+        if (!date.atTime(startTime).isAfter(LocalDateTime.now(ZONE_VN))) {
+            return new CheckAvailabilityResponse(courtId, false, BigDecimal.ZERO, "Khung giờ đã bắt đầu hoặc đã qua", OffsetDateTime.now());
+        }
+
         if (systemSettingService != null && systemSettingService.isMaintenanceMode()) {
             return new CheckAvailabilityResponse(courtId, false, BigDecimal.ZERO, "Hệ thống đang trong chế độ bảo trì định kỳ.", OffsetDateTime.now());
         }
@@ -137,7 +141,44 @@ public class AvailabilityService {
         Facility facility = facilityRepository.findById(court.getFacilityId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cụm sân"));
 
-        if (!"ACTIVE".equalsIgnoreCase(facility.getStatus())) {
+        return evaluateInterval(court, facility, date, startTime, endTime,
+                () -> occupancyRepository.findActiveOverlapping(courtId,
+                        date.atTime(startTime).atZone(ZONE_VN).toOffsetDateTime(),
+                        date.atTime(endTime).atZone(ZONE_VN).toOffsetDateTime()),
+                () -> priceRuleRepository.findRulesForCourtAndDay(courtId, date.getDayOfWeek().getValue()));
+    }
+
+    public java.util.Map<Long, CheckAvailabilityResponse> checkIntervals(List<Long> courtIds, LocalDate date, LocalTime start, LocalTime end) {
+        if (!start.isBefore(end)) throw new BadRequestException("Giờ bắt đầu phải trước giờ kết thúc!");
+        if (courtIds.isEmpty()) return java.util.Map.of();
+        if (systemSettingService != null && systemSettingService.isMaintenanceMode()) {
+            var blocked = new java.util.HashMap<Long, CheckAvailabilityResponse>();
+            for (Long id : courtIds) blocked.put(id, new CheckAvailabilityResponse(id, false, BigDecimal.ZERO, "Hệ thống đang bảo trì", OffsetDateTime.now()));
+            return blocked;
+        }
+        var courts = courtRepository.findAllById(courtIds);
+        var facilityIds = courts.stream().map(Court::getFacilityId).distinct().toList();
+        var facilities = facilityRepository.findAllById(facilityIds).stream().collect(java.util.stream.Collectors.toMap(Facility::getId, f -> f));
+        var conflicts = occupancyRepository.findActiveOverlappingBatch(courtIds,
+                date.atTime(start).atZone(ZONE_VN).toOffsetDateTime(), date.atTime(end).atZone(ZONE_VN).toOffsetDateTime());
+        var rules = facilityIds.isEmpty() ? List.<PriceRule>of() : priceRuleRepository.findRulesForCourtsAndDay(courtIds, facilityIds, date.getDayOfWeek().getValue());
+        var result = new java.util.HashMap<Long, CheckAvailabilityResponse>();
+        for (Court court : courts) {
+            var facility = facilities.get(court.getFacilityId());
+            if (facility == null) continue;
+            result.put(court.getId(), evaluateInterval(court, facility, date, start, end,
+                    () -> conflicts.stream().filter(o -> o.getCourtId().equals(court.getId())).toList(),
+                    () -> rules.stream().filter(r -> court.getId().equals(r.getCourtId())
+                            || (r.getCourtId() == null && facility.getId().equals(r.getFacilityId()))).toList()));
+        }
+        return result;
+    }
+
+    private CheckAvailabilityResponse evaluateInterval(Court court, Facility facility, LocalDate date, LocalTime startTime, LocalTime endTime,
+            java.util.function.Supplier<List<CourtOccupancy>> conflictsSupplier, java.util.function.Supplier<List<PriceRule>> rulesSupplier) {
+        Long courtId = court.getId();
+        if (!date.atTime(startTime).isAfter(LocalDateTime.now(ZONE_VN))) return new CheckAvailabilityResponse(courtId, false, BigDecimal.ZERO, "Khung giờ đã qua", OffsetDateTime.now());
+        if (!"ACTIVE".equalsIgnoreCase(facility.getStatus()) || !Boolean.TRUE.equals(facility.getIsApproved())) {
             return new CheckAvailabilityResponse(
                     courtId,
                     false,
@@ -170,7 +211,7 @@ public class AvailabilityService {
         OffsetDateTime startAt = date.atTime(startTime).atZone(ZONE_VN).toOffsetDateTime();
         OffsetDateTime endAt = date.atTime(endTime).atZone(ZONE_VN).toOffsetDateTime();
 
-        List<CourtOccupancy> conflicts = occupancyRepository.findActiveOverlapping(courtId, startAt, endAt);
+        List<CourtOccupancy> conflicts = conflictsSupplier.get();
         if (!conflicts.isEmpty()) {
             CourtOccupancy c = conflicts.getFirst();
             String reason = c.getOccupancyType() == OccupancyType.MAINTENANCE
@@ -180,7 +221,7 @@ public class AvailabilityService {
         }
 
         int dayOfWeek = date.getDayOfWeek().getValue();
-        List<PriceRule> rules = priceRuleRepository.findRulesForCourtAndDay(courtId, dayOfWeek);
+        List<PriceRule> rules = effectiveRules(rulesSupplier.get(), date);
         BigDecimal totalPrice = calculatePriceForInterval(rules, startTime, endTime, court.getPricePerHour());
 
         return new CheckAvailabilityResponse(courtId, true, totalPrice, "Sân còn trống", OffsetDateTime.now());
@@ -203,14 +244,15 @@ public class AvailabilityService {
         LocalTime current = start;
 
         while (current.isBefore(end)) {
-            LocalTime next = Duration.between(current, end).compareTo(Duration.ofMinutes(30)) <= 0
-                    ? end : current.plusMinutes(30);
-
-            LocalTime midPoint = current.plusMinutes(Duration.between(current, next).toMinutes() / 2);
+            LocalTime next = end;
+            for (PriceRule rule : rules) {
+                if (rule.getStartTime().isAfter(current) && rule.getStartTime().isBefore(next)) next = rule.getStartTime();
+                if (rule.getEndTime().isAfter(current) && rule.getEndTime().isBefore(next)) next = rule.getEndTime();
+            }
             BigDecimal hourlyRate = fallbackHourly;
 
             for (PriceRule r : rules) {
-                if (!midPoint.isBefore(r.getStartTime()) && midPoint.isBefore(r.getEndTime())) {
+                if (!current.isBefore(r.getStartTime()) && current.isBefore(r.getEndTime())) {
                     int slotMins = r.getSlotDurationMinutes() != null && r.getSlotDurationMinutes() > 0
                             ? r.getSlotDurationMinutes() : 60;
                     hourlyRate = r.getPricePerSlot()
@@ -229,6 +271,13 @@ public class AvailabilityService {
         }
 
         return total;
+    }
+
+    private List<PriceRule> effectiveRules(List<PriceRule> rules, LocalDate date) {
+        return rules.stream()
+                .filter(rule -> (rule.getEffectiveFrom() == null || !date.isBefore(rule.getEffectiveFrom()))
+                        && (rule.getEffectiveTo() == null || !date.isAfter(rule.getEffectiveTo())))
+                .toList();
     }
 
     private CourtOccupancy findConflict(List<CourtOccupancy> occupancies, OffsetDateTime start, OffsetDateTime end) {

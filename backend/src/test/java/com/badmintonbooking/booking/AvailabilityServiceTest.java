@@ -53,6 +53,44 @@ class AvailabilityServiceTest {
     private Facility mockFacility;
     private PriceRule defaultPriceRule;
 
+    @Test
+    void batchChecksUseSamePricingAndRejectOccupiedCourts() {
+        var date = LocalDate.now(AvailabilityService.ZONE_VN).plusDays(1);
+        when(courtRepository.findAllById(List.of(1L))).thenReturn(List.of(mockCourt));
+        when(facilityRepository.findAllById(List.of(10L))).thenReturn(List.of(mockFacility));
+        when(priceRuleRepository.findRulesForCourtsAndDay(List.of(1L), List.of(10L), date.getDayOfWeek().getValue())).thenReturn(List.of(defaultPriceRule));
+        var first = availabilityService.checkIntervals(List.of(1L), date, LocalTime.of(6, 0), LocalTime.of(7, 0)).get(1L);
+        assertTrue(first.isAvailable());
+        assertEquals(0, new BigDecimal("100000").compareTo(first.calculatedPrice()));
+        var from = date.atTime(6, 30).atZone(AvailabilityService.ZONE_VN).toOffsetDateTime();
+        when(occupancyRepository.findActiveOverlappingBatch(eq(List.of(1L)), any(), any())).thenReturn(
+                List.of(new CourtOccupancy(1L, 9L, from, from.plusHours(1), OccupancyType.HOLD)));
+        assertFalse(availabilityService.checkIntervals(List.of(1L), date, LocalTime.of(6, 0), LocalTime.of(7, 0)).get(1L).isAvailable());
+    }
+
+    @Test
+    void priceChangesAtExactRuleBoundary() {
+        PriceRule peak = new PriceRule();
+        peak.setStartTime(LocalTime.of(6, 10));
+        peak.setEndTime(LocalTime.of(7, 0));
+        peak.setPricePerSlot(new BigDecimal("180000"));
+        BigDecimal price = availabilityService.calculatePriceForInterval(
+                List.of(peak), LocalTime.of(6, 0), LocalTime.of(7, 0), new BigDecimal("60000"));
+        assertEquals(0, new BigDecimal("160000").compareTo(price));
+    }
+
+    @Test
+    void ignoresPriceRulesOutsideRequestedDate() {
+        LocalDate date = LocalDate.of(2027, 1, 10);
+        mockCourt.setBasePricePerHour(new BigDecimal("60000"));
+        defaultPriceRule.setEffectiveFrom(date.plusDays(1));
+        when(courtRepository.findById(1L)).thenReturn(Optional.of(mockCourt));
+        when(facilityRepository.findById(10L)).thenReturn(Optional.of(mockFacility));
+        when(priceRuleRepository.findRulesForCourtAndDay(eq(1L), anyInt())).thenReturn(List.of(defaultPriceRule));
+        var result = availabilityService.checkIntervalAvailability(1L, date, LocalTime.of(6, 0), LocalTime.of(7, 0));
+        assertEquals(0, new BigDecimal("60000").compareTo(result.calculatedPrice()));
+    }
+
     @BeforeEach
     void setUp() {
         mockCourt = new Court();

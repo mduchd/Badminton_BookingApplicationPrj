@@ -10,6 +10,13 @@ import java.util.List;
 
 @Repository
 public interface PriceRuleRepository extends JpaRepository<PriceRule, Long> {
+    @Query("SELECT p FROM PriceRule p WHERE (p.courtId IN :courtIds OR (p.courtId IS NULL AND p.facilityId IN :facilityIds)) " +
+           "AND p.customerType = 'CASUAL' AND (p.dayOfWeek = :day OR (p.dayOfWeek = 0 AND p.dayType = 'ALL') " +
+           "OR (p.dayType = 'WEEKDAY' AND :day BETWEEN 1 AND 5) OR (p.dayType = 'WEEKEND' AND :day IN (6,7))) " +
+           "ORDER BY CASE WHEN p.courtId IS NOT NULL THEN 0 ELSE 1 END, " +
+           "CASE WHEN p.dayOfWeek > 0 THEN 0 WHEN p.dayType IN ('WEEKDAY','WEEKEND') THEN 1 ELSE 2 END, p.startTime, p.id")
+    List<PriceRule> findRulesForCourtsAndDay(@Param("courtIds") List<Long> courtIds,
+            @Param("facilityIds") List<Long> facilityIds, @Param("day") int day);
 
     List<PriceRule> findByCourtIdIn(List<Long> courtIds);
 

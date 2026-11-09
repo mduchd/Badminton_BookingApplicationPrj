@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { X, Calendar as CalendarIcon, MapPin } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookingApi } from '../services/bookingApi';
@@ -33,6 +33,14 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
   const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(initialDate);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(initialSlot);
+  const bookingAttempt = useRef<{ payload: string; key: string } | null>(null);
+  const { data: intervalCheck } = useQuery({
+    queryKey: ['intervalCheck', courtId, selectedDate, selectedSlot?.startTime, selectedSlot?.endTime],
+    queryFn: () => bookingApi.checkInterval(courtId, selectedDate, selectedSlot!.startTime, selectedSlot!.endTime),
+    enabled: isOpen && !!selectedSlot,
+    staleTime: 0,
+    refetchInterval: 15000,
+  });
 
   // Lấy dữ liệu availability của sân
   const { data: availability, isLoading } = useQuery({
@@ -51,21 +59,23 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
   };
 
   // Only confirm a slot that the latest availability response still marks available.
-  const currentSlot = visibleAvailability?.slots.find((slot) =>
-    slot.startTime === selectedSlot?.startTime && slot.endTime === selectedSlot?.endTime && slot.available
-  ) ?? null;
+  const currentSlot = selectedSlot && intervalCheck?.isAvailable
+    ? { ...selectedSlot, price: intervalCheck.calculatedPrice } : null;
 
   // Mutation tạo đơn giữ chỗ HELD
   const createBookingMutation = useMutation({
     mutationFn: (note: string) => {
       if (!currentSlot) throw new Error('Khung giờ không còn trống. Vui lòng chọn lại!');
-      return bookingApi.createHeldBooking({
+      const payload = {
         courtId,
         bookingDate: selectedDate,
         startTime: currentSlot.startTime,
         endTime: currentSlot.endTime,
         note,
-            });
+      };
+      const serialized = JSON.stringify(payload);
+      if (bookingAttempt.current?.payload !== serialized) bookingAttempt.current = { payload: serialized, key: crypto.randomUUID() };
+      return bookingApi.createHeldBooking(payload, bookingAttempt.current.key);
     },
     onSuccess: (booking) => {
       queryClient.invalidateQueries({ queryKey: ['courtAvailability'] });
@@ -78,7 +88,7 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-xs">
+    <div role="dialog" aria-modal="true" aria-label="Đặt sân" className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-xs">
       <div className="relative w-full max-w-5xl bg-white rounded-3xl border border-slate-200 overflow-hidden max-h-[min(90vh,720px)] flex flex-col">
         {/* Header Modal thanh lịch nền sáng */}
         <div className="px-5 py-4 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
@@ -124,7 +134,7 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
             </div>
 
             <p className="text-xs text-slate-600 font-medium">
-              Khung giờ trống màu xanh, bấm chọn để xem giá snapshot
+              Khung giờ trống màu xanh, bấm chọn để xem giá
             </p>
           </div>
 
@@ -136,7 +146,7 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
 
           {/* Lưới giờ & Card tóm tắt */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-            <div className="lg:col-span-2">
+            <div className="order-2 lg:order-1 lg:col-span-2">
               <TimeSlotGrid
                 availability={visibleAvailability}
                 selectedSlot={selectedSlot}
@@ -145,7 +155,7 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
               />
             </div>
 
-            <div className="lg:col-span-1">
+            <div className="order-1 lg:order-2 lg:col-span-1">
               <BookingSummaryCard
                 courtName={courtName}
                 facilityName={facilityName}

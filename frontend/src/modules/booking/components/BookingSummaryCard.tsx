@@ -49,9 +49,6 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
       <div>
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
           <h3 className="font-bold text-slate-900 text-base">Tóm tắt đơn đặt sân</h3>
-          <span className="px-2.5 py-1 text-[11px] font-bold bg-amber-50 text-amber-900 rounded-lg border border-amber-300">
-            Giữ chỗ 10 phút
-          </span>
         </div>
 
         <div className="space-y-3 mt-4 text-xs">
@@ -78,7 +75,7 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
           </div>
 
           <div className="flex justify-between items-baseline pt-2">
-            <span className="text-slate-700 font-semibold text-xs">Giá snapshot:</span>
+            <span className="text-slate-700 font-semibold text-xs">Tổng tiền:</span>
             <span className="text-lg font-black text-[#1b7a42]">
               {formatVND(selectedSlot.price)}
             </span>
@@ -101,9 +98,9 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
         <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-[11px] leading-relaxed">
           <div className="flex items-center gap-1.5 font-bold mb-0.5">
             <AlertCircle className="w-3.5 h-3.5 text-amber-700" />
-            <span>Lưu ý giữ chỗ 10 phút:</span>
+            <span>Giữ chỗ có thời hạn:</span>
           </div>
-          Liên hệ chủ sân để được hướng dẫn thanh toán và xác nhận đơn. Khung giờ sẽ tự động mở lại khi hết thời hạn giữ chỗ.
+          Xem thời hạn và tiếp tục thanh toán trong đơn đặt sân. Khung giờ sẽ mở lại khi hết thời hạn giữ chỗ.
         </div>
       </div>
 
@@ -121,7 +118,7 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
         ) : (
           <>
             <CheckCircle2 className="w-4 h-4" />
-            Xác nhận giữ chỗ (10 phút)
+            Xác nhận giữ chỗ
           </>
         )}
       </button>

@@ -17,6 +17,7 @@ import java.util.Optional;
 
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long> {
+    java.util.Optional<Booking> findByCustomerIdAndIdempotencyKey(Long customerId, String idempotencyKey);
 
     List<Booking> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
 

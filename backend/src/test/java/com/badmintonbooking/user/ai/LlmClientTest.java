@@ -8,6 +8,6 @@ import static org.junit.jupiter.api.Assertions.*;
 class LlmClientTest {
     @Test void noKeyReturnsErrorInsteadOfInventingAiResponse() {
         LlmClient client = new LlmClient(new ObjectMapper());
-        assertThrows(IllegalStateException.class, () -> client.parseMessage("Tìm sân Cầu Giấy", null));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> client.parseMessage("Tìm sân Cầu Giấy", null));
     }
 }

@@ -20,10 +20,12 @@ public class BookingController {
 
     private final BookingService bookingService;
     private final UserRepository userRepository;
+    private final com.badmintonbooking.booking.service.BookingIdempotencyService idempotency;
 
-    public BookingController(BookingService bookingService, UserRepository userRepository) {
+    public BookingController(BookingService bookingService, UserRepository userRepository, com.badmintonbooking.booking.service.BookingIdempotencyService idempotency) {
         this.bookingService = bookingService;
         this.userRepository = userRepository;
+        this.idempotency = idempotency;
     }
 
     private Long customerId(Authentication authentication) {
@@ -35,11 +37,12 @@ public class BookingController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<BookingResponse>> createHeldBooking(
-            @Valid @RequestBody BookingCreateRequest request, Authentication authentication
+            @Valid @RequestBody BookingCreateRequest request, Authentication authentication,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey
     ) {
-        BookingResponse response = bookingService.createHeldBooking(request, customerId(authentication));
+        BookingResponse response = idempotency.create(request, customerId(authentication), idempotencyKey);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(response, "Giữ chỗ thành công! Đơn của bạn được giữ trong 10 phút để thanh toán."));
+                .body(ApiResponse.ok(response, "Giữ chỗ thành công. Vui lòng kiểm tra thời hạn trong đơn và tiếp tục thanh toán."));
     }
 
     @GetMapping("/me")

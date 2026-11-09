@@ -15,6 +15,9 @@ import java.util.Optional;
 
 @Repository
 public interface CourtOccupancyRepository extends JpaRepository<CourtOccupancy, Long> {
+    @Query("SELECT o FROM CourtOccupancy o WHERE o.courtId IN :courtIds AND o.activeStatus = 'ACTIVE' AND o.startAt < :endAt AND o.endAt > :startAt")
+    List<CourtOccupancy> findActiveOverlappingBatch(@Param("courtIds") Collection<Long> courtIds,
+            @Param("startAt") OffsetDateTime startAt, @Param("endAt") OffsetDateTime endAt);
 
     @Query("SELECT o FROM CourtOccupancy o WHERE o.courtId = :courtId " +
            "AND o.activeStatus = 'ACTIVE' " +

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test:e2e": "playwright test",
     "check:ui-rules": "node scripts/check-ui-rules.mjs",
     "build": "node scripts/check-ui-rules.mjs && tsc -b && vite build",
     "lint": "eslint .",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.0",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",

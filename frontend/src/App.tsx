@@ -291,6 +291,7 @@ export function MainApp() {
   }
 
   const openBookingForCourt = (court: NonNullable<typeof bookingCourt>) => {
+    setBookingCourt(court)
     if (!currentUser) {
       setAuthInitialTab('login')
       setIsAuthOpen(true)
@@ -777,6 +778,17 @@ export function MainApp() {
           onApplyCriteria={handleApplyCriteriaFromAI}
           onSelectCourt={handleOpenCourtSidebar}
           onBookCourt={handleOpenBooking}
+          onChooseRecommendation={(court) => {
+            if (!court.courtId || !court.date || !court.startTime || !court.endTime || court.totalPrice == null) return
+            setIsAIChatOpen(false)
+            openBookingForCourt({ courtId: court.courtId, courtName: court.courtName || 'Sân đã chọn', facilityName: court.facilityName,
+              facilityAddress: court.address, initialDate: court.date,
+              initialSlot: { startTime: court.startTime, endTime: court.endTime, price: court.totalPrice, available: true, slotStatus: 'AVAILABLE' } })
+          }}
+          onOpenFacilityBooking={(facilityId) => {
+            setIsAIChatOpen(false)
+            navigate(`/courts/${facilityId}/book`)
+          }}
           currentCriteria={criteria}
         /></LoadOnOpen>
       )}
