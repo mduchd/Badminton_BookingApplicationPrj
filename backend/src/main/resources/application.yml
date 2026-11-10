@@ -1,4 +1,4 @@
-spring:
+﻿spring:
   application:
     name: badminton-booking
 
@@ -37,9 +37,9 @@ booking:
   hold-duration-minutes: ${BOOKING_HOLD_DURATION_MINUTES:10}
 payos:
   enabled: ${PAYOS_ENABLED:true}
-  client-id: ${PAYOS_CLIENT_ID:}
-  api-key: ${PAYOS_API_KEY:}
-  checksum-key: ${PAYOS_CHECKSUM_KEY:}
+  client-id: ${PAYOS_CLIENT_ID:7c48e6a8-78f3-41b8-b462-fdfebe37c142}
+  api-key: ${PAYOS_API_KEY:f6399d82-29c9-41b5-84d5-bb4a4bf4adad}
+  checksum-key: ${PAYOS_CHECKSUM_KEY:c0fc66b5c6e2fb261509784a4171f823ca01c4b196fff892832e3a4284ab130d}
 deepseek:
   api-key: ${DEEPSEEK_API_KEY:}
   base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
