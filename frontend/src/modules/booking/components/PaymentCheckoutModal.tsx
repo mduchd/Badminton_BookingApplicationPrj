@@ -22,8 +22,8 @@ export function PaymentCheckoutModal({ isOpen, onClose, booking, onSuccess, onPa
     queryKey: ['checkout-session', booking?.id],
     queryFn: () => createCheckout(booking!.id, {
       paymentMethod: 'PAYOS',
-      returnUrl: `${window.location.origin}/payment/success`,
-      cancelUrl: `${window.location.origin}/payment/cancel`,
+      returnUrl: `${window.location.origin}/booking-success/${booking!.id}`,
+      cancelUrl: `${window.location.origin}/checkout/${booking!.id}`,
     }),
     enabled: isOpen && !!booking,
     retry: false,

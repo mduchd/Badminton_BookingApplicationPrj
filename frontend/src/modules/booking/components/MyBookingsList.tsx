@@ -45,7 +45,7 @@ export const MyBookingsList: React.FC<MyBookingsListProps> = ({
         return (
           <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-50 text-amber-800 border border-amber-300 inline-flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-            Đang giữ ({remaining})
+            Chờ thanh toán ({remaining})
           </span>
         );
       }

@@ -31,7 +31,7 @@ for (const width of [360, 768, 1366, 1920]) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
       await page.screenshot({ path: `test-results/booking-${width}.png`, fullPage: true })
       const created = page.waitForResponse(r => r.url().endsWith('/api/bookings') && r.request().method() === 'POST')
-      await modal.getByRole('button', { name: 'Xác nhận giữ chỗ', exact: true }).click()
+      await modal.getByRole('button', { name: 'Tiếp tục thanh toán', exact: true }).click()
       const held = await created
       expect(held.status()).toBe(201)
       expect(held.request().headers()['idempotency-key']).toBeTruthy()

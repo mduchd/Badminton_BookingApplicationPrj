@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ROUTES } from '../../../app/router'
 import { PaymentCheckoutModal } from '../components/PaymentCheckoutModal'
@@ -8,7 +8,7 @@ import { bookingApi } from '../services/bookingApi'
 import type { BookingStatus } from '../types'
 
 const statusLabels: Record<BookingStatus, string> = {
-  HELD: 'Đang giữ chỗ',
+  HELD: 'Chưa thanh toán',
   PENDING_PAYMENT: 'Đang chờ thanh toán',
   CONFIRMED: 'Đã xác nhận',
   COMPLETED: 'Đã hoàn thành',
@@ -17,7 +17,8 @@ const statusLabels: Record<BookingStatus, string> = {
 }
 
 export function CheckoutView({ userId }: { userId: string }) {
-  const [paymentOpen, setPaymentOpen] = useState(false)
+  const [paymentOpen, setPaymentOpen] = useState(true)
+  const navigate = useNavigate()
   const { bookingId } = useParams()
   const id = Number(bookingId)
   const client = useQueryClient()
@@ -74,7 +75,7 @@ export function CheckoutView({ userId }: { userId: string }) {
                 </p>
               )}
               <p className="text-sm font-medium text-slate-700">
-                Thanh toán trực tuyến qua payOS hoặc liên hệ chủ sân để được hướng dẫn chuyển khoản.
+                Hoàn tất thanh toán qua payOS để xác nhận đặt sân. Khung giờ chỉ được giữ tạm và sẽ mở lại nếu hết hạn thanh toán.
               </p>
               <div className="flex flex-wrap items-center gap-3 pt-1">
                 <button
@@ -84,12 +85,6 @@ export function CheckoutView({ userId }: { userId: string }) {
                 >
                   Thanh toán qua payOS
                 </button>
-                <Link
-                  to={`/courts/${booking.facilityId}`}
-                  className="cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  Thông tin liên hệ
-                </Link>
                 <button
                   type="button"
                   disabled={cancel.isPending}
@@ -100,6 +95,11 @@ export function CheckoutView({ userId }: { userId: string }) {
                 </button>
               </div>
             </div>
+          )}
+          {(booking.status === 'CONFIRMED' || booking.status === 'COMPLETED') && (
+            <Link to={`/booking-success/${id}`} className="inline-block cursor-pointer text-sm font-semibold text-green-700">
+              Xem xác nhận đặt sân
+            </Link>
           )}
         </div>
       ) : (
@@ -112,13 +112,14 @@ export function CheckoutView({ userId }: { userId: string }) {
         </p>
       )}
       <PaymentCheckoutModal
-        isOpen={paymentOpen}
+        isOpen={paymentOpen && holding}
         booking={booking ?? null}
         onClose={() => setPaymentOpen(false)}
         onPaymentSuccess={() => {
           client.invalidateQueries({ queryKey: ['booking', userId, id] })
           client.invalidateQueries({ queryKey: ['myBookings'] })
           client.invalidateQueries({ queryKey: ['courtAvailability'] })
+          navigate(`/booking-success/${id}`, { replace: true })
         }}
       />
     </main>

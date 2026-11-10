@@ -18,11 +18,12 @@ export const BookingSuccessView: React.FC<{ userId: string }> = ({ userId }) => 
   const { bookingId } = useParams<{ bookingId: string }>()
   const navigate = useNavigate()
   const id = Number(bookingId)
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError } = useQuery({
     queryKey: ['booking', userId, id],
     queryFn: () => bookingApi.getBookingById(id),
     enabled: Number.isSafeInteger(id) && id > 0,
     retry: false,
+    refetchInterval: (query) => query.state.data?.status === 'HELD' || query.state.data?.status === 'PENDING_PAYMENT' ? 3000 : false,
   })
   const booking = data && (data.status === 'CONFIRMED' || data.status === 'COMPLETED') ? {
     ...data,
@@ -40,7 +41,13 @@ export const BookingSuccessView: React.FC<{ userId: string }> = ({ userId }) => 
   if (!booking) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center p-6 text-center">
-        <h2 className="text-xl font-bold text-slate-900 mb-2">{isPending && Number.isSafeInteger(id) && id > 0 ? 'Đang tải đơn đặt sân…' : 'Chưa có biên nhận xác nhận cho đơn này'}</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">{isPending && Number.isSafeInteger(id) && id > 0 ? 'Đang tải đơn đặt sân…' : data?.status === 'HELD' || data?.status === 'PENDING_PAYMENT' ? 'Đang chờ xác nhận thanh toán từ payOS' : 'Chưa có biên nhận xác nhận cho đơn này'}</h2>
+        {!isError && (data?.status === 'HELD' || data?.status === 'PENDING_PAYMENT') && (
+          <>
+            <p role="status" className="text-sm text-slate-600">Đơn chỉ được xác nhận khi hệ thống nhận được thanh toán thành công.</p>
+            <button type="button" onClick={() => navigate(`/checkout/${id}`)} className="mt-4 cursor-pointer text-sm font-semibold text-green-700">Tiếp tục thanh toán</button>
+          </>
+        )}
         <button
           type="button"
           onClick={() => navigate(ROUTES.HOME)}

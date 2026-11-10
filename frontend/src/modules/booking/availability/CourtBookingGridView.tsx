@@ -10,6 +10,7 @@ import type { TimeSlot } from '../types'
 import type { Facility, PriceRule } from '../../types/court'
 import type { BookingSlot } from '../../types/booking'
 import type { User } from '../../types/user'
+import { isSlotInRange, selectTimeRange } from '../timeRangeSelection'
 import { ROUTES } from '../../../app/router'
 
 const DEFAULT_TIMES = Array.from({ length: 36 }, (_, i) => {
@@ -71,17 +72,27 @@ function BookingGrid({ facility, priceRules, currentUser = null, onOpenAuth, onB
   const toggleSelectSlot = (court: { id: string; name: string }, time: string) => {
     const slot = getSlot(court.id, time)
     if (!slot || getSlotStatus(court.id, time) !== 'available') return
-    const slotId = `${court.id}_${selectedDate}_${time}`
-    if (selectedSlots.some((s) => s.slotId === slotId)) return setSelectedSlots([])
-    setSelectedSlots([{ slotId, courtId: court.id, courtName: court.name, date: selectedDate, startTime: slot.startTime, endTime: slot.endTime, price: slot.price }])
+    const courtSlots = availability[facility.subCourts.findIndex(c => c.id === court.id)]?.data?.slots ?? []
+    const first = selectedSlots[0]
+    const current = first?.courtId === court.id
+      ? { ...slot, startTime: first.startTime, endTime: selectedSlots[selectedSlots.length - 1].endTime }
+      : null
+    try {
+      const range = selectTimeRange(current, slot, courtSlots.map(s => ({ ...s, available: getSlotStatus(court.id, s.startTime.slice(0, 5)) === 'available' })))
+      setSelectedSlots(courtSlots.filter(s => isSlotInRange(s, range))
+        .sort((a, b) => a.startTime.localeCompare(b.startTime))
+        .map(s => ({ slotId: `${court.id}_${selectedDate}_${s.startTime.slice(0, 5)}`, courtId: court.id, courtName: court.name, date: selectedDate, startTime: s.startTime, endTime: s.endTime, price: s.price })))
+    } catch (error) {
+      toast.error((error as Error).message)
+    }
   }
   const totalPrice = selectedSlots.reduce((sum, slot) => sum + slot.price, 0)
   const handleProceedToCheckout = () => {
     const selected = selectedSlots[0]
     const slot = selected && getSlot(selected.courtId, selected.startTime.slice(0, 5))
-    if (!selected || !slot || getSlotStatus(selected.courtId, selected.startTime.slice(0, 5)) !== 'available') { toast.error('Khung giờ không còn khả dụng. Vui lòng chọn lại.'); return }
+    if (!selected || !slot || selectedSlots.some(s => getSlotStatus(s.courtId, s.startTime.slice(0, 5)) !== 'available')) { toast.error('Khung giờ không còn khả dụng. Vui lòng chọn lại.'); return }
     if (!currentUser) { onOpenAuth('login'); return }
-    onBook({ courtId: Number(selected.courtId), courtName: selected.courtName, facilityName: facility.name, facilityAddress: facility.normalizedAddress || facility.address, initialDate: selectedDate, initialSlot: slot })
+    onBook({ courtId: Number(selected.courtId), courtName: selected.courtName, facilityName: facility.name, facilityAddress: facility.normalizedAddress || facility.address, initialDate: selectedDate, initialSlot: { ...slot, endTime: selectedSlots[selectedSlots.length - 1].endTime, price: totalPrice } })
   }
   const handleScrollDate = (direction: 'left' | 'right') => dateListRef.current?.scrollBy({ left: direction === 'left' ? -260 : 260, behavior: 'smooth' })
   const prevUserRef = useRef(currentUser)
@@ -233,7 +244,7 @@ function BookingGrid({ facility, priceRules, currentUser = null, onOpenAuth, onB
           </button>
         </div>
 
-        <p className="px-4 py-2 text-xs text-slate-600">Chọn một khung giờ cho mỗi lần đặt.</p>
+        <p className="px-4 py-2 text-xs text-slate-600">Chọn nhiều giờ liên tiếp trên cùng một sân: bấm ô đầu và ô cuối. Bấm ô đã chọn để rút ngắn khoảng giờ; chọn sân khác để chuyển sân.</p>
         {/* 4. VISUAL MATRIX TABLE: Seamlessly integrated inside the workplace canvas */}
         <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-270px)] sm:max-h-[calc(100vh-290px)]">
           <table className="w-full border-collapse select-none">
@@ -287,7 +298,8 @@ function BookingGrid({ facility, priceRules, currentUser = null, onOpenAuth, onB
                           type="button"
                           onClick={() => toggleSelectSlot(court, time)}
                           disabled={status !== 'available'}
-                          aria-label={status === 'unknown' ? `${court.name}, ${time}: khung giờ đã qua hoặc chưa được cung cấp` : undefined}
+                          aria-pressed={isSelected}
+                          aria-label={`${court.name}, ${time}${status === 'unknown' ? ': khung giờ đã qua hoặc chưa được cung cấp' : ''}`}
                           className={`w-full py-2 px-0.5 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-0.5 ${
                             isSelected
                               ? 'bg-[#168039] text-white border border-[#168039] cursor-pointer'
@@ -302,7 +314,7 @@ function BookingGrid({ facility, priceRules, currentUser = null, onOpenAuth, onB
                         >
                           {isSelected ? (
                             <>
-                              <Check className="w-3 h-3" />
+                              <span className="flex items-center gap-1"><Check className="w-3 h-3" />{time}</span>
                               <span className="text-xs font-bold">Đã chọn</span>
                             </>
                           ) : status === 'available' ? (
@@ -339,6 +351,7 @@ function BookingGrid({ facility, priceRules, currentUser = null, onOpenAuth, onB
               <div className="text-xs text-slate-600 font-medium">
                 Đã chọn <strong className="text-slate-900 font-black">{selectedSlots.length}</strong> khung giờ ({activeDateItem?.displayDate})
               </div>
+              {selectedSlots.length > 0 && <p className="text-xs font-semibold text-slate-800">{selectedSlots[0].courtName}: {selectedSlots[0].startTime.slice(0, 5)} – {selectedSlots[selectedSlots.length - 1].endTime.slice(0, 5)}</p>}
               <div className="text-lg sm:text-xl font-black text-[#168039]">
                 {totalPrice.toLocaleString('vi-VN')} đ
               </div>

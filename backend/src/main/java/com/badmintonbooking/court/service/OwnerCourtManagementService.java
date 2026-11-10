@@ -446,6 +446,9 @@ public class OwnerCourtManagementService {
         }
 
         BookingStatus currentStatus = booking.getStatus();
+        if (nextStatus == BookingStatus.CONFIRMED) {
+            throw new BadRequestException("Đơn đặt sân chỉ được xác nhận tự động sau khi thanh toán payOS thành công.");
+        }
         if (currentStatus == nextStatus) {
             return toOwnerBookingDtos(List.of(booking), Map.of(facility.getId(), facility)).getFirst();
         }
@@ -453,7 +456,6 @@ public class OwnerCourtManagementService {
         boolean held = currentStatus == BookingStatus.HELD || currentStatus == BookingStatus.PENDING_PAYMENT;
         boolean confirmed = currentStatus == BookingStatus.CONFIRMED;
         boolean allowed = switch (nextStatus) {
-            case CONFIRMED -> held;
             case COMPLETED -> confirmed;
             case CANCELLED -> held || confirmed;
             default -> false;
@@ -464,17 +466,7 @@ public class OwnerCourtManagementService {
 
         OffsetDateTime now = OffsetDateTime.now();
         List<CourtOccupancy> occupancies = occupancyRepository.findByBookingId(bookingId);
-        if (nextStatus == BookingStatus.CONFIRMED) {
-            if (booking.getHoldExpiresAt() == null || !booking.getHoldExpiresAt().isAfter(now)
-                    || occupancies.isEmpty()
-                    || occupancies.stream().anyMatch(occ -> occ.getActiveStatus() != ActiveStatus.ACTIVE
-                            || occ.getOccupancyType() != OccupancyType.HOLD)) {
-                throw new SlotConflictException("Đơn không còn giữ khung giờ. Vui lòng đặt lại.");
-            }
-            for (CourtOccupancy occupancy : occupancies) {
-                occupancy.setOccupancyType(OccupancyType.BOOKING);
-            }
-        } else if (nextStatus == BookingStatus.CANCELLED) {
+        if (nextStatus == BookingStatus.CANCELLED) {
             for (CourtOccupancy occupancy : occupancies) {
                 occupancy.setActiveStatus(ActiveStatus.RELEASED);
             }

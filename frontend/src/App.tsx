@@ -323,7 +323,7 @@ export function MainApp() {
   }
 
   const handleBookingSuccess = (booking: BookingResponse) => {
-    toast.success('Đã giữ chỗ sân')
+    toast.info('Vui lòng thanh toán payOS để hoàn tất đặt sân.')
     navigate(`/checkout/${booking.id}`)
   }
 
@@ -730,7 +730,7 @@ export function MainApp() {
       {/* Modals */}
       <Suspense fallback={<DeferredLoading />}>
 
-      {/* TV3 Payment Checkout Modal (payOS & Mock) */}
+      {/* payOS payment checkout */}
       {checkoutBooking && (
         <PaymentCheckoutModal
           isOpen={!!checkoutBooking}

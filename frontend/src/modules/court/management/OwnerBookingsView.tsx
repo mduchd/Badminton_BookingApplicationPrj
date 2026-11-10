@@ -5,7 +5,6 @@ import {
   Search,
   UserCheck,
   CheckCircle2,
-  CreditCard,
   XCircle,
   Calendar,
 } from 'lucide-react'
@@ -51,7 +50,7 @@ export const OwnerBookingsView: React.FC = () => {
   return (
     <OwnerLayout
       title="Quản lý Đơn đặt & Đón khách Nhận sân"
-      subtitle="Tra cứu mã đặt chỗ, xác nhận thanh toán tại quầy, đón khách nhận sân và giải phóng khung giờ hủy"
+      subtitle="Thanh toán được xác nhận tự động qua payOS. Chỉ đón khách nhận sân khi đơn đã thanh toán."
     >
       {/* Unified Filter & Table Workplace */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -193,20 +192,7 @@ export const OwnerBookingsView: React.FC = () => {
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 self-start lg:self-auto flex-wrap">
                   {(bk.status === 'HELD' || bk.status === 'PENDING_PAYMENT') && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleUpdateStatus(
-                          bk,
-                          'CONFIRMED',
-                          `Đã xác nhận thu tiền đơn ${bk.bookingCode}`
-                        )
-                      }
-                      className="px-3.5 py-2 rounded-xl bg-[#e5a92c] hover:bg-[#d49b24] text-slate-900 text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5"
-                    >
-                      <CreditCard className="w-3.5 h-3.5" />
-                      <span>Xác nhận thanh toán</span>
-                    </button>
+                    <span className="text-xs font-medium text-amber-800">Chờ khách thanh toán payOS</span>
                   )}
 
                   {bk.status === 'CONFIRMED' && (

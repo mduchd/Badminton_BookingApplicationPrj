@@ -102,7 +102,7 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
             <AlertCircle className="w-3.5 h-3.5 text-amber-700" />
             <span>Giữ chỗ có thời hạn:</span>
           </div>
-          Xem thời hạn và tiếp tục thanh toán trong đơn đặt sân. Khung giờ sẽ mở lại khi hết thời hạn giữ chỗ.
+          Chỉ xác nhận đặt sân sau khi thanh toán payOS thành công. Khung giờ được giữ tạm trong lúc thanh toán và sẽ mở lại khi hết hạn.
         </div>
       </div>
 
@@ -114,12 +114,12 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
         {isSubmitting ? (
           <>
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            Đang xử lý giữ chỗ...
+            Đang chuyển đến thanh toán...
           </>
         ) : (
           <>
             <CheckCircle2 className="w-4 h-4" />
-            Xác nhận giữ chỗ
+            Tiếp tục thanh toán
           </>
         )}
       </button>}
