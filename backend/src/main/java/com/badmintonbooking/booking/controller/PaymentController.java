@@ -61,6 +61,15 @@ public class PaymentController {
     /**
      * Nhận và xác thực Webhook tự động từ payOS (với HMAC-SHA256 và Idempotency)
      */
+    @PostMapping("/webhooks/payos/confirm")
+    public ResponseEntity<Map<String, Object>> confirmPayOsWebhook() {
+        boolean ok = paymentService.confirmPayOsWebhook();
+        return ResponseEntity.ok(Map.of(
+                "success", ok,
+                "message", ok ? "Đăng ký Webhook URL với payOS thành công." : "Đăng ký Webhook với payOS thất bại."
+        ));
+    }
+
     @PostMapping("/webhooks/payos")
     public ResponseEntity<Map<String, Object>> payOsWebhook(
             @RequestBody Map<String, Object> payload

@@ -66,6 +66,17 @@ public class PaymentService {
     @Value("${payment.frontend-url:https://smashcourt-booking.netlify.app}")
     private String frontendUrl;
 
+    @Value("${payos.webhook-url:https://badminton-booking-api-pjtn.onrender.com/api/webhooks/payos}")
+    private String payOsWebhookUrl;
+
+    public boolean confirmPayOsWebhook() {
+        if (isBlank(payOsClientId) || isBlank(payOsApiKey) || isBlank(payOsWebhookUrl)) {
+            log.warn("Thiếu thông tin để confirm Webhook payOS: clientId={}, webhookUrl={}", payOsClientId, payOsWebhookUrl);
+            return false;
+        }
+        return payOsHelper.confirmWebhookUrl(payOsClientId, payOsApiKey, payOsWebhookUrl);
+    }
+
     private final BookingRepository bookingRepository;
     private final CourtOccupancyRepository occupancyRepository;
     private final PaymentRepository paymentRepository;

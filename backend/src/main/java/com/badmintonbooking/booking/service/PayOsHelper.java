@@ -81,7 +81,7 @@ public class PayOsHelper {
         }
 
         try {
-            // payOS giới hạn độ dài description tối đa 25 ký tự
+            // payOS giới hạn độ dài description tối đa 25 ký tự, không chứa ký tự đặc biệt
             String desc = description != null ? description : "Thanh toan san";
             if (desc.length() > 25) {
                 desc = desc.substring(0, 25);
@@ -135,6 +135,38 @@ public class PayOsHelper {
         } catch (Exception e) {
             log.error("Lỗi khi kết nối tới payOS API: ", e);
             return new PayOsPaymentLinkResult(false, null, null, null, e.getMessage());
+        }
+    }
+
+    /**
+     * Xác thực và đăng ký Webhook URL với payOS qua API /confirm-webhook (bỏ ngrok, dùng Render trực tiếp)
+     */
+    public boolean confirmWebhookUrl(String clientId, String apiKey, String webhookUrl) {
+        if (clientId == null || clientId.isBlank() || apiKey == null || apiKey.isBlank() || webhookUrl == null || webhookUrl.isBlank()) {
+            return false;
+        }
+
+        try {
+            String jsonPayload = String.format("{\"webhookUrl\":\"%s\"}", escapeJson(webhookUrl));
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(10))
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api-merchant.payos.vn/confirm-webhook"))
+                    .header("Content-Type", "application/json")
+                    .header("x-client-id", clientId.trim())
+                    .header("x-api-key", apiKey.trim())
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload, StandardCharsets.UTF_8))
+                    .timeout(Duration.ofSeconds(15))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            log.info("payOS confirmWebhook response [{}]: {}", response.statusCode(), response.body());
+            return response.statusCode() == 200 && response.body() != null && response.body().contains("\"code\":\"00\"");
+        } catch (Exception e) {
+            log.warn("Lỗi khi tự động xác nhận webhook payOS: {}", e.getMessage());
+            return false;
         }
     }
 
