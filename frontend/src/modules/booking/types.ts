@@ -67,6 +67,7 @@ export interface CheckoutResponse {
   amount: number;
   paymentMethod: string;
   checkoutUrl: string;
+  /** Raw VietQR payload from payOS, encoded into a QR by the client. */
   qrCode?: string;
   status: string;
   holdExpiresAt?: string;

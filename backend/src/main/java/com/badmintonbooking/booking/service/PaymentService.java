@@ -173,6 +173,7 @@ public class PaymentService {
             // Nếu phiên cũ đã có paymentLinkId hợp lệ, tái sử dụng link checkout trực tiếp
             if (!isBlank(payment.getTransactionRef()) && payment.getTransactionRef().length() > 5) {
                 checkoutUrl = "https://pay.payos.vn/web/" + payment.getTransactionRef();
+                qrUrl = payment.getQrCode();
             } else {
                 String returnUrl = !isBlank(request.returnUrl()) ? request.returnUrl() : (frontendUrl + "/payment/success");
                 String cancelUrl = !isBlank(request.cancelUrl()) ? request.cancelUrl() : (frontendUrl + "/payment/cancel");
@@ -200,10 +201,11 @@ public class PaymentService {
 
                 checkoutUrl = payOsRes.checkoutUrl();
                 qrUrl = payOsRes.qrCode();
+                payment.setQrCode(qrUrl);
                 if (!isBlank(payOsRes.paymentLinkId())) {
                     payment.setTransactionRef(payOsRes.paymentLinkId());
-                    paymentRepository.save(payment);
                 }
+                paymentRepository.save(payment);
             }
         }
 

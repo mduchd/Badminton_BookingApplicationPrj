@@ -39,6 +39,9 @@ public class Payment {
     @Column(name = "transaction_ref")
     private String transactionRef;
 
+    @Column(name = "qr_code", columnDefinition = "TEXT")
+    private String qrCode;
+
     @Column(name = "commission_rate")
     private Double commissionRate;
 
@@ -76,6 +79,9 @@ public class Payment {
 
     public String getTransactionRef() { return transactionRef; }
     public void setTransactionRef(String transactionRef) { this.transactionRef = transactionRef; }
+
+    public String getQrCode() { return qrCode; }
+    public void setQrCode(String qrCode) { this.qrCode = qrCode; }
 
     public Double getCommissionRate() { return commissionRate; }
     public void setCommissionRate(Double commissionRate) { this.commissionRate = commissionRate; }

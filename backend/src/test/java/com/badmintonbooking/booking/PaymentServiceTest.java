@@ -132,6 +132,7 @@ class PaymentServiceTest {
         ReflectionTestUtils.setField(service, "payOsChecksumKey", "checksum-key");
 
         booking.setStatus(BookingStatus.PENDING_PAYMENT);
+        payment.setQrCode("000201-existing-payos-payload");
         when(bookings.findByIdForUpdate(100L)).thenReturn(Optional.of(booking));
         when(payments.findByBookingId(100L)).thenReturn(Optional.of(payment));
 
@@ -139,7 +140,32 @@ class PaymentServiceTest {
         assertNotNull(response);
         assertEquals("https://pay.payos.vn/web/link123", response.checkoutUrl());
         assertEquals(123456L, response.orderCode());
+        assertEquals(payment.getQrCode(), response.qrCode());
         verify(payments).save(payment);
+    }
+
+    @Test
+    void checkoutPersistsQrPayloadAndReturnsItWhenReopened() {
+        ReflectionTestUtils.setField(service, "payOsClientId", "client-id");
+        ReflectionTestUtils.setField(service, "payOsApiKey", "api-key");
+        PayOsHelper payOs = mock(PayOsHelper.class);
+        ReflectionTestUtils.setField(service, "payOsHelper", payOs);
+        payment.setTransactionRef(null);
+        when(bookings.findByIdForUpdate(100L)).thenReturn(Optional.of(booking));
+        when(payments.findByBookingId(100L)).thenReturn(Optional.of(payment));
+        String qrPayload = "000201-payos-bank-payment-payload";
+        when(payOs.createPaymentLink(anyString(), anyString(), anyString(), anyLong(), anyLong(), anyString(), anyString(), anyString()))
+                .thenReturn(new PayOsHelper.PayOsPaymentLinkResult(true, "https://pay.payos.vn/web/link123", qrPayload, "link123", "OK"));
+        var request = new CheckoutRequest("PAYOS", "https://example.com/success", "https://example.com/cancel");
+
+        CheckoutResponse created = service.createCheckout(100L, request, 1L);
+        assertEquals(qrPayload, created.qrCode());
+        assertEquals(qrPayload, payment.getQrCode());
+        CheckoutResponse reopened = service.createCheckout(100L, request, 1L);
+        assertEquals(created.qrCode(), reopened.qrCode());
+        assertEquals(created.checkoutUrl(), reopened.checkoutUrl());
+        assertEquals(created.orderCode(), reopened.orderCode());
+        verify(payOs, times(1)).createPaymentLink(anyString(), anyString(), anyString(), anyLong(), anyLong(), anyString(), anyString(), anyString());
     }
 
     @Test

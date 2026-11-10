@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { X, ExternalLink, AlertCircle, CheckCircle2, RotateCw } from 'lucide-react'
 import { toast } from 'sonner'
+import { QRCodeSVG } from 'qrcode.react'
 import type { BookingResponse } from '../types'
 import { createCheckout, getPaymentByBookingId } from '../services/bookingApi'
 
@@ -129,12 +130,17 @@ export function PaymentCheckoutModal({ isOpen, onClose, booking, onSuccess, onPa
               {checkout.data.qrCode ? (
                 <div className="flex flex-col items-center justify-center space-y-2 rounded-xl border border-slate-200 bg-white p-4">
                   <p className="text-xs font-semibold text-slate-700">Quét mã QR bằng App Ngân hàng</p>
-                  <img
-                    src={checkout.data.qrCode}
-                    alt="Mã QR thanh toán payOS"
-                    className="h-48 w-48 object-contain"
+                  <QRCodeSVG
+                    value={checkout.data.qrCode}
+                    title="Mã QR thanh toán payOS"
+                    role="img"
+                    aria-label="Mã QR thanh toán payOS"
+                    size={224}
+                    marginSize={4}
+                    level="M"
+                    className="h-auto w-56 max-w-full shrink-0"
                   />
-                  <p className="text-xs text-slate-500">Mã đơn: #{checkout.data.orderCode}</p>
+                  <p className="text-xs font-medium text-slate-600">Mã đơn: #{checkout.data.orderCode}</p>
                 </div>
               ) : null}
 
