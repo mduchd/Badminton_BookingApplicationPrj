@@ -62,7 +62,7 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
 
         {/* Top-Left Badges */}
         <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap z-10">
-          {court.rating && (
+          {court.reviewCount > 0 && court.rating > 0 && (
             <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-white/95 text-slate-800 shadow-xs flex items-center gap-1 backdrop-blur-xs">
               <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
               <span>{court.rating}</span>
@@ -96,16 +96,16 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
       </div>
 
       {/* Bottom Info Section */}
-      <div className="p-3.5 flex items-center gap-3">
+      <div className="p-3.5 grid grid-cols-[40px_minmax(0,1fr)] items-center gap-3">
         {/* Round Logo */}
-        <div className="w-12 h-12 rounded-full border border-slate-200 overflow-hidden flex-shrink-0 bg-slate-50 shadow-2xs">
+        <div className="w-10 h-10 rounded-full border border-slate-200 overflow-hidden flex-shrink-0 bg-slate-50 shadow-2xs">
           {court.logoUrl && <img src={logoThumbnail(court.logoUrl)} alt={court.name} width={48} height={48} className="w-full h-full object-cover" loading="lazy" decoding="async" onError={(event) => { if (event.currentTarget.getAttribute('src') !== court.logoUrl) event.currentTarget.src = court.logoUrl }} />}
         </div>
 
         {/* Text Details */}
         <div className="flex-1 min-w-0 pr-1">
-          <h3 className="text-xs sm:text-[13px] font-bold text-slate-900 truncate group-hover:text-emerald-700 transition-colors">
-            {court.name}
+          <h3 className="text-sm font-bold text-slate-900 line-clamp-2 break-words group-hover:text-emerald-700 transition-colors">
+            <button type="button" onClick={(event) => { event.stopPropagation(); handleCardClick() }} className="cursor-pointer text-left" aria-label={`Xem chi tiết ${court.name}`}>{court.name}</button>
           </h3>
 
           <div className="text-[11px] text-slate-700 font-medium truncate mt-0.5">
@@ -113,7 +113,7 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
             <span>{court.address}</span>
           </div>
 
-          <div className="flex items-center gap-1 text-[10px] text-slate-600 font-medium mt-1">
+          <div className="flex items-center gap-1 text-xs text-slate-600 font-medium mt-1">
             <Clock className="w-3 h-3 text-slate-500" />
             <span>{court.openHours}</span>
           </div>
@@ -123,7 +123,7 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
         <button
           type="button"
           onClick={handleBookClick}
-          className="px-3.5 py-2 rounded-lg bg-[#e5a92c] hover:bg-[#d49b24] active:bg-[#c48d1c] text-white font-bold text-xs transition-colors flex-shrink-0 cursor-pointer"
+          className="col-span-2 w-full px-3.5 py-2 rounded-lg bg-[#1b7a42] hover:bg-[#156335] text-white font-bold text-xs transition-colors flex-shrink-0 cursor-pointer"
         >
           Đặt lịch
         </button>

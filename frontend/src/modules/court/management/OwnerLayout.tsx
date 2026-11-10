@@ -58,9 +58,9 @@ export const OwnerLayout: React.FC<OwnerLayoutProps> = ({
   ]
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-5 space-y-5 pb-20">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-5 pb-20">
       {/* Unified Workplace Shell Header + Tabs */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div className="bg-white border border-slate-200 border-b-0 rounded-t-xl overflow-hidden">
         {/* Top Row */}
         <div className="p-4 sm:p-6 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
@@ -86,7 +86,7 @@ export const OwnerLayout: React.FC<OwnerLayoutProps> = ({
               <button
                 type="button"
                 onClick={() => setIsAuthOpen(true)}
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#e5a92c] hover:bg-[#d49b24] text-white text-xs font-bold transition-colors cursor-pointer disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#e5a92c] hover:bg-[#d49b24] text-slate-900 text-xs font-bold transition-colors cursor-pointer disabled:cursor-not-allowed"
               >
                 <LogIn className="w-4 h-4" />
                 <span>Đăng nhập Chủ sân</span>
@@ -161,7 +161,7 @@ export const OwnerLayout: React.FC<OwnerLayoutProps> = ({
           </div>
         </div>
       ) : ownerUser ? (
-        <div className="space-y-5">{children}</div>
+        <div className="space-y-5 border border-slate-200 bg-white p-3 sm:p-5 rounded-b-xl">{children}</div>
       ) : (
         <p role="status" className="p-6 text-center text-sm text-slate-600">
           {checkingAuth ? 'Đang xác thực tài khoản…' : 'Đăng nhập bằng tài khoản Chủ sân để quản lý dữ liệu.'}

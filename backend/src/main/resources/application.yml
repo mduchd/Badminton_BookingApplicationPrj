@@ -1,4 +1,9 @@
 spring:
+  mail:
+    properties:
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
   application:
     name: badminton-booking
 
@@ -52,6 +57,17 @@ cloudinary:
   api-secret: ${CLOUDINARY_API_SECRET:}
   folder: ${CLOUDINARY_FOLDER:smashcourt/facilities}
 app:
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  password-reset:
+    enabled: ${PASSWORD_RESET_ENABLED:false}
+    from: ${MAIL_FROM:}
+  push:
+    enabled: ${PUSH_ENABLED:false}
+    credentials-file: ${FIREBASE_CREDENTIALS_FILE:}
+  integrations:
+    encryption-key: ${INTEGRATIONS_ENCRYPTION_KEY:}
   upload-dir: ${APP_UPLOAD_DIR:uploads}
   google:
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+    calendar-redirect-uri: ${GOOGLE_CALENDAR_REDIRECT_URI:}
     client-id: ${GOOGLE_CLIENT_ID:329281674145-bbkiipcmkff46lqraifh7fcatsg225vv.apps.googleusercontent.com}

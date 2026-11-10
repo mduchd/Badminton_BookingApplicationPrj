@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useApiQuery } from '../../../hooks/useApiQuery'
+import { DialogFrame } from '../../../components/shared/DialogFrame'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Plus, Edit2, Trash2, Clock, X, Users, Layers } from 'lucide-react'
 import { OwnerLayout } from '../management/OwnerLayout'
 import { courtApi } from '../services/courtApi'
@@ -26,8 +28,6 @@ interface RuleFormState {
 export const OwnerPricingView: React.FC = () => {
   const [facilities, setFacilities] = useState<Facility[]>([])
   const [selectedFacilityId, setSelectedFacilityId] = useState<string>('')
-  const [rules, setRules] = useState<PriceRule[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
   const [customerFilter, setCustomerFilter] = useState<'ALL' | CustomerPricingType>('ALL')
 
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -53,25 +53,11 @@ export const OwnerPricingView: React.FC = () => {
     [facilities, selectedFacilityId]
   )
 
-  const loadRules = useCallback(async () => {
-    if (!selectedFacilityId) {
-      setLoading(false)
-      return
-    }
-    setLoading(true)
-    try {
-      const data = await courtApi.getOwnerPriceRules(selectedFacilityId)
-      setRules(data)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Không thể tải bảng giá')
-    } finally {
-      setLoading(false)
-    }
-  }, [selectedFacilityId])
-
-  useEffect(() => {
-    loadRules()
-  }, [loadRules])
+  const { data: rules = [], isFetching: loading, refetch: loadRules } = useApiQuery({
+    queryKey: ['ownerPriceRules', selectedFacilityId],
+    queryFn: () => courtApi.getOwnerPriceRules(selectedFacilityId),
+    enabled: !!selectedFacilityId,
+  })
 
   const filteredRules = useMemo(() => {
     if (customerFilter === 'ALL') return rules
@@ -161,12 +147,12 @@ export const OwnerPricingView: React.FC = () => {
         {/* Top Control Bar */}
         <div className="p-4 sm:p-5 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col items-start sm:flex-row sm:items-center gap-2 min-w-0 w-full">
               <span className="text-xs sm:text-sm font-bold text-slate-800">Cụm sân:</span>
               <select
                 value={selectedFacilityId}
                 onChange={(e) => setSelectedFacilityId(e.target.value)}
-                className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-xs sm:text-sm text-slate-900 cursor-pointer"
+                className="w-full min-w-0 max-w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-xs sm:text-sm text-slate-900 cursor-pointer"
               >
                 {facilities.map((f) => (
                   <option key={f.id} value={f.id}>
@@ -319,7 +305,7 @@ export const OwnerPricingView: React.FC = () => {
 
       {/* Create/Edit Rule Modal */}
       {isModalOpen && formState && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <DialogFrame className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs" onClose={() => setIsModalOpen(false)} label="Thiết lập sân">
           <div className="bg-white rounded-2xl border border-slate-200 max-w-lg w-full max-h-[min(90vh,700px)] flex flex-col overflow-hidden shadow-xl">
             <div className="p-4 sm:p-5 border-b border-slate-200 shrink-0 flex items-center justify-between">
               <div>
@@ -344,7 +330,7 @@ export const OwnerPricingView: React.FC = () => {
             >
               <div>
                 <label className="text-slate-700 font-bold block mb-1">Tên khung giá *</label>
-                <input
+                <input aria-label="Tên khung giá *"
                   type="text"
                   required
                   value={formState.name}
@@ -357,7 +343,7 @@ export const OwnerPricingView: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-slate-700 font-bold block mb-1">Phạm vi áp dụng</label>
-                  <select
+                  <select aria-label="Phạm vi áp dụng"
                     value={formState.courtId}
                     onChange={(e) => setFormState({ ...formState, courtId: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 font-semibold text-slate-900 cursor-pointer"
@@ -373,7 +359,7 @@ export const OwnerPricingView: React.FC = () => {
 
                 <div>
                   <label className="text-slate-700 font-bold block mb-1">Loại khách hàng</label>
-                  <select
+                  <select aria-label="Loại khách hàng"
                     value={formState.customerType}
                     onChange={(e) =>
                       setFormState({
@@ -392,7 +378,7 @@ export const OwnerPricingView: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-slate-700 font-bold block mb-1">Giờ bắt đầu</label>
-                  <input
+                  <input aria-label="Giờ bắt đầu"
                     type="time"
                     required
                     value={formState.startTime}
@@ -402,7 +388,7 @@ export const OwnerPricingView: React.FC = () => {
                 </div>
                 <div>
                   <label className="text-slate-700 font-bold block mb-1">Giờ kết thúc</label>
-                  <input
+                  <input aria-label="Giờ kết thúc"
                     type="time"
                     required
                     value={formState.endTime}
@@ -415,7 +401,7 @@ export const OwnerPricingView: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-slate-700 font-bold block mb-1">Ngày trong tuần</label>
-                  <select
+                  <select aria-label="Ngày trong tuần"
                     value={formState.dayType}
                     onChange={(e) =>
                       setFormState({ ...formState, dayType: e.target.value as DayTypeFilter })
@@ -430,7 +416,7 @@ export const OwnerPricingView: React.FC = () => {
 
                 <div>
                   <label className="text-slate-700 font-bold block mb-1">Thời lượng mỗi ca</label>
-                  <select
+                  <select aria-label="Thời lượng mỗi ca"
                     value={formState.slotDurationMinutes}
                     onChange={(e) =>
                       setFormState({
@@ -450,7 +436,7 @@ export const OwnerPricingView: React.FC = () => {
                 <label className="text-slate-700 font-bold block mb-1">
                   Đơn giá cho 1 ca ({formState.slotDurationMinutes} phút) - VNĐ *
                 </label>
-                <input
+                <input aria-label="Đơn giá cho 1 ca ( phút) - VNĐ *"
                   type="number"
                   step="5000"
                   min={10000}
@@ -491,7 +477,7 @@ export const OwnerPricingView: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </DialogFrame>
       )}
     </OwnerLayout>
   )

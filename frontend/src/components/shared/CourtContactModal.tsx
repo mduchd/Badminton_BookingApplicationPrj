@@ -1,3 +1,4 @@
+import { DialogFrame } from './DialogFrame'
 import React, { useState } from 'react'
 import {
   X,
@@ -62,7 +63,7 @@ export const CourtContactModal: React.FC<CourtContactModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+    <DialogFrame className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4" onClose={onClose} label="Liên hệ chủ sân">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity duration-200"
@@ -249,6 +250,6 @@ export const CourtContactModal: React.FC<CourtContactModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </DialogFrame>
   )
 }

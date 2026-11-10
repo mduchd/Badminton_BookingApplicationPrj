@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useApiQuery } from '../../../hooks/useApiQuery'
+import { DialogFrame } from '../../../components/shared/DialogFrame'
+import React, { useMemo, useRef, useState } from 'react'
 import {
   Plus,
   Edit2,
@@ -93,17 +95,7 @@ interface FacilityFormState {
   sportType: 'badminton'
   status: 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE'
   draftCourts: CourtUpsertPayload[]
-  enableOnlineBooking: boolean
-  allowOneTime: boolean
-  allowSchedule: boolean
-  allowSocial: boolean
-  allowMembership: boolean
-  bankName: string
-  bankAccountNumber: string
-  bankAccountHolder: string
-  autoFillQrAmount: boolean
-  requireQrDeposit: boolean
-  onlineBookingNote: string
+
 }
 
 function parseMultiPhoneState(rawPhone: string): {
@@ -160,8 +152,6 @@ function composeMultiPhoneString(state: {
 }
 
 export const OwnerFacilitiesView: React.FC = () => {
-  const [facilities, setFacilities] = useState<Facility[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
   const [searchKeyword, setSearchKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'maintenance' | 'paused'>('all')
 
@@ -199,21 +189,9 @@ export const OwnerFacilitiesView: React.FC = () => {
   // Embedded Map Preview Modal for any Facility card
   const [mapPreviewFacility, setMapPreviewFacility] = useState<Facility | null>(null)
 
-  const loadFacilities = async () => {
-    setLoading(true)
-    try {
-      const data = await courtApi.getOwnerFacilities()
-      setFacilities(data)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Không thể tải danh sách cụm sân')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadFacilities()
-  }, [])
+  const { data: facilities = [], isFetching: loading, refetch: loadFacilities } = useApiQuery({
+    queryKey: ['ownerFacilities'], queryFn: courtApi.getOwnerFacilities,
+  })
 
   const filteredFacilities = useMemo(() => {
     return facilities.filter((f) => {
@@ -239,7 +217,7 @@ export const OwnerFacilitiesView: React.FC = () => {
       district: formState.district,
       city: formState.city,
     })
-  }, [formState?.streetAddress, formState?.ward, formState?.district, formState?.city])
+  }, [formState])
 
   const handleOpenCreateModal = () => {
     setFormState({
@@ -280,18 +258,7 @@ export const OwnerFacilitiesView: React.FC = () => {
         surfaceType: 'Thảm PVC tiêu chuẩn BWF',
         status: 'ACTIVE' as const,
       })),
-      enableOnlineBooking: true,
-      allowOneTime: true,
-      allowSchedule: true,
-      allowSocial: true,
-      allowMembership: true,
-      bankName: 'BIDV - Ngân hàng TMCP Đầu tư và Phát triển Việt Nam',
-      bankAccountNumber: '1234567890',
-      bankAccountHolder: 'CLB CAU LONG SMASHCOURT',
-      autoFillQrAmount: true,
-      requireQrDeposit: true,
-      onlineBookingNote:
-        'Khách đặt lịch online vui lòng chuyển khoản cọc theo mã QR tự động để hệ thống giữ sân ngay lập tức.',
+
     })
     setBulkCourtCount(6)
     setBulkCourtPrice(100000)
@@ -340,18 +307,7 @@ export const OwnerFacilitiesView: React.FC = () => {
           ? 'INACTIVE'
           : 'ACTIVE',
       draftCourts: [],
-      enableOnlineBooking: fac.status === 'active',
-      allowOneTime: true,
-      allowSchedule: true,
-      allowSocial: true,
-      allowMembership: true,
-      bankName: 'BIDV - Ngân hàng TMCP Đầu tư và Phát triển Việt Nam',
-      bankAccountNumber: '21510008899999',
-      bankAccountHolder: 'CHU SAN CAU LONG',
-      autoFillQrAmount: true,
-      requireQrDeposit: true,
-      onlineBookingNote:
-        'Vui lòng mang giày đế kếp chuyên dụng cầu lông và có mặt trước 10 phút để nhận sân.',
+
     })
     setActiveSection('general')
     setIsModalOpen(true)
@@ -481,17 +437,6 @@ export const OwnerFacilitiesView: React.FC = () => {
       toast.error('Số điện thoại liên hệ không được bỏ trống!')
       return
     }
-    if (
-      formState.enableOnlineBooking &&
-      (!formState.bankName.trim() || !formState.bankAccountNumber.trim())
-    ) {
-      toast.error(
-        'Không thể bật đặt lịch online vì chưa có thông tin tài khoản ngân hàng nhận thanh toán!'
-      )
-      setActiveSection('settings')
-      return
-    }
-
     const composedPhone =
       composeMultiPhoneString({
         primaryPhone: formState.primaryPhone,
@@ -524,7 +469,7 @@ export const OwnerFacilitiesView: React.FC = () => {
         galleryImages: formState.galleryImages,
         amenities: formState.amenities,
         sportType: formState.sportType,
-        status: formState.enableOnlineBooking ? formState.status : 'INACTIVE',
+        status: formState.status,
         courts: formState.isNew ? formState.draftCourts : undefined,
       }
 
@@ -904,7 +849,7 @@ export const OwnerFacilitiesView: React.FC = () => {
 
       {/* ==================== FACILITY CREATE/EDIT MODAL ==================== */}
       {isModalOpen && formState && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
+        <DialogFrame className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs" onClose={() => setIsModalOpen(false)} label="Thiết lập sân">
           <div className="bg-white rounded-2xl border border-slate-200 max-w-3xl w-full max-h-[min(90vh,700px)] flex flex-col overflow-hidden shadow-xl">
             {/* Light Modal Header */}
             <div className="px-5 py-4 border-b border-slate-200 shrink-0 flex items-center justify-between gap-3 bg-white">
@@ -963,7 +908,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                       <label className="block text-xs font-bold text-slate-700 mb-1">
                         Tên chi nhánh / cụm sân *
                       </label>
-                      <input
+                      <input aria-label="Tên chi nhánh / cụm sân *"
                         type="text"
                         required
                         value={formState.name}
@@ -976,7 +921,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                       <label className="block text-xs font-bold text-slate-700 mb-1">
                         Trạng thái vận hành
                       </label>
-                      <select
+                      <select aria-label="Trạng thái vận hành"
                         value={formState.status}
                         onChange={(e) =>
                           setFormState({
@@ -994,7 +939,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                   </div>
 
                   {/* Standardized Address Fields */}
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                  <div className="py-4 border-b border-slate-200 space-y-3">
                     <div className="text-xs font-bold text-slate-900">
                       Địa chỉ hành chính chuẩn hóa
                     </div>
@@ -1003,7 +948,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                         <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Tỉnh / Thành phố *
                         </label>
-                        <select
+                        <select aria-label="Tỉnh / Thành phố *"
                           value={formState.city}
                           onChange={(e) => setFormState({ ...formState, city: e.target.value })}
                           className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-medium text-slate-900 cursor-pointer"
@@ -1019,7 +964,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                         <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Quận / Huyện *
                         </label>
-                        <input
+                        <input aria-label="Quận / Huyện *"
                           type="text"
                           required
                           value={formState.district}
@@ -1032,7 +977,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                         <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Phường / Xã
                         </label>
-                        <input
+                        <input aria-label="Phường / Xã"
                           type="text"
                           value={formState.ward}
                           onChange={(e) => setFormState({ ...formState, ward: e.target.value })}
@@ -1046,7 +991,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
                         Số nhà, ngõ, tên đường *
                       </label>
-                      <input
+                      <input aria-label="Số nhà, ngõ, tên đường *"
                         type="text"
                         required
                         value={formState.streetAddress}
@@ -1065,7 +1010,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                   </div>
 
                   {/* Working Hours with 24/24 mode */}
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                  <div className="py-4 border-b border-slate-200 space-y-3">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className="text-xs font-bold text-slate-900">Giờ hoạt động chi nhánh</span>
                       <label className="inline-flex items-center gap-2 text-xs font-bold text-[#168039] cursor-pointer">
@@ -1092,7 +1037,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                           <label className="block text-xs font-semibold text-slate-700 mb-1">
                             Từ giờ mở cửa
                           </label>
-                          <select
+                          <select aria-label="Từ giờ mở cửa"
                             value={formState.openTime}
                             onChange={(e) => setFormState({ ...formState, openTime: e.target.value })}
                             className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold text-slate-900 cursor-pointer"
@@ -1108,7 +1053,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                           <label className="block text-xs font-semibold text-slate-700 mb-1">
                             Đến giờ đóng cửa
                           </label>
-                          <select
+                          <select aria-label="Đến giờ đóng cửa"
                             value={formState.closeTime}
                             onChange={(e) => setFormState({ ...formState, closeTime: e.target.value })}
                             className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold text-slate-900 cursor-pointer"
@@ -1125,7 +1070,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                   </div>
 
                   {/* Multi-Phone Contact Info with Notes */}
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                  <div className="py-4 border-b border-slate-200 space-y-3">
                     <div className="text-xs font-bold text-slate-900">
                       Thông tin liên hệ đa đầu số kèm ghi chú
                     </div>
@@ -1134,7 +1079,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                         <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Số điện thoại chính *
                         </label>
-                        <input
+                        <input aria-label="Số điện thoại chính *"
                           type="tel"
                           required
                           value={formState.primaryPhone}
@@ -1149,7 +1094,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                         <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Ghi chú SĐT chính
                         </label>
-                        <input
+                        <input aria-label="Ghi chú SĐT chính"
                           type="text"
                           value={formState.primaryPhoneNote}
                           onChange={(e) =>
@@ -1166,7 +1111,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                         <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Số điện thoại phụ (tùy chọn)
                         </label>
-                        <input
+                        <input aria-label="Số điện thoại phụ (tùy chọn)"
                           type="tel"
                           value={formState.secondaryPhone}
                           onChange={(e) =>
@@ -1180,7 +1125,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                         <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Ghi chú SĐT phụ
                         </label>
-                        <input
+                        <input aria-label="Ghi chú SĐT phụ"
                           type="text"
                           value={formState.secondaryPhoneNote}
                           onChange={(e) =>
@@ -1206,7 +1151,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Giới thiệu & Điều khoản quy định cơ sở
                     </label>
-                    <textarea
+                    <textarea aria-label="Giới thiệu & Điều khoản quy định cơ sở"
                       rows={3}
                       value={formState.description}
                       onChange={(e) => setFormState({ ...formState, description: e.target.value })}
@@ -1260,7 +1205,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                       Thêm tiện ích riêng của cơ sở
                     </label>
                     <div className="flex items-center gap-2">
-                      <input
+                      <input aria-label="Thêm tiện ích riêng của cơ sở"
                         type="text"
                         value={customAmenity}
                         onChange={(e) => setCustomAmenity(e.target.value)}
@@ -1449,7 +1394,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                             <label className="block text-[10px] font-bold text-slate-600 mb-0.5">
                               Số lượng sân
                             </label>
-                            <input
+                            <input aria-label="Số lượng sân"
                               type="number"
                               min={1}
                               max={30}
@@ -1462,7 +1407,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                             <label className="block text-[10px] font-bold text-slate-600 mb-0.5">
                               Giá cơ bản (đ/h)
                             </label>
-                            <input
+                            <input aria-label="Giá cơ bản (đ/h)"
                               type="number"
                               step={5000}
                               value={bulkCourtPrice}
@@ -1573,211 +1518,23 @@ export const OwnerFacilitiesView: React.FC = () => {
               )}
 
               {activeSection === 'settings' && (
-                <div className="space-y-4">
-                  {/* Online Booking Link & Toggle */}
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <div>
-                        <div className="text-xs font-bold text-slate-900">
-                          Trạng thái nhận đặt lịch trực tuyến
-                        </div>
-                        <p className="text-[11px] text-slate-600">
-                          Bật để khách hàng nhìn thấy bảng giờ trống và đặt sân trực tiếp trên ứng dụng
-                        </p>
-                      </div>
-                      <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-[#168039] cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formState.enableOnlineBooking}
-                          onChange={(e) =>
-                            setFormState({ ...formState, enableOnlineBooking: e.target.checked })
-                          }
-                          className="rounded border-slate-300 text-[#168039]"
-                        />
-                        <span>{formState.enableOnlineBooking ? 'Đang mở đặt lịch online' : 'Đã tắt đặt lịch online'}</span>
-                      </label>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-xs">
-                      <span className="truncate text-slate-600">
-                        Link đặt sân online:{' '}
-                        <strong className="text-slate-900">
-                          {window.location.origin}/?venue={encodeURIComponent(formState.name || 'chi-nhanh-moi')}
-                        </strong>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard?.writeText(
-                            `${window.location.origin}/?venue=${encodeURIComponent(formState.name || 'chi-nhanh-moi')}`
-                          )
-                          toast.success('Đã sao chép link đặt sân online!')
-                        }}
-                        className="px-2.5 py-1 rounded-md bg-emerald-50 text-[#168039] font-bold cursor-pointer shrink-0"
-                      >
-                        Sao chép link
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Booking Types Modules */}
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
-                    <div className="text-xs font-bold text-slate-900">
-                      Loại hình đặt lịch áp dụng tại chi nhánh
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {[
-                        {
-                          key: 'allowOneTime' as const,
-                          title: 'Đơn ngày (Khách vãng lai)',
-                          desc: 'Cho phép chọn khung giờ trống theo ngày trên lưới lịch',
-                        },
-                        {
-                          key: 'allowSchedule' as const,
-                          title: 'Đơn tháng (Lịch cố định)',
-                          desc: 'Đăng ký giữ sân cố định theo thứ trong tuần suốt tháng/quý',
-                        },
-                        {
-                          key: 'allowSocial' as const,
-                          title: 'Sự kiện / Vé giao lưu Social',
-                          desc: 'Mở bán vé xé lẻ giao lưu cầu lông hoặc giải đấu phong trào',
-                        },
-                        {
-                          key: 'allowMembership' as const,
-                          title: 'Gói hội viên (Membership)',
-                          desc: 'Cho phép thanh toán tiền sân bằng thẻ hội viên trả trước',
-                        },
-                      ].map((mod) => (
-                        <label
-                          key={mod.key}
-                          className="p-3 rounded-xl bg-white border border-slate-200 flex items-start gap-2.5 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={formState[mod.key]}
-                            onChange={(e) =>
-                              setFormState({ ...formState, [mod.key]: e.target.checked })
-                            }
-                            className="mt-0.5 rounded border-slate-300 text-[#168039]"
-                          />
-                          <div>
-                            <div className="text-xs font-bold text-slate-900">{mod.title}</div>
-                            <div className="text-[11px] text-slate-600">{mod.desc}</div>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Bank Account & Dynamic QR Setup */}
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                    <div className="text-xs font-bold text-slate-900">
-                      Tài khoản ngân hàng & Cổng thanh toán QR tự động
-                    </div>
-                    <p className="text-[11px] text-slate-600">
-                      Bắt buộc thiết lập tài khoản ngân hàng để bật tính năng nhận đặt lịch online và sinh mã VietQR tự động điền số tiền cọc.
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">
-                          Ngân hàng thụ hưởng *
-                        </label>
-                        <select
-                          value={formState.bankName}
-                          onChange={(e) => setFormState({ ...formState, bankName: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold text-slate-900 cursor-pointer"
-                        >
-                          <option value="BIDV - Ngân hàng TMCP Đầu tư và Phát triển Việt Nam">
-                            BIDV (970418)
-                          </option>
-                          <option value="VietinBank - Ngân hàng TMCP Công Thương Việt Nam">
-                            VietinBank (970415)
-                          </option>
-                          <option value="Vietcombank - Ngân hàng TMCP Ngoại thương Việt Nam">
-                            Vietcombank (970436)
-                          </option>
-                          <option value="MBBank - Ngân hàng TMCP Quân Đội">
-                            MBBank (970422)
-                          </option>
-                          <option value="Techcombank - Ngân hàng TMCP Kỹ Thương Việt Nam">
-                            Techcombank (970407)
-                          </option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">
-                          Số tài khoản *
-                        </label>
-                        <input
-                          type="text"
-                          value={formState.bankAccountNumber}
-                          onChange={(e) =>
-                            setFormState({ ...formState, bankAccountNumber: e.target.value })
-                          }
-                          placeholder="VD: 21510008899999"
-                          className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold text-slate-900"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">
-                          Tên chủ tài khoản (in hoa) *
-                        </label>
-                        <input
-                          type="text"
-                          value={formState.bankAccountHolder}
-                          onChange={(e) =>
-                            setFormState({
-                              ...formState,
-                              bankAccountHolder: e.target.value.toUpperCase(),
-                            })
-                          }
-                          placeholder="VD: NGUYEN VAN A"
-                          className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold text-slate-900"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 flex-wrap pt-1">
-                      <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formState.autoFillQrAmount}
-                          onChange={(e) =>
-                            setFormState({ ...formState, autoFillQrAmount: e.target.checked })
-                          }
-                          className="rounded border-slate-300 text-[#168039]"
-                        />
-                        <span>Quét mã QR tự động nhập số tiền</span>
-                      </label>
-                      <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formState.requireQrDeposit}
-                          onChange={(e) =>
-                            setFormState({ ...formState, requireQrDeposit: e.target.checked })
-                          }
-                          className="rounded border-slate-300 text-[#168039]"
-                        />
-                        <span>Bắt buộc thanh toán tiền sân/cọc khi đặt qua mã QR</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Online Booking Note */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Lưu ý đặt lịch & thanh toán online hiển thị cho khách hàng
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={formState.onlineBookingNote}
-                      onChange={(e) =>
-                        setFormState({ ...formState, onlineBookingNote: e.target.value })
-                      }
-                      placeholder="VD: Quý khách vui lòng chuyển khoản đúng nội dung QR để hệ thống tự động xác nhận giữ sân..."
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium text-slate-900"
-                    />
-                  </div>
+                <div className="space-y-5">
+                  <section className="space-y-2">
+                    <h3 className="text-sm font-bold text-slate-900">Nhận đặt sân trực tuyến</h3>
+                    <p className="text-sm text-slate-700">Trạng thái hoạt động và giờ mở cửa được lưu trong mục Thông tin & Liên hệ. Khách có thể đặt theo ngày khi sân đang hoạt động và còn khung giờ trống.</p>
+                    {formState.id ? <div className="flex flex-wrap items-center gap-3">
+                      <a href={`${window.location.origin}/courts/${formState.id}/book`} target="_blank" rel="noopener noreferrer" className="break-all text-sm text-[#1b7a42] underline cursor-pointer">Mở trang đặt sân</a>
+                      <button type="button" className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold cursor-pointer" onClick={async () => {
+                        try { await navigator.clipboard.writeText(`${window.location.origin}/courts/${formState.id}/book`); toast.success('Đã sao chép liên kết đặt sân') }
+                        catch { toast.error('Không thể sao chép. Bạn có thể mở trang đặt sân và sao chép địa chỉ.') }
+                      }}>Sao chép liên kết</button>
+                    </div> : <p className="text-sm text-slate-600">Lưu cụm sân trước để tạo liên kết đặt sân.</p>}
+                  </section>
+                  <section className="space-y-2 border-t border-slate-200 pt-5">
+                    <h3 className="text-sm font-bold text-slate-900">Thanh toán</h3>
+                    <p className="text-sm text-slate-700">Đơn đặt sân được thanh toán qua cổng payOS của hệ thống. Hiện chưa hỗ trợ cấu hình tài khoản ngân hàng và mã QR riêng cho từng cơ sở.</p>
+                  </section>
+                  <p className="border-t border-slate-200 pt-5 text-sm text-slate-600">Đặt lịch cố định theo tháng, vé giao lưu và gói hội viên chưa được hỗ trợ.</p>
                 </div>
               )}
             </form>
@@ -1806,12 +1563,12 @@ export const OwnerFacilitiesView: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </DialogFrame>
       )}
 
       {/* ==================== SUB-COURT ADD/EDIT MODAL ==================== */}
       {courtModalTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <DialogFrame className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs" onClose={() => setCourtModalTarget(null)} label="Thiết lập sân">
           <div className="bg-white rounded-2xl border border-slate-200 max-w-md w-full max-h-[min(90vh,700px)] flex flex-col overflow-hidden shadow-xl">
             <div className="p-4 sm:p-5 border-b border-slate-200 shrink-0 flex items-center justify-between">
               <div>
@@ -1837,7 +1594,7 @@ export const OwnerFacilitiesView: React.FC = () => {
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
                   <label className="block text-xs font-bold text-slate-700 mb-1">Tên sân con *</label>
-                  <input
+                  <input aria-label="Tên sân con *"
                     type="text"
                     required
                     value={courtForm.name}
@@ -1847,7 +1604,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Số thứ tự</label>
-                  <input
+                  <input aria-label="Số thứ tự"
                     type="number"
                     min={1}
                     value={courtForm.courtNumber || 1}
@@ -1862,7 +1619,7 @@ export const OwnerFacilitiesView: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Phân hạng sân</label>
-                  <select
+                  <select aria-label="Phân hạng sân"
                     value={courtForm.courtType}
                     onChange={(e) =>
                       setCourtForm({
@@ -1879,7 +1636,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Trạng thái</label>
-                  <select
+                  <select aria-label="Trạng thái"
                     value={courtForm.status}
                     onChange={(e) =>
                       setCourtForm({
@@ -1901,7 +1658,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Giá gốc mặc định / giờ (VNĐ)
                   </label>
-                  <input
+                  <input aria-label="Giá gốc mặc định / giờ (VNĐ)"
                     type="number"
                     step="5000"
                     required
@@ -1914,7 +1671,7 @@ export const OwnerFacilitiesView: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Loại mặt thảm</label>
-                  <input
+                  <input aria-label="Loại mặt thảm"
                     type="text"
                     value={courtForm.surfaceType || ''}
                     onChange={(e) => setCourtForm({ ...courtForm, surfaceType: e.target.value })}
@@ -1943,12 +1700,12 @@ export const OwnerFacilitiesView: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </DialogFrame>
       )}
 
       {/* ==================== GOOGLE MAPS EMBED PREVIEW MODAL ==================== */}
       {mapPreviewFacility && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <DialogFrame className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs" onClose={() => setMapPreviewFacility(null)} label="Thiết lập sân">
           <div className="bg-white rounded-2xl border border-slate-200 max-w-2xl w-full max-h-[min(90vh,700px)] flex flex-col overflow-hidden shadow-xl">
             <div className="p-4 sm:p-5 border-b border-slate-200 shrink-0 flex items-center justify-between">
               <div>
@@ -2000,7 +1757,7 @@ export const OwnerFacilitiesView: React.FC = () => {
               </a>
             </div>
           </div>
-        </div>
+        </DialogFrame>
       )}
     </OwnerLayout>
   )

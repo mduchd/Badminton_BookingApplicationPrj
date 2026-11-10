@@ -38,6 +38,12 @@ public class User {
     @Column(nullable = false)
     private String status = "ACTIVE";
 
+    @Column(name = "token_version", nullable = false)
+    private long tokenVersion = 0;
+
+    public long getTokenVersion() { return tokenVersion; }
+    public void setTokenVersion(long tokenVersion) { this.tokenVersion = tokenVersion; }
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
@@ -91,18 +97,26 @@ public class User {
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
 
-    @Transient
+    @Column(name = "fcm_enabled", nullable = false)
+    private boolean fcmEnabled;
+    @Column(name = "calendar_connected", nullable = false)
+    private boolean calendarConnected;
+    @Column(name = "calendar_email")
+    private String calendarEmail;
+
+    public void setFcmEnabled(boolean value) { fcmEnabled = value; }
+    public void setCalendarConnected(boolean value) { calendarConnected = value; }
+    public void setCalendarEmail(String value) { calendarEmail = value; }
+
     public boolean isFcmEnabled() {
-        return false;
+        return fcmEnabled;
     }
 
-    @Transient
     public boolean isCalendarConnected() {
-        return false;
+        return calendarConnected;
     }
 
-    @Transient
     public String getCalendarEmail() {
-        return null;
+        return calendarEmail;
     }
 }

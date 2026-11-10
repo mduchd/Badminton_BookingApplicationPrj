@@ -1,3 +1,4 @@
+import { DialogFrame } from '../../../components/shared/DialogFrame'
 import React, { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { authStorage } from '../auth/authApi'
@@ -38,7 +39,7 @@ type AdminTab = 'dashboard' | 'facilities' | 'users' | 'transactions' | 'setting
 
 export const AdminPortalView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard')
-  const [loading, setLoading] = useState<boolean>(false)
+  const [loading, setLoading] = useState<boolean>(true)
 
   const [facilities, setFacilities] = useState<Facility[]>([])
   const [facilityTotal, setFacilityTotal] = useState(0)
@@ -105,24 +106,13 @@ export const AdminPortalView: React.FC = () => {
     })),
   })
 
-  const loadDashboardData = async () => {
-    setLoading(true)
-    try {
-      const [dashboard, userData, transactionData, settingsData] = await Promise.all([
-        adminApi.getDashboardMetrics(), adminApi.getUsers(),
-        adminApi.getTransactions(), adminApi.getSystemSettings(),
-      ])
-      setMetrics(dashboard)
-      setFacilityRefresh((value) => value + 1)
-      setUsers(userData)
-      setTransactions(transactionData)
-      setSettings(settingsData)
-    } catch {
-      toast.error('Không thể tải dữ liệu quản trị. Vui lòng thử lại.')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const loadDashboardData = () => Promise.all([
+    adminApi.getDashboardMetrics(), adminApi.getUsers(), adminApi.getTransactions(), adminApi.getSystemSettings(),
+  ]).then(([dashboard, userData, transactionData, settingsData]) => {
+    setMetrics(dashboard); setFacilityRefresh(value => value + 1)
+    setUsers(userData); setTransactions(transactionData); setSettings(settingsData)
+  }).catch(() => toast.error('Không thể tải dữ liệu quản trị. Vui lòng thử lại.'))
+    .finally(() => setLoading(false))
 
   useEffect(() => {
     void loadDashboardData()
@@ -210,7 +200,7 @@ export const AdminPortalView: React.FC = () => {
     }
     const updated = facilities.map((f) => {
       if (f.id === fac.id) {
-        return { ...f, status: nextStatus as any }
+        return { ...f, status: nextStatus as Facility['status'] }
       }
       return f
     })
@@ -340,9 +330,6 @@ export const AdminPortalView: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded text-xs font-bold bg-[#1b7a42] text-white">
-                Platform Admin
-              </span>
               <span className="text-xs text-slate-600 font-medium">Hệ thống SmashCourt</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
@@ -356,7 +343,7 @@ export const AdminPortalView: React.FC = () => {
           <div className="flex items-center gap-2.5 self-start sm:self-auto">
             <button
               type="button"
-              onClick={loadDashboardData}
+              onClick={() => { setLoading(true); void loadDashboardData() }}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
               title="Làm mới dữ liệu"
             >
@@ -455,7 +442,7 @@ export const AdminPortalView: React.FC = () => {
               <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2">
                 <div className="flex items-center justify-between text-slate-600">
                   <span className="text-xs font-bold">Tổng GMV toàn sàn</span>
-                  <div className="w-8 h-8 rounded-lg bg-emerald-100 text-[#1b7a42] flex items-center justify-center">
+                  <div className="w-8 h-8 text-[#1b7a42] flex items-center justify-center">
                     <TrendingUp className="w-4 h-4" />
                   </div>
                 </div>
@@ -474,7 +461,7 @@ export const AdminPortalView: React.FC = () => {
               <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2">
                 <div className="flex items-center justify-between text-slate-600">
                   <span className="text-xs font-bold">Tổng lượt đặt sân</span>
-                  <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+                  <div className="w-8 h-8 text-[#1b7a42] flex items-center justify-center">
                     <Calendar className="w-4 h-4" />
                   </div>
                 </div>
@@ -493,7 +480,7 @@ export const AdminPortalView: React.FC = () => {
               <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2">
                 <div className="flex items-center justify-between text-slate-600">
                   <span className="text-xs font-bold">Cơ sở Cụm sân</span>
-                  <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
+                  <div className="w-8 h-8 text-[#1b7a42] flex items-center justify-center">
                     <Building2 className="w-4 h-4" />
                   </div>
                 </div>
@@ -581,6 +568,7 @@ export const AdminPortalView: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
+                      {transactions.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-sm text-slate-600">Chưa có giao dịch thanh toán.</td></tr>}
                       {transactions.slice(0, 5).map((tx) => (
                         <tr key={tx.id} className="hover:bg-slate-50/50">
                           <td className="py-2.5 font-mono font-bold text-slate-900">
@@ -734,7 +722,7 @@ export const AdminPortalView: React.FC = () => {
                         </span>
                       </td>
                       <td className="min-w-0 font-bold text-slate-900 md:p-3.5">
-                        {(fac as any).subCourtCount ?? fac.subCourts?.length ?? 0} sân đã cấu hình
+                        {fac.subCourtCount ?? fac.subCourts?.length ?? 0} sân đã cấu hình
                         {aloProfiles[fac.id]?.publishedCourtCount != null && (
                           <span className="block text-[11px] font-medium text-slate-600">
                             Công bố {aloProfiles[fac.id].publishedCourtCount} sân
@@ -746,7 +734,7 @@ export const AdminPortalView: React.FC = () => {
                         {fac.openHours || 'Chưa cập nhật'}
                       </td>
                       <td className="min-w-0 md:p-3.5">
-                        {fac.status === 'REJECTED' || (fac as any).status === 'REJECTED' ? (
+                        {fac.status === 'REJECTED' ? (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-rose-50 text-rose-900 border-rose-200">
                             Bị từ chối
                           </span>
@@ -769,7 +757,7 @@ export const AdminPortalView: React.FC = () => {
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-rose-50 text-rose-900 border-rose-200">
                             Đang khóa
                           </span>
-                        ) : fac.status === 'REJECTED' || (fac as any).status === 'REJECTED' ? (
+                        ) : fac.status === 'REJECTED' ? (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold border bg-slate-100 text-slate-700 border-slate-200">
                             Ngừng HĐ
                           </span>
@@ -852,9 +840,9 @@ export const AdminPortalView: React.FC = () => {
                   className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white cursor-pointer focus:outline-none"
                 >
                   <option value="ALL">Tất cả vai trò</option>
-                  <option value="CUSTOMER">Khách hàng (CUSTOMER)</option>
-                  <option value="COURT_OWNER">Chủ sân (COURT_OWNER)</option>
-                  <option value="SYSTEM_ADMIN">Admin (SYSTEM_ADMIN)</option>
+                  <option value="CUSTOMER">Khách hàng</option>
+                  <option value="COURT_OWNER">Chủ sân</option>
+                  <option value="SYSTEM_ADMIN">Quản trị viên</option>
                 </select>
 
                 <select
@@ -899,9 +887,9 @@ export const AdminPortalView: React.FC = () => {
                           onChange={(e) => handleChangeUserRole(u.id, e.target.value as UserRole)}
                           className="px-2.5 py-1.5 rounded-xl border border-slate-200 font-bold text-xs bg-slate-50 text-slate-900 cursor-pointer focus:outline-none"
                         >
-                          <option value="CUSTOMER">Khách hàng (CUSTOMER)</option>
-                          <option value="COURT_OWNER">Chủ sân (COURT_OWNER)</option>
-                          <option value="SYSTEM_ADMIN">Admin (SYSTEM_ADMIN)</option>
+                          <option value="CUSTOMER">Khách hàng</option>
+                          <option value="COURT_OWNER">Chủ sân</option>
+                          <option value="SYSTEM_ADMIN">Quản trị viên</option>
                         </select>
                       </td>
                       <td className="p-3.5">
@@ -1003,6 +991,7 @@ export const AdminPortalView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
+                  {filteredTransactions.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-sm text-slate-600">Chưa có giao dịch phù hợp với bộ lọc.</td></tr>}
                   {filteredTransactions.map((tx) => (
                     <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="p-3.5">
@@ -1074,7 +1063,7 @@ export const AdminPortalView: React.FC = () => {
                     Tỷ lệ phí hoa hồng nền tảng (% GMV mỗi đơn):
                   </label>
                   <div className="flex items-center gap-2">
-                    <input
+                    <input aria-label="Tỷ lệ phí hoa hồng nền tảng (% GMV mỗi đơn):"
                       type="number"
                       step="0.5"
                       min="0"
@@ -1097,10 +1086,10 @@ export const AdminPortalView: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Thời gian giữ chỗ thanh toán (Hold Duration):
+                    Thời gian giữ chỗ thanh toán:
                   </label>
                   <div className="flex items-center gap-2">
-                    <input
+                    <input aria-label="Thời gian giữ chỗ thanh toán:"
                       type="number"
                       min="3"
                       max="30"
@@ -1122,9 +1111,9 @@ export const AdminPortalView: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Thông báo toàn hệ thống (Broadcast Announcement):
+                    Thông báo toàn hệ thống:
                   </label>
-                  <textarea
+                  <textarea aria-label="Thông báo toàn hệ thống:"
                     rows={3}
                     value={settings.broadcastAnnouncement}
                     onChange={(e) =>
@@ -1203,7 +1192,7 @@ export const AdminPortalView: React.FC = () => {
       {/* ==================== MODAL CHI TIẾT CỤM SÂN ==================== */}
       {selectedFacility &&
         createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-xs">
+          <DialogFrame className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-xs" onClose={() => setSelectedFacilityId(null)} label="Chi tiết quản trị">
             <div className="relative w-full max-w-xl bg-white rounded-3xl border border-slate-200 overflow-hidden max-h-[min(90vh,700px)] flex flex-col">
               {/* Modal Header */}
               <div className="px-5 py-4 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
@@ -1245,7 +1234,7 @@ export const AdminPortalView: React.FC = () => {
                   <div className="flex justify-between py-1.5 border-b border-slate-100">
                     <span className="text-slate-600 font-semibold">Số lượng sân con:</span>
                     <span className="text-slate-900 font-bold">
-                      {(selectedFacility as any).subCourtCount ?? selectedFacility.subCourts?.length ?? 0} sân đã cấu hình
+                      {selectedFacility.subCourtCount ?? selectedFacility.subCourts?.length ?? 0} sân đã cấu hình
                     </span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100">
@@ -1258,14 +1247,14 @@ export const AdminPortalView: React.FC = () => {
                     <span className="text-slate-600 font-semibold">Trạng thái duyệt:</span>
                     <span
                       className={`font-bold ${
-                        selectedFacility.status === 'REJECTED' || (selectedFacility as any).status === 'REJECTED'
+                        selectedFacility.status === 'REJECTED'
                           ? 'text-rose-700'
                           : selectedFacility.isApproved || selectedFacility.status === 'ACTIVE' || selectedFacility.status === 'active'
                           ? 'text-emerald-700'
                           : 'text-amber-800'
                       }`}
                     >
-                      {selectedFacility.status === 'REJECTED' || (selectedFacility as any).status === 'REJECTED'
+                      {selectedFacility.status === 'REJECTED'
                         ? 'Đã từ chối'
                         : selectedFacility.isApproved || selectedFacility.status === 'ACTIVE' || selectedFacility.status === 'active'
                         ? 'Đã phê duyệt'
@@ -1274,10 +1263,10 @@ export const AdminPortalView: React.FC = () => {
                   </div>
                 </div>
 
-                {(selectedFacility as any).rejectionReason && (
+                {selectedFacility.rejectionReason && (
                   <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-900">
                     <strong className="block font-bold mb-0.5">Lý do từ chối kiểm duyệt trước đó:</strong>
-                    <span>{(selectedFacility as any).rejectionReason}</span>
+                    <span>{selectedFacility.rejectionReason}</span>
                   </div>
                 )}
 
@@ -1369,14 +1358,14 @@ export const AdminPortalView: React.FC = () => {
                 )}
               </div>
             </div>
-          </div>,
+          </DialogFrame>,
           document.body
         )}
 
       {/* ==================== MODAL TỪ CHỐI DUYỆT ==================== */}
       {showRejectModal &&
         createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <DialogFrame className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs" onClose={() => setShowRejectModal(false)} label="Chi tiết quản trị">
             <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
               <h3 className="text-sm font-bold text-slate-900">Từ chối kiểm duyệt cơ sở</h3>
               <p className="text-xs text-slate-600">
@@ -1406,7 +1395,7 @@ export const AdminPortalView: React.FC = () => {
                 </button>
               </div>
             </div>
-          </div>,
+          </DialogFrame>,
           document.body
         )}
     </div>

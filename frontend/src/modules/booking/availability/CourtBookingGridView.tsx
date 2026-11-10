@@ -1,3 +1,4 @@
+import { useNow } from '../../../hooks/useNow'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueries, useQuery } from '@tanstack/react-query'
@@ -34,13 +35,14 @@ function BookingGrid({ facility, priceRules, currentUser = null, onOpenAuth, onB
   const navigate = useNavigate()
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false)
   const dateListRef = useRef<HTMLDivElement>(null)
-  const dateOptions = useMemo(() => Array.from({ length: 24 }, (_, i) => {
-    const d = new Date(Date.now() + i * 86400000)
+  const now = useNow()
+  const [dateOptions] = useState(() => Array.from({ length: 24 }, (_, i) => {
+    const d = new Date(new Date().getTime() + i * 86400000)
     const date = dateKey(d)
     const [year, month, day] = date.split('-')
     const dayName = i === 0 ? 'Hôm nay' : i === 1 ? 'Ngày mai' : new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', weekday: 'long' }).format(d)
     return { date, dayName, displayDate: `${day}/${month}`, monthYear: `${month}/${year}` }
-  }), [])
+  }))
   const [selectedDate, setSelectedDate] = useState(dateOptions[0].date)
   const [selectedSlots, setSelectedSlots] = useState<BookingSlot[]>([])
   const availability = useQueries({ queries: facility.subCourts.map((court) => ({
@@ -60,7 +62,7 @@ function BookingGrid({ facility, priceRules, currentUser = null, onOpenAuth, onB
   const getSlotPrice = (courtId: string, time: string) => getSlot(courtId, time)?.price ?? 0
   const getSlotStatus = (courtId: string, time: string): 'available' | 'held' | 'confirmed' | 'blocked' | 'unknown' => {
     const slot = getSlot(courtId, time)
-    if (!slot || new Date(`${selectedDate}T${slot.startTime}+07:00`).getTime() <= Date.now()) return 'unknown'
+    if (!slot || new Date(`${selectedDate}T${slot.startTime}+07:00`).getTime() <= now) return 'unknown'
     if (slot.available) return 'available'
     if (slot.slotStatus === 'HELD') return 'held'
     if (slot.slotStatus === 'BOOKED') return 'confirmed'
@@ -285,6 +287,7 @@ function BookingGrid({ facility, priceRules, currentUser = null, onOpenAuth, onB
                           type="button"
                           onClick={() => toggleSelectSlot(court, time)}
                           disabled={status !== 'available'}
+                          aria-label={status === 'unknown' ? `${court.name}, ${time}: khung giờ đã qua hoặc chưa được cung cấp` : undefined}
                           className={`w-full py-2 px-0.5 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-0.5 ${
                             isSelected
                               ? 'bg-[#168039] text-white border border-[#168039] cursor-pointer'
@@ -300,21 +303,21 @@ function BookingGrid({ facility, priceRules, currentUser = null, onOpenAuth, onB
                           {isSelected ? (
                             <>
                               <Check className="w-3 h-3" />
-                              <span className="text-[9px] font-bold">Đã chọn</span>
+                              <span className="text-xs font-bold">Đã chọn</span>
                             </>
                           ) : status === 'available' ? (
                             <>
                               <span className="text-[10px] font-extrabold text-slate-900">{time}</span>
-                              <span className="text-[9px] font-semibold text-emerald-700">
+                              <span className="text-xs font-semibold text-emerald-700">
                                 {(price / 1000).toFixed(0)}k
                               </span>
                             </>
                           ) : status === 'held' ? (
-                            <span className="text-[9px] font-semibold">Giữ chỗ</span>
+                            <span className="text-xs font-semibold">Giữ chỗ</span>
                           ) : status === 'confirmed' ? (
-                            <span className="text-[9px] font-semibold">Đã đặt</span>
+                            <span className="text-xs font-semibold">Đã đặt</span>
                           ) : (
-                            <span className="text-[9px] font-semibold">{status === 'unknown' ? 'Không có' : 'Bảo trì'}</span>
+                            <span className="text-xs font-semibold">{status === 'unknown' ? '—' : 'Bảo trì'}</span>
                           )}
                         </button>
                       </td>
@@ -376,7 +379,7 @@ function BookingGrid({ facility, priceRules, currentUser = null, onOpenAuth, onB
               type="button"
               onClick={handleProceedToCheckout}
               disabled={selectedSlots.length === 0}
-              className="flex-1 sm:flex-initial px-8 sm:px-12 py-3 rounded-xl bg-[#e5a92c] hover:bg-[#d49b24] active:bg-[#c48d1c] disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black text-sm sm:text-base transition-colors cursor-pointer flex items-center justify-center gap-2"
+              className="flex-1 sm:flex-initial px-8 sm:px-12 py-3 rounded-xl bg-[#e5a92c] hover:bg-[#d49b24] active:bg-[#c48d1c] disabled:bg-slate-300 disabled:cursor-not-allowed text-slate-900 font-black text-sm sm:text-base transition-colors cursor-pointer flex items-center justify-center gap-2"
             >
               <span>{currentUser ? 'Tiếp tục đặt chỗ' : 'Tiếp tục đặt chỗ (Đăng nhập)'}</span>
               <ChevronRight className="w-5 h-5" />

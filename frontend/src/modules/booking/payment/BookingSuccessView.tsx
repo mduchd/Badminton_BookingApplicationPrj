@@ -110,7 +110,7 @@ export const BookingSuccessView: React.FC<{ userId: string }> = ({ userId }) => 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6 pb-24">
       {/* Success Badge & Header */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 text-center space-y-3">
+      <div className="pb-6 border-b border-slate-200 text-center space-y-3">
         <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
 
         <h1 className="text-xl sm:text-2xl font-black text-slate-900">

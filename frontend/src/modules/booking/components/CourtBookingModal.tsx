@@ -1,3 +1,5 @@
+import { useNow } from '../../../hooks/useNow'
+import { DialogFrame } from '../../../components/shared/DialogFrame'
 import React, { useState, useRef } from 'react';
 import { X, Calendar as CalendarIcon, MapPin } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -30,6 +32,7 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
   onBookingSuccess,
 }) => {
   const queryClient = useQueryClient();
+  const now = useNow();
   const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(initialDate);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(initialSlot);
@@ -52,7 +55,7 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
   const visibleAvailability = availability && {
     ...availability,
     slots: availability.slots.map((slot) =>
-      new Date(`${selectedDate}T${slot.startTime}+07:00`).getTime() <= Date.now()
+      new Date(`${selectedDate}T${slot.startTime}+07:00`).getTime() <= now
         ? { ...slot, available: false, reason: 'Đã qua' }
         : slot
     ),
@@ -88,7 +91,7 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Đặt sân" className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-xs">
+    <DialogFrame className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-xs" onClose={onClose} label="Đặt sân">
       <div className="relative w-full max-w-5xl bg-white rounded-3xl border border-slate-200 overflow-hidden max-h-[min(90vh,720px)] flex flex-col">
         {/* Header Modal thanh lịch nền sáng */}
         <div className="px-5 py-4 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
@@ -120,7 +123,7 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
               <CalendarIcon className="w-5 h-5 text-[#1b7a42]" />
               <div>
                 <label className="block text-xs font-bold text-slate-800">Chọn ngày đánh cầu:</label>
-                <input
+                <input aria-label="Chọn ngày đánh cầu:"
                   type="date"
                   value={selectedDate}
                   min={todayStr}
@@ -157,6 +160,7 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
 
             <div className="order-1 lg:order-2 lg:col-span-1">
               <BookingSummaryCard
+                formId="booking-confirm-form"
                 courtName={courtName}
                 facilityName={facilityName}
                 selectedDate={selectedDate}
@@ -167,7 +171,10 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
             </div>
           </div>
         </div>
+        <footer className="shrink-0 border-t border-slate-200 bg-white px-5 py-4">
+          <button type="submit" form="booking-confirm-form" disabled={!currentSlot || createBookingMutation.isPending} className="w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 rounded-xl bg-[#1b7a42] hover:bg-[#156335] px-4 py-3 text-sm font-semibold text-white">{createBookingMutation.isPending ? 'Đang giữ chỗ…' : 'Xác nhận giữ chỗ'}</button>
+        </footer>
       </div>
-    </div>
+    </DialogFrame>
   );
 };

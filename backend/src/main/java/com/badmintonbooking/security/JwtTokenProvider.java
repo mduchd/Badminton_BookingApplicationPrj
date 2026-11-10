@@ -18,6 +18,10 @@ public class JwtTokenProvider {
     private long jwtExpirationMs;
 
     public String generateToken(Object userId, String email, String role) {
+        return generateToken(userId, email, role, 0);
+    }
+
+    public String generateToken(Object userId, String email, String role, long version) {
         long now = System.currentTimeMillis();
         long exp = now + jwtExpirationMs;
 
@@ -25,8 +29,8 @@ public class JwtTokenProvider {
                 .encodeToString("{\"alg\":\"HS256\",\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8));
 
         String payloadJson = String.format(
-                "{\"sub\":\"%s\",\"email\":\"%s\",\"role\":\"%s\",\"iat\":%d,\"exp\":%d}",
-                userId.toString(), email, role, now / 1000, exp / 1000
+                "{\"sub\":\"%s\",\"email\":\"%s\",\"role\":\"%s\",\"iat\":%d,\"exp\":%d,\"ver\":%d}",
+                userId.toString(), email, role, now / 1000, exp / 1000, version
         );
         String payload = Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(payloadJson.getBytes(StandardCharsets.UTF_8));
@@ -69,6 +73,14 @@ public class JwtTokenProvider {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    public long getTokenVersion(String token) {
+        try {
+            String payload = new String(Base64.getUrlDecoder().decode(token.split("\\.")[1]), StandardCharsets.UTF_8);
+            var matcher = java.util.regex.Pattern.compile("\"ver\":(\\d+)").matcher(payload);
+            return matcher.find() ? Long.parseLong(matcher.group(1)) : 0;
+        } catch (Exception ex) { return -1; }
     }
 
     public Long getUserIdFromToken(String token) {

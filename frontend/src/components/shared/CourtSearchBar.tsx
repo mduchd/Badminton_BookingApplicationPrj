@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import {
   Crosshair,
   SlidersHorizontal,
@@ -28,15 +28,7 @@ export const CourtSearchBar: React.FC<CourtSearchBarProps> = ({
   activeTab,
   activeFilterCount,
 }) => {
-  const [gpsLoading, setGpsLoading] = useState(false)
-
-  const handleLocateMe = () => {
-    setGpsLoading(true)
-    setTimeout(() => {
-      setGpsLoading(false)
-      onSearchChange('Văn Miếu - Quốc Tử Giám')
-    }, 400)
-  }
+  const handleLocateMe = () => onSelectTab('map')
 
   return (
     <div className="w-full bg-white rounded-xl border border-slate-300/90 px-4 sm:px-5 py-2.5 sm:py-3 transition-all focus-within:border-[#1b7a42] focus-within:ring-2 focus-within:ring-[#1b7a42]/20 shadow-[0_4px_8px_-2px_rgba(15,23,42,0.1),0_16px_32px_-6px_rgba(15,23,42,0.2)] ring-1 ring-slate-900/10">
@@ -71,10 +63,8 @@ export const CourtSearchBar: React.FC<CourtSearchBarProps> = ({
           <button
             type="button"
             onClick={handleLocateMe}
-            className={`p-2 text-slate-500 hover:text-[#1b7a42] hover:bg-slate-100 rounded-lg transition-colors ml-1 cursor-pointer ${
-              gpsLoading ? 'animate-spin text-emerald-600' : ''
-            }`}
-            title="Định vị vị trí hiện tại của tôi"
+            className={`p-2 text-slate-500 hover:text-[#1b7a42] hover:bg-slate-100 rounded-lg transition-colors ml-1 cursor-pointer `}
+            title="Mở bản đồ để định vị"
           >
             <Crosshair className="w-4 h-4" />
           </button>

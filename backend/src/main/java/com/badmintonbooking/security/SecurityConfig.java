@@ -46,6 +46,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/admin/**").hasRole("SYSTEM_ADMIN")
                 .requestMatchers("/api/v1/auth/**").permitAll()
+                .requestMatchers("/api/v1/account/**").authenticated()
                 .requestMatchers("/api/v1/public/**").permitAll()
                 .requestMatchers("/api/facilities/favorites", "/api/facilities/favorites/**")
                     .hasAnyRole("CUSTOMER", "COURT_OWNER", "SYSTEM_ADMIN")

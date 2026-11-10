@@ -66,8 +66,8 @@ export const bookingApi = {
   },
 
   // Lấy thông tin thanh toán theo bookingId
-  async getPaymentByBookingId(bookingId: number): Promise<any> {
-    const response = await client.get<ApiResponse<any>>(
+  async getPaymentByBookingId(bookingId: number): Promise<{ status: string; id: number; bookingId: number; amount: number }> {
+    const response = await client.get<ApiResponse<{ status: string; id: number; bookingId: number; amount: number }>>(
       `/payments/booking/${bookingId}`
     );
     return response.data.data;

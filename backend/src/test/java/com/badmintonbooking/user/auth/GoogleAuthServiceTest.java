@@ -37,20 +37,21 @@ class GoogleAuthServiceTest {
         assertEquals("https://avatar.google.com/photo.jpg", result.user().avatarUrl());
     }
 
-    @Test void updatesExistingUserAvatarOnLogin() {
+    @Test void updatesAvatarWithoutOverwritingSavedProfileName() {
         var identityWithAvatar = new GoogleIdentity("google-subject", "user@example.com", "Updated Name", "https://avatar.google.com/new.jpg");
         User existing = new User();
         existing.setId(42L);
         existing.setEmail("user@example.com");
         existing.setStatus("ACTIVE");
         existing.setRole("CUSTOMER");
+        existing.setFullName("Tên đã lưu trong hồ sơ");
         existing.setAvatarUrl("https://avatar.google.com/old.jpg");
         when(users.findByProviderAndProviderSubject("GOOGLE", "google-subject")).thenReturn(Optional.of(existing));
         when(tokens.generateToken(42L, "user@example.com", "CUSTOMER")).thenReturn("session-token");
 
         var result = auth.loginWithGoogle(identityWithAvatar);
         assertEquals("https://avatar.google.com/new.jpg", result.user().avatarUrl());
-        assertEquals("Updated Name", result.user().fullName());
+        assertEquals("Tên đã lưu trong hồ sơ", result.user().fullName());
     }
 
     @Test void refusesToLinkExistingEmailWithoutProof() {

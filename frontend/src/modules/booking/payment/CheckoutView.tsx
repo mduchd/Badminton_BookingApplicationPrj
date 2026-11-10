@@ -46,22 +46,22 @@ export function CheckoutView({ userId }: { userId: string }) {
       {booking ? (
         <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5">
           <h1 className="text-xl font-bold">Đơn #SMC-{booking.id}</h1>
-          <p>{booking.facilityName} · {booking.courtName}</p>
-          <p>{booking.bookingDate} · {booking.startTime.slice(0, 5)} – {booking.endTime.slice(0, 5)}</p>
-          <p className="font-semibold">{booking.totalAmount.toLocaleString('vi-VN')} đ · {statusLabels[booking.status]}</p>
+          <p>{booking.facilityName} - {booking.courtName}</p>
+          <p>{booking.bookingDate} - {booking.startTime.slice(0, 5)} – {booking.endTime.slice(0, 5)}</p>
+          <p className="font-semibold">{booking.totalAmount.toLocaleString('vi-VN')} đ - {statusLabels[booking.status]}</p>
           {holding && (
             <>
               {booking.holdExpiresAt && (
                 <p>Giữ chỗ đến {new Date(booking.holdExpiresAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}.</p>
               )}
               <p className="text-sm text-slate-700">Thanh toán qua payOS hoặc liên hệ chủ sân để được hướng dẫn.</p>
-              <button type="button" onClick={() => setPaymentOpen(true)} className="mr-4 rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white">
+              <div className="flex flex-wrap items-center gap-3"><button type="button" onClick={() => setPaymentOpen(true)} className="mr-4 rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white cursor-pointer">
                 Thanh toán qua payOS
               </button>
               <Link to={`/courts/${booking.facilityId}`} className="mr-4 text-sm font-semibold text-green-700">Thông tin liên hệ</Link>
-              <button type="button" disabled={cancel.isPending} onClick={() => cancel.mutate()} className="rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700">
+              <button type="button" disabled={cancel.isPending} onClick={() => cancel.mutate()} className="rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-700 cursor-pointer">
                 Hủy giữ chỗ
-              </button>
+              </button></div>
             </>
           )}
         </div>

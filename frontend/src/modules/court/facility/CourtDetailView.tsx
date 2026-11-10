@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -42,7 +42,11 @@ export const CourtDetailView: React.FC<CourtDetailViewProps> = ({ favoriteIds, o
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [pricingTab, setPricingTab] = useState<'CASUAL' | 'FIXED_MONTHLY'>('CASUAL')
   const isFavorite = id != null && favoriteIds.includes(id)
-  useEffect(() => setSelectedImageIndex(0), [id])
+  const [imageFacilityId, setImageFacilityId] = useState(id)
+  if (imageFacilityId !== id) {
+    setImageFacilityId(id)
+    setSelectedImageIndex(0)
+  }
 
   if (loading) {
     return (
@@ -155,7 +159,7 @@ export const CourtDetailView: React.FC<CourtDetailViewProps> = ({ favoriteIds, o
             <span className="px-3 py-1 rounded-full text-xs font-bold bg-white text-slate-900 border border-slate-200 flex items-center gap-1.5">
               <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
               <span>
-                {facility.rating} ({facility.reviewCount} đánh giá)
+                {facility.reviewCount > 0 ? `${facility.rating} (${facility.reviewCount} đánh giá)` : 'Chưa có đánh giá'}
               </span>
             </span>
             <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#168039] text-white">

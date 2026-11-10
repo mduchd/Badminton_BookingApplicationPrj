@@ -1,3 +1,4 @@
+import { DialogFrame } from '../../../components/shared/DialogFrame'
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -85,7 +86,10 @@ function formatVnd(amount: number): string {
   return `${Math.round(amount).toLocaleString('vi-VN')} ₫`
 }
 
-export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
+export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = (props) =>
+  props.isOpen && props.court ? <SidebarContent key={props.court.id} {...props} /> : null
+
+const SidebarContent: React.FC<CourtDetailSidebarProps> = ({
   court,
   isOpen,
   onClose,
@@ -99,13 +103,6 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
   const [isCopied, setIsCopied] = useState(false)
   const isFavorite = court?.isFavorite ?? false
   const [lightboxImg, setLightboxImg] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (court) {
-      setActiveTab('info')
-      setLightboxImg(null)
-    }
-  }, [court?.id])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -128,7 +125,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
     retry: false,
   })
 
-  if (!court && !isOpen) return null
+  if (!isOpen) return null
 
   const facility = data?.facility
   const priceRules = data?.priceRules ?? []
@@ -211,7 +208,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
   ]
 
   return (
-    <>
+    <DialogFrame className="fixed inset-0 z-50" onClose={() => lightboxImg ? setLightboxImg(null) : onClose()} label="Chi tiết cụm sân">
       {/* Backdrop */}
       <div
         onClick={onClose}
@@ -224,6 +221,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
       {/* Slide-in Sidebar (Left) */}
       <aside
         aria-label="Chi tiết cụm sân"
+        inert={!isOpen}
         className={`fixed top-0 left-0 bottom-0 z-50 w-full sm:w-[460px] md:w-[500px] bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 ease-out shadow-2xl ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
@@ -243,7 +241,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="w-10 h-10 rounded-full bg-white text-[#0c4a2b] flex items-center justify-center hover:bg-slate-100 active:scale-90 transition-all duration-150 cursor-pointer shadow-xs focus:outline-none"
+                  className="w-10 h-10 rounded-full bg-white text-[#0c4a2b] flex items-center justify-center hover:bg-slate-100 active:scale-90 transition-all duration-150 cursor-pointer focus:outline-none"
                   title="Quay lại danh sách"
                 >
                   <ArrowLeft className="w-5 h-5 text-[#0c4a2b]" />
@@ -253,7 +251,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                   <button
                     type="button"
                     onClick={handleOpenGoogleMaps}
-                    className="w-10 h-10 rounded-full bg-white text-[#0c4a2b] flex items-center justify-center hover:bg-slate-100 active:scale-90 transition-all duration-150 cursor-pointer shadow-xs focus:outline-none"
+                    className="w-10 h-10 rounded-full bg-white text-[#0c4a2b] flex items-center justify-center hover:bg-slate-100 active:scale-90 transition-all duration-150 cursor-pointer focus:outline-none"
                     title="Chỉ đường Google Maps"
                   >
                     <Route className="w-5 h-5 text-[#0c4a2b]" />
@@ -262,7 +260,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                   <button
                     type="button"
                     onClick={handleToggleFav}
-                    className="w-10 h-10 rounded-full bg-white text-[#0c4a2b] flex items-center justify-center hover:bg-slate-100 active:scale-75 transition-all duration-150 cursor-pointer shadow-xs focus:outline-none"
+                    className="w-10 h-10 rounded-full bg-white text-[#0c4a2b] flex items-center justify-center hover:bg-slate-100 active:scale-75 transition-all duration-150 cursor-pointer focus:outline-none"
                     title="Yêu thích"
                   >
                     <Heart
@@ -275,7 +273,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                   <button
                     type="button"
                     onClick={handleBookNow}
-                    className="px-5 py-2.5 rounded-xl bg-[#dfb03b] hover:bg-[#cfa02d] active:scale-95 text-white font-semibold text-sm cursor-pointer transition-all duration-150 focus:outline-none"
+                    className="px-5 py-2.5 rounded-xl bg-[#dfb03b] hover:bg-[#cfa02d] active:scale-95 text-slate-900 font-semibold text-sm cursor-pointer transition-all duration-150 focus:outline-none"
                   >
                     Đặt lịch
                   </button>
@@ -284,11 +282,11 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
             </div>
 
             {/* 2. Overlapping Venue Info Card with Centered Floating Pills */}
-            <div className="relative px-3.5 sm:px-4 -mt-14 z-20 flex-shrink-0">
+            <div className="relative px-3.5 sm:px-4 pt-4 flex-shrink-0">
               {/* Centered Floating Rating & Chat Pills Straddling Card Top Border */}
-              <div className="relative z-10 flex items-center justify-center gap-2.5 -mb-5 px-2">
-                <div className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#22b573] text-white text-sm font-semibold shadow-xs">
-                  <Star className="w-4 h-4 fill-white text-white" />
+              <div className="flex items-center justify-between gap-2 pb-3">
+                <div className="inline-flex items-center gap-1.5 text-slate-700 text-sm font-semibold">
+                  <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
                   <span>
                     {reviewCount > 0 ? `${ratingValue} (${reviewCount} đánh giá)` : 'Chưa có đánh giá'}
                   </span>
@@ -297,7 +295,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                 <button
                   type="button"
                   onClick={handleStartChat}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#066839] hover:bg-[#05562f] active:scale-95 text-white text-sm font-semibold cursor-pointer shadow-xs transition-all duration-150 focus:outline-none"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#066839] hover:bg-[#05562f] active:scale-95 text-white text-sm font-semibold cursor-pointer transition-all duration-150 focus:outline-none"
                 >
                   <MessageSquare className="w-4 h-4 text-white" />
                   <span>Chat với sân</span>
@@ -305,7 +303,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
               </div>
 
               {/* White Venue Card */}
-              <div className="bg-white rounded-2xl border border-[#e4ece8] shadow-sm pt-7 pb-3.5 px-4 space-y-3">
+              <div className="bg-white border-t border-slate-200 pt-4 pb-3.5 space-y-3">
                 <div className="flex items-center gap-3.5">
                   <div className="w-14 h-14 rounded-full border border-slate-200 overflow-hidden flex-shrink-0 bg-[#0d0f12]">
                     <img
@@ -414,7 +412,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
               {activeTab === 'info' && (
                 <div className="space-y-4">
                   {/* Online Booking Link Row */}
-                  <div className="border border-[#e4ece8] rounded-2xl p-3.5 space-y-1.5 bg-white">
+                  <div className="border-b border-slate-200 py-4 space-y-1.5 bg-white">
                     <div className="text-[13px] font-bold text-[#d95b16]">
                       Link đặt lịch online
                     </div>
@@ -432,7 +430,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                       <button
                         type="button"
                         onClick={handleCopyLink}
-                        className="w-8 h-8 rounded-lg bg-[#e9f5ef] text-[#0c6b3d] hover:bg-[#d8eee3] flex items-center justify-center flex-shrink-0 cursor-pointer transition-colors focus:outline-none"
+                        className="w-8 h-8 rounded-lg bg-white text-[#0c6b3d] hover:bg-[#d8eee3] flex items-center justify-center flex-shrink-0 cursor-pointer transition-colors focus:outline-none"
                         title="Sao chép link đặt lịch"
                       >
                         {isCopied ? (
@@ -445,7 +443,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                   </div>
 
                   {/* Description */}
-                  <div className="border border-[#e4ece8] rounded-2xl p-3.5 space-y-2 bg-white">
+                  <div className="border-b border-slate-200 py-4 space-y-2 bg-white">
                     <h3 className="text-[13px] font-bold text-[#0c4a2b]">Giới thiệu cụm sân</h3>
                     <p className="text-xs sm:text-[13px] text-slate-700 leading-relaxed">
                       {description}
@@ -453,7 +451,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                   </div>
 
                   {/* Amenities & Quick Highlights */}
-                  <div className="border border-[#e4ece8] rounded-2xl p-3.5 space-y-2.5 bg-white">
+                  <div className="border-b border-slate-200 py-4 space-y-2.5 bg-white">
                     <h3 className="text-[13px] font-bold text-[#0c4a2b]">Tiện ích tại sân</h3>
                     <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700">
                       {(facility?.amenities ?? court.amenities).map((am, idx) => (
@@ -492,7 +490,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                     </p>
                   </div>
 
-                  <div className="border border-[#e4ece8] rounded-2xl p-3.5 space-y-2 bg-white">
+                  <div className="border-b border-slate-200 py-4 space-y-2 bg-white">
                     <div className="flex items-center justify-between">
                       <div className="text-xs sm:text-[13px] font-bold text-[#0c4a2b]">
                         Gói cố định theo tháng
@@ -519,12 +517,12 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                 </div>
               )}
 
-              {/* TAB 3: DỊCH VỤ (BẢNG GIÁ SÂN + DỊCH VỤ) */}
+              {/* TAB 3: DỊCH VỤ (Bảng giá sân + DỊCH VỤ) */}
               {activeTab === 'services' && (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <h3 className="text-sm font-bold text-[#0c4a2b] uppercase tracking-wide">
-                      BẢNG GIÁ SÂN
+                    <h3 className="text-sm font-bold text-[#0c4a2b]">
+                      Bảng giá sân
                     </h3>
                     <div className="text-center text-[13px] font-semibold text-[#0c4a2b]">
                       Cầu Lông
@@ -584,7 +582,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
               {/* TAB 5: ĐIỀU KHOẢN & QUY ĐỊNH */}
               {activeTab === 'terms' && (
                 <div className="space-y-3 text-xs sm:text-[13px] text-slate-700">
-                  <div className="border border-[#e4ece8] rounded-2xl p-3.5 space-y-1.5">
+                  <div className="border-b border-slate-200 py-4 space-y-1.5">
                     <h4 className="font-bold text-[#0c4a2b] flex items-center gap-2">
                       <ShieldCheck className="w-4 h-4 text-[#066839]" />
                       <span>Quy định giày & mặt sân</span>
@@ -594,7 +592,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                     </p>
                   </div>
 
-                  <div className="border border-[#e4ece8] rounded-2xl p-3.5 space-y-1.5">
+                  <div className="border-b border-slate-200 py-4 space-y-1.5">
                     <h4 className="font-bold text-[#0c4a2b] flex items-center gap-2">
                       <Clock className="w-4 h-4 text-[#066839]" />
                       <span>Nhận sân & thời gian thi đấu</span>
@@ -604,7 +602,7 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
                     </p>
                   </div>
 
-                  <div className="border border-[#e4ece8] rounded-2xl p-3.5 space-y-1.5">
+                  <div className="border-b border-slate-200 py-4 space-y-1.5">
                     <h4 className="font-bold text-[#0c4a2b] flex items-center gap-2">
                       <Info className="w-4 h-4 text-[#066839]" />
                       <span>Đổi lịch & hủy đặt sân</span>
@@ -705,6 +703,6 @@ export const CourtDetailSidebar: React.FC<CourtDetailSidebarProps> = ({
           />
         </div>
       )}
-    </>
+    </DialogFrame>
   )
 }
