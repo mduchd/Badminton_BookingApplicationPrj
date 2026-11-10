@@ -1,3 +1,4 @@
+import { DialogFrame } from '../../../components/shared/DialogFrame'
 import React from 'react'
 import { X, Filter, RotateCcw, MapPin, Calendar, Clock, DollarSign, Check } from 'lucide-react'
 import type { SearchCriteria } from '../../types/user'
@@ -39,7 +40,7 @@ export const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overlay-enter">
+    <DialogFrame className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overlay-enter" onClose={onClose} label="Bộ lọc sân">
       <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[min(90vh,700px)] sm:modal-enter max-sm:sheet-enter">
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
@@ -53,6 +54,7 @@ export const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Đóng bộ lọc"
             className="p-1.5 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -67,26 +69,10 @@ export const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
               <MapPin className="w-4 h-4 text-[#1b7a42]" />
               <span>Khu vực / Quận huyện</span>
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {availableDistricts.map((d) => {
-                const val = d === 'Tất cả quận/huyện' ? '' : d
-                const isSelected = criteria.district === val
-                return (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => onChangeCriteria({ ...criteria, district: val })}
-                    className={`py-2.5 px-3 rounded-xl border text-center font-bold text-xs sm:text-sm transition-all cursor-pointer ${
-                      isSelected
-                        ? 'border-[#1b7a42] bg-emerald-50 text-[#1b7a42] ring-1 ring-[#1b7a42]'
-                        : 'border-slate-200 hover:bg-slate-50 text-slate-700'
-                    }`}
-                  >
-                    {d}
-                  </button>
-                )
-              })}
-            </div>
+            <select aria-label="Khu vực / Quận huyện" value={criteria.district || ''} onChange={(e) => onChangeCriteria({ ...criteria, district: e.target.value })} className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-900 cursor-pointer">
+              <option value="">Tất cả quận/huyện</option>
+              {availableDistricts.filter(d => d !== 'Tất cả quận/huyện').map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
           </div>
 
           {/* 2. Date */}
@@ -95,7 +81,7 @@ export const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
               <Calendar className="w-4 h-4 text-[#1b7a42]" />
               <span>Ngày đặt sân</span>
             </label>
-            <input
+            <input aria-label="Ngày đặt sân"
               type="date"
               value={criteria.date}
               onChange={(e) => onChangeCriteria({ ...criteria, date: e.target.value })}
@@ -110,7 +96,7 @@ export const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
               <span>Khung giờ liên tục</span>
             </label>
             <div className="flex items-center gap-3">
-              <select
+              <select aria-label="Khung giờ liên tục"
                 value={criteria.startTime}
                 onChange={(e) => onChangeCriteria({ ...criteria, startTime: e.target.value })}
                 className="w-1/2 p-3 rounded-xl border border-slate-200 text-slate-800 font-bold text-sm sm:text-base focus:outline-none"
@@ -122,7 +108,7 @@ export const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
                 ))}
               </select>
               <span className="font-extrabold text-slate-600">-</span>
-              <select
+              <select aria-label="Khung giờ liên tục"
                 value={criteria.endTime}
                 onChange={(e) => onChangeCriteria({ ...criteria, endTime: e.target.value })}
                 className="w-1/2 p-3 rounded-xl border border-slate-200 text-slate-800 font-bold text-sm sm:text-base focus:outline-none"
@@ -206,6 +192,6 @@ export const SmartFilterModal: React.FC<SmartFilterModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </DialogFrame>
   )
 }

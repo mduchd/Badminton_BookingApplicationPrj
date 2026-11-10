@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import { useNow } from '../../../hooks/useNow'
+import { DialogFrame } from '../../../components/shared/DialogFrame'
+import React, { useState, useRef } from 'react';
 import { X, Calendar as CalendarIcon, MapPin } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookingApi } from '../services/bookingApi';
 import type { TimeSlot, BookingResponse } from '../types';
 import { TimeSlotGrid } from './TimeSlotGrid';
 import { BookingSummaryCard } from './BookingSummaryCard';
+import { selectTimeRange } from '../timeRangeSelection';
+import { toast } from 'sonner';
 
 interface CourtBookingModalProps {
   isOpen: boolean;
@@ -30,9 +34,18 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
   onBookingSuccess,
 }) => {
   const queryClient = useQueryClient();
+  const now = useNow();
   const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(initialDate);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(initialSlot);
+  const bookingAttempt = useRef<{ payload: string; key: string } | null>(null);
+  const { data: intervalCheck, isFetching: isCheckingInterval, isError: isIntervalError } = useQuery({
+    queryKey: ['intervalCheck', courtId, selectedDate, selectedSlot?.startTime, selectedSlot?.endTime],
+    queryFn: () => bookingApi.checkInterval(courtId, selectedDate, selectedSlot!.startTime, selectedSlot!.endTime),
+    enabled: isOpen && !!selectedSlot,
+    staleTime: 0,
+    refetchInterval: 15000,
+  });
 
   // Lấy dữ liệu availability của sân
   const { data: availability, isLoading } = useQuery({
@@ -44,28 +57,31 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
   const visibleAvailability = availability && {
     ...availability,
     slots: availability.slots.map((slot) =>
-      new Date(`${selectedDate}T${slot.startTime}+07:00`).getTime() <= Date.now()
+      new Date(`${selectedDate}T${slot.startTime}+07:00`).getTime() <= now
         ? { ...slot, available: false, reason: 'Đã qua' }
         : slot
     ),
   };
 
   // Only confirm a slot that the latest availability response still marks available.
-  const currentSlot = visibleAvailability?.slots.find((slot) =>
-    slot.startTime === selectedSlot?.startTime && slot.endTime === selectedSlot?.endTime && slot.available
-  ) ?? null;
+  const currentSlot = selectedSlot && !isCheckingInterval && !isIntervalError && intervalCheck?.isAvailable
+    && new Date(`${selectedDate}T${selectedSlot.startTime}+07:00`).getTime() > now
+    ? { ...selectedSlot, price: intervalCheck.calculatedPrice } : null;
 
   // Mutation tạo đơn giữ chỗ HELD
   const createBookingMutation = useMutation({
     mutationFn: (note: string) => {
       if (!currentSlot) throw new Error('Khung giờ không còn trống. Vui lòng chọn lại!');
-      return bookingApi.createHeldBooking({
+      const payload = {
         courtId,
         bookingDate: selectedDate,
         startTime: currentSlot.startTime,
         endTime: currentSlot.endTime,
         note,
-            });
+      };
+      const serialized = JSON.stringify(payload);
+      if (bookingAttempt.current?.payload !== serialized) bookingAttempt.current = { payload: serialized, key: crypto.randomUUID() };
+      return bookingApi.createHeldBooking(payload, bookingAttempt.current.key);
     },
     onSuccess: (booking) => {
       queryClient.invalidateQueries({ queryKey: ['courtAvailability'] });
@@ -78,7 +94,7 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-xs">
+    <DialogFrame className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-xs" onClose={onClose} label="Đặt sân">
       <div className="relative w-full max-w-5xl bg-white rounded-3xl border border-slate-200 overflow-hidden max-h-[min(90vh,720px)] flex flex-col">
         {/* Header Modal thanh lịch nền sáng */}
         <div className="px-5 py-4 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
@@ -110,7 +126,7 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
               <CalendarIcon className="w-5 h-5 text-[#1b7a42]" />
               <div>
                 <label className="block text-xs font-bold text-slate-800">Chọn ngày đánh cầu:</label>
-                <input
+                <input aria-label="Chọn ngày đánh cầu:"
                   type="date"
                   value={selectedDate}
                   min={todayStr}
@@ -124,7 +140,7 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
             </div>
 
             <p className="text-xs text-slate-600 font-medium">
-              Khung giờ trống màu xanh, bấm chọn để xem giá snapshot
+              Bấm ô đầu và ô cuối để chọn nhiều giờ liên tiếp. Bấm ô đã chọn để rút ngắn.
             </p>
           </div>
 
@@ -133,31 +149,42 @@ export const CourtBookingModal: React.FC<CourtBookingModalProps> = ({
               {createBookingMutation.error.message}
             </p>
           )}
+          {selectedSlot && (isIntervalError || intervalCheck?.isAvailable === false) && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{isIntervalError ? 'Không kiểm tra được lịch sân. Vui lòng thử lại.' : intervalCheck?.reason || 'Khoảng giờ không còn trống. Vui lòng chọn lại.'}</p>}
 
           {/* Lưới giờ & Card tóm tắt */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-            <div className="lg:col-span-2">
+            <div className="order-2 lg:order-1 lg:col-span-2">
               <TimeSlotGrid
                 availability={visibleAvailability}
                 selectedSlot={selectedSlot}
-                onSelectSlot={(slot) => setSelectedSlot(slot)}
+                onSelectSlot={(slot) => {
+                  try {
+                    setSelectedSlot(selectTimeRange(selectedSlot, slot, visibleAvailability?.slots ?? []));
+                  } catch (error) {
+                    toast.error((error as Error).message);
+                  }
+                }}
                 isLoading={isLoading}
               />
             </div>
 
-            <div className="lg:col-span-1">
+            <div className="order-1 lg:order-2 lg:col-span-1">
               <BookingSummaryCard
+                formId="booking-confirm-form"
                 courtName={courtName}
                 facilityName={facilityName}
                 selectedDate={selectedDate}
-                selectedSlot={currentSlot}
-                onConfirmBooking={(note) => createBookingMutation.mutate(note)}
+                selectedSlot={currentSlot ?? selectedSlot}
+                onConfirmBooking={(note) => { if (currentSlot && !createBookingMutation.isPending) createBookingMutation.mutate(note); }}
                 isSubmitting={createBookingMutation.isPending}
               />
             </div>
           </div>
         </div>
+        <footer className="shrink-0 border-t border-slate-200 bg-white px-5 py-4">
+          <button type="submit" form="booking-confirm-form" disabled={!currentSlot || createBookingMutation.isPending} className="w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 rounded-xl bg-[#1b7a42] hover:bg-[#156335] px-4 py-3 text-sm font-semibold text-white">{createBookingMutation.isPending ? 'Đang chuyển đến thanh toán…' : 'Tiếp tục thanh toán'}</button>
+        </footer>
       </div>
-    </div>
+    </DialogFrame>
   );
 };

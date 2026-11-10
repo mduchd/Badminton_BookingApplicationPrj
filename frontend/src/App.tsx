@@ -1,3 +1,4 @@
+import { errorMessage } from './lib/errors'
 import { lazy, Suspense, useState, useMemo, useRef, useEffect } from 'react'
 import {
   Routes,
@@ -40,6 +41,7 @@ const SmartFilterModal = lazy(() => import('./modules/user/ai-search/SmartFilter
 const AIChatPanel = lazy(() => import('./modules/user/ai-search/AIChatPanel').then((module) => ({ default: module.AIChatPanel })))
 const CourtContactModal = lazy(() => import('./components/shared/CourtContactModal').then((module) => ({ default: module.CourtContactModal })))
 const CourtBookingModal = lazy(() => import('./modules/booking/components/CourtBookingModal').then((module) => ({ default: module.CourtBookingModal })))
+const PasswordRecovery = lazy(() => import('./modules/user/auth/PasswordRecovery').then(m => ({ default: m.PasswordRecovery })))
 const AuthModal = lazy(() => import('./modules/user/auth/AuthModal').then((module) => ({ default: module.AuthModal })))
 const ProfileModal = lazy(() => import('./modules/user/profile/ProfileModal').then((module) => ({ default: module.ProfileModal })))
 const KhamPhaView = lazy(() => import('./modules/user/ai-search/KhamPhaView').then((module) => ({ default: module.KhamPhaView })))
@@ -90,7 +92,12 @@ export function MainApp() {
   const qc = useQueryClient()
   const location = useLocation()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [resetToken, setResetToken] = useState(() => searchParams.get('reset_token'))
+  useEffect(() => {
+    if (searchParams.has('reset_token')) setSearchParams(prev => { const next = new URLSearchParams(prev); next.delete('reset_token'); return next }, { replace: true })
+  }, [searchParams, setSearchParams])
+
 
   const activeNavTab = getNavTabFromPath(location.pathname)
   const showBottomNav = isBottomNavVisible(location.pathname)
@@ -136,12 +143,28 @@ export function MainApp() {
   }, [])
 
   const handleLogout = () => {
+    const logoutToken = authStorage.getToken()
+    void import('./modules/user/notification/pushClient').then(async ({ detachPushOnLogout }) => {
+      if (logoutToken) await detachPushOnLogout(logoutToken)
+    }).catch(() => {})
     authStorage.removeToken()
+    qc.clear()
     setCurrentUser(null)
     setBookingCourt(null)
     setCheckoutBooking(null)
     toast.info('Đã đăng xuất khỏi hệ thống SmashCourt')
   }
+
+  useEffect(() => {
+    if (!currentUser || !('serviceWorker' in navigator)) return
+    const onPush = (event: MessageEvent) => {
+      if (event.data?.type !== 'smashcourt-push') return
+      toast.info('Lịch đặt sân đã cập nhật', { description: 'Mở Tài khoản để xem trạng thái đơn.' })
+      void qc.invalidateQueries({ queryKey: ['myBookings'] })
+    }
+    navigator.serviceWorker.addEventListener('message', onPush)
+    return () => navigator.serviceWorker.removeEventListener('message', onPush)
+  }, [currentUser, qc])
 
   // Sub-tab state for Home view (All / Booked / Favorites)
   const activeTab: 'all' | 'map' | 'booked' | 'favorite' = useMemo(() => {
@@ -172,6 +195,8 @@ export function MainApp() {
   const [isCourtContactOpen, setIsCourtContactOpen] = useState(false)
   const [contactTargetCourt, setContactTargetCourt] = useState<BadmintonCourtItem | null>(null)
 
+  if (isManagementRoute && isAIChatOpen) setIsAIChatOpen(false)
+
   const handleOpenCourtSidebar = (court: BadmintonCourtItem) => {
     setSelectedCourtForSidebar(court)
     setIsCourtSidebarOpen(true)
@@ -180,13 +205,6 @@ export function MainApp() {
   const handleCloseCourtSidebar = () => {
     setIsCourtSidebarOpen(false)
   }
-
-  // Auto close AI Chat when entering management routes (Owner & Admin)
-  useEffect(() => {
-    if (isManagementRoute && isAIChatOpen) {
-      setIsAIChatOpen(false)
-    }
-  }, [isManagementRoute, isAIChatOpen])
 
   // Booking Checkout Modal State (TV3)
   const [checkoutBooking, setCheckoutBooking] = useState<BookingResponse | null>(null)
@@ -208,9 +226,9 @@ export function MainApp() {
         description: `Đơn #SMC-${b.id} đã được hủy và khung giờ đã được giải phóng.`,
       })
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       toast.error('Hủy đơn không thành công', {
-        description: err.response?.data?.message || err.message,
+        description: errorMessage(err),
       })
     },
   })
@@ -291,6 +309,7 @@ export function MainApp() {
   }
 
   const openBookingForCourt = (court: NonNullable<typeof bookingCourt>) => {
+    setBookingCourt(court)
     if (!currentUser) {
       setAuthInitialTab('login')
       setIsAuthOpen(true)
@@ -304,10 +323,8 @@ export function MainApp() {
   }
 
   const handleBookingSuccess = (booking: BookingResponse) => {
-    toast.success('Đã giữ chỗ sân', {
-      description: `Mã đơn #SMC-${booking.id}. Bạn có thể xem lại trong mục Sân đã đặt.`,
-      action: { label: 'Xem đơn', onClick: () => navigate(`/checkout/${booking.id}`) },
-    })
+    toast.info('Vui lòng thanh toán payOS để hoàn tất đặt sân.')
+    navigate(`/checkout/${booking.id}`)
   }
 
   // AI sync handlers
@@ -593,7 +610,7 @@ export function MainApp() {
                     showHeader ? 'pt-4 pb-6' : 'py-4 sm:py-6'
                   } space-y-4`
             } ${showBottomNav ? 'pb-28' : 'pb-8'} relative z-20 ${
-              isManagementRoute ? '' : slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
+              isManagementRoute || isCourtBookView ? '' : slideDirection === 'right' ? 'tab-slide-from-right' : 'tab-slide-from-left'
             }`}
           >
             <Suspense fallback={<CourtListSkeleton />}><Routes>
@@ -713,7 +730,7 @@ export function MainApp() {
       {/* Modals */}
       <Suspense fallback={<DeferredLoading />}>
 
-      {/* TV3 Payment Checkout Modal (payOS & Mock) */}
+      {/* payOS payment checkout */}
       {checkoutBooking && (
         <PaymentCheckoutModal
           isOpen={!!checkoutBooking}
@@ -772,11 +789,22 @@ export function MainApp() {
       {/* AI Court Finder Chat Panel (Spring AI Orchestrator) - Tuyệt đối không xuất hiện trên Chủ sân & Admin */}
       {!isManagementRoute && (
         <LoadOnOpen open={isAIChatOpen}><AIChatPanel
-          isOpen={isAIChatOpen}
+          isOpen={isAIChatOpen && !isManagementRoute}
           onClose={() => setIsAIChatOpen(false)}
           onApplyCriteria={handleApplyCriteriaFromAI}
           onSelectCourt={handleOpenCourtSidebar}
           onBookCourt={handleOpenBooking}
+          onChooseRecommendation={(court) => {
+            if (!court.courtId || !court.date || !court.startTime || !court.endTime || court.totalPrice == null) return
+            setIsAIChatOpen(false)
+            openBookingForCourt({ courtId: court.courtId, courtName: court.courtName || 'Sân đã chọn', facilityName: court.facilityName,
+              facilityAddress: court.address, initialDate: court.date,
+              initialSlot: { startTime: court.startTime, endTime: court.endTime, price: court.totalPrice, available: true, slotStatus: 'AVAILABLE' } })
+          }}
+          onOpenFacilityBooking={(facilityId) => {
+            setIsAIChatOpen(false)
+            navigate(`/courts/${facilityId}/book`)
+          }}
           currentCriteria={criteria}
         /></LoadOnOpen>
       )}
@@ -790,6 +818,7 @@ export function MainApp() {
         />
       )}
 
+      {resetToken && <PasswordRecovery token={resetToken} onClose={() => setResetToken(null)} onReset={() => setCurrentUser(null)} />}
       {/* Auth Modal (Login / Register / Google OIDC) */}
       {isAuthOpen && <Suspense fallback={<DeferredLoading />}>
       <AuthModal

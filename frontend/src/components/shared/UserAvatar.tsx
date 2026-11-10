@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { User as UserIcon } from 'lucide-react'
 
 interface UserAvatarProps {
@@ -16,21 +16,17 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   ringClassName = 'ring-2 ring-white/90',
   fallbackBgColor = 'bg-[#168039] text-white',
 }) => {
-  const [imageError, setImageError] = useState(false)
-
-  useEffect(() => {
-    setImageError(false)
-  }, [src])
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
 
   const initial = name?.trim() ? name.trim().charAt(0).toUpperCase() : null
 
-  if (src && !imageError) {
+  if (src && failedSrc !== src) {
     return (
       <img
         src={src}
         alt={name || 'Avatar'}
         referrerPolicy="no-referrer"
-        onError={() => setImageError(true)}
+        onError={() => setFailedSrc(src)}
         className={`${className} rounded-full object-cover shrink-0 ${ringClassName}`}
       />
     )

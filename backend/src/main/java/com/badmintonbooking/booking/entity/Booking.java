@@ -63,6 +63,11 @@ public class Booking {
     private OffsetDateTime holdExpiresAt;
 
     private String note;
+    @Column(name = "idempotency_key", length = 128)
+    private String idempotencyKey;
+
+    public String getIdempotencyKey() { return idempotencyKey; }
+    public void setIdempotencyKey(String key) { this.idempotencyKey = key; }
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();

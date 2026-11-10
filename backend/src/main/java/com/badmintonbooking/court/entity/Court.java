@@ -17,6 +17,7 @@ public class Court {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "facility_id", insertable = false, updatable = false)
+    @org.hibernate.annotations.OnDelete(action = org.hibernate.annotations.OnDeleteAction.CASCADE)
     private Facility facility;
 
     @Column(nullable = false, length = 100)

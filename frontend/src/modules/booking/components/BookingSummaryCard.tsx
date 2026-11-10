@@ -9,6 +9,7 @@ interface BookingSummaryCardProps {
   selectedSlot: TimeSlot | null;
   onConfirmBooking: (note: string) => void;
   isSubmitting: boolean;
+  formId?: string;
 }
 
 export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
@@ -18,6 +19,7 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
   selectedSlot,
   onConfirmBooking,
   isSubmitting,
+  formId,
 }) => {
   const [note, setNote] = useState('');
 
@@ -45,13 +47,10 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-2xl p-6 border border-slate-200/90 flex flex-col justify-between h-full">
+    <form id={formId} onSubmit={(event) => { event.preventDefault(); onConfirmBooking(note) }} className="bg-white p-4 sm:p-6 flex flex-col justify-between h-full">
       <div>
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
           <h3 className="font-bold text-slate-900 text-base">Tóm tắt đơn đặt sân</h3>
-          <span className="px-2.5 py-1 text-[11px] font-bold bg-amber-50 text-amber-900 rounded-lg border border-amber-300">
-            Giữ chỗ 10 phút
-          </span>
         </div>
 
         <div className="space-y-3 mt-4 text-xs">
@@ -78,7 +77,7 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
           </div>
 
           <div className="flex justify-between items-baseline pt-2">
-            <span className="text-slate-700 font-semibold text-xs">Giá snapshot:</span>
+            <span className="text-slate-700 font-semibold text-xs">Tổng tiền:</span>
             <span className="text-lg font-black text-[#1b7a42]">
               {formatVND(selectedSlot.price)}
             </span>
@@ -88,7 +87,7 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
         {/* Ghi chú */}
         <div className="mt-4">
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">Ghi chú (tùy chọn):</label>
-          <input
+          <input aria-label="Ghi chú (tùy chọn):"
             type="text"
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -101,30 +100,29 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
         <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-[11px] leading-relaxed">
           <div className="flex items-center gap-1.5 font-bold mb-0.5">
             <AlertCircle className="w-3.5 h-3.5 text-amber-700" />
-            <span>Lưu ý giữ chỗ 10 phút:</span>
+            <span>Giữ chỗ có thời hạn:</span>
           </div>
-          Liên hệ chủ sân để được hướng dẫn thanh toán và xác nhận đơn. Khung giờ sẽ tự động mở lại khi hết thời hạn giữ chỗ.
+          Chỉ xác nhận đặt sân sau khi thanh toán payOS thành công. Khung giờ được giữ tạm trong lúc thanh toán và sẽ mở lại khi hết hạn.
         </div>
       </div>
 
-      <button
-        type="button"
+      {!formId && <button
+        type="submit"
         disabled={isSubmitting}
-        onClick={() => onConfirmBooking(note)}
         className="w-full mt-6 py-3 px-4 bg-[#1b7a42] hover:bg-[#156335] text-white rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isSubmitting ? (
           <>
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            Đang xử lý giữ chỗ...
+            Đang chuyển đến thanh toán...
           </>
         ) : (
           <>
             <CheckCircle2 className="w-4 h-4" />
-            Xác nhận giữ chỗ (10 phút)
+            Tiếp tục thanh toán
           </>
         )}
-      </button>
-    </div>
+      </button>}
+    </form>
   );
 };

@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { Button } from '../../../components/shared/Button'
+import { DialogFrame } from '../../../components/shared/DialogFrame'
+import { useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { X, ExternalLink, AlertCircle, CheckCircle2, RotateCw } from 'lucide-react'
 import { toast } from 'sonner'
@@ -15,54 +17,42 @@ interface PaymentCheckoutModalProps {
 
 export function PaymentCheckoutModal({ isOpen, onClose, booking, onSuccess, onPaymentSuccess }: PaymentCheckoutModalProps) {
   const queryClient = useQueryClient()
-  const [isPaid, setIsPaid] = useState(false)
-
-  useEffect(() => {
-    setIsPaid(false)
-  }, [booking?.id, isOpen])
-
+  const notifiedBooking = useRef<number | null>(null)
   const checkout = useQuery({
     queryKey: ['checkout-session', booking?.id],
-    queryFn: () =>
-      createCheckout(booking!.id, {
-        paymentMethod: 'PAYOS',
-        returnUrl: `${window.location.origin}/payment/success`,
-        cancelUrl: `${window.location.origin}/payment/cancel`,
-      }),
-    enabled: isOpen && !!booking && !isPaid,
+    queryFn: () => createCheckout(booking!.id, {
+      paymentMethod: 'PAYOS',
+      returnUrl: `${window.location.origin}/booking-success/${booking!.id}`,
+      cancelUrl: `${window.location.origin}/checkout/${booking!.id}`,
+    }),
+    enabled: isOpen && !!booking,
     retry: false,
     staleTime: Infinity,
   })
-
   const payment = useQuery({
     queryKey: ['payment-status', booking?.id],
     queryFn: () => getPaymentByBookingId(booking!.id),
-    enabled: isOpen && !!booking && !!checkout.data && !isPaid,
-    refetchInterval: 3000,
+    enabled: isOpen && !!booking && !!checkout.data,
+    refetchInterval: (query) => query.state.data?.status === 'SUCCESS' ? false : 3000,
     retry: false,
   })
-
+  const isPaid = payment.data?.status === 'SUCCESS'
   useEffect(() => {
-    if (payment.data?.status === 'SUCCESS' && !isPaid) {
-      setIsPaid(true)
+    if (isOpen && isPaid && notifiedBooking.current !== booking?.id) {
+      notifiedBooking.current = booking?.id ?? null
       toast.success('Thanh toán thành công! Sân đã được xác nhận.')
-      void queryClient.invalidateQueries({ queryKey: ['my-bookings'] })
-      void queryClient.invalidateQueries({ queryKey: ['availability'] })
+      void queryClient.invalidateQueries({ queryKey: ['myBookings'] })
+      void queryClient.invalidateQueries({ queryKey: ['courtAvailability'] })
     }
-  }, [payment.data, isPaid, queryClient])
-
+  }, [booking?.id, isOpen, isPaid, queryClient])
   if (!isOpen || !booking) return null
-
   const rawError = (checkout.error as { response?: { data?: { message?: string } } })?.response?.data?.message
     || (checkout.error as Error)?.message
   const errorMessage = rawError || 'Không thể tạo phiên thanh toán. Vui lòng thử lại sau.'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+    <DialogFrame className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4" onClose={onClose} label="Thanh toán">
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="payment-title"
         className="w-full max-w-md max-h-[min(90vh,700px)] flex flex-col rounded-2xl bg-white p-6 shadow-xl"
       >
         {/* Header modal */}
@@ -167,29 +157,12 @@ export function PaymentCheckoutModal({ isOpen, onClose, booking, onSuccess, onPa
 
         {/* Footer */}
         <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 pt-3">
-          {isPaid ? (
-            <button
-              type="button"
-              className="cursor-pointer rounded-lg bg-[#1b7a42] px-4 py-2 text-sm font-semibold text-white hover:bg-[#156335]"
-              onClick={() => {
-                onSuccess?.()
-                onPaymentSuccess?.()
-                onClose()
-              }}
-            >
-              Hoàn tất
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onClose}
-              className="cursor-pointer rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Đóng
-            </button>
-          )}
+          <Button variant={isPaid ? 'primary' : 'secondary'} className="w-full" onClick={() => {
+            if (isPaid) { onSuccess?.(); onPaymentSuccess?.() }
+            onClose()
+          }}>{isPaid ? 'Hoàn tất' : 'Đóng'}</Button>
         </div>
       </div>
-    </div>
+    </DialogFrame>
   )
 }

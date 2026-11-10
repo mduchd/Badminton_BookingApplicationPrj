@@ -20,6 +20,7 @@ public class CourtOccupancy {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "court_id", insertable = false, updatable = false)
+    @org.hibernate.annotations.OnDelete(action = org.hibernate.annotations.OnDeleteAction.CASCADE)
     private Court court;
 
     @Column(name = "booking_id")

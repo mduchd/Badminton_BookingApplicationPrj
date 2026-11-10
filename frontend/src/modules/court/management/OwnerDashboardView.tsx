@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import { useApiQuery } from '../../../hooks/useApiQuery'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   DollarSign,
@@ -15,7 +16,7 @@ import {
 } from 'lucide-react'
 import { OwnerLayout } from './OwnerLayout'
 import { courtApi } from '../services/courtApi'
-import type { Facility, OwnerDashboardData } from '../../types/court'
+import type { Facility } from '../../types/court'
 import { ROUTES } from '../../../app/router'
 import { toast } from 'sonner'
 
@@ -34,8 +35,6 @@ export const OwnerDashboardView: React.FC = () => {
     formatIsoDate(new Date(Date.now() - 6 * 86400000))
   )
   const [toDate, setToDate] = useState<string>(() => formatIsoDate(new Date()))
-  const [dashboard, setDashboard] = useState<OwnerDashboardData | null>(null)
-  const [loading, setLoading] = useState<boolean>(true)
 
   useEffect(() => {
     courtApi
@@ -67,25 +66,11 @@ export const OwnerDashboardView: React.FC = () => {
     }
   }
 
-  const fetchDashboard = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await courtApi.getOwnerDashboard(
-        selectedFacilityId || undefined,
-        fromDate,
-        toDate
-      )
-      setDashboard(data)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Không thể tải số liệu doanh thu')
-    } finally {
-      setLoading(false)
-    }
-  }, [selectedFacilityId, fromDate, toDate])
-
-  useEffect(() => {
-    fetchDashboard()
-  }, [fetchDashboard])
+  const { data: dashboard, isFetching: loading, refetch: fetchDashboard } = useApiQuery({
+    queryKey: ['ownerDashboard', selectedFacilityId, fromDate, toDate],
+    queryFn: () => courtApi.getOwnerDashboard(selectedFacilityId || undefined, fromDate, toDate),
+    enabled: true,
+  })
 
   const handleCheckIn = async (bookingId: string) => {
     try {
@@ -177,7 +162,7 @@ export const OwnerDashboardView: React.FC = () => {
 
           <button
             type="button"
-            onClick={fetchDashboard}
+            onClick={() => void fetchDashboard()}
             disabled={loading}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold cursor-pointer disabled:cursor-not-allowed"
           >

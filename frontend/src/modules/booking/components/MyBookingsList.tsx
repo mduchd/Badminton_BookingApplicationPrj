@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import { useNow } from '../../../hooks/useNow'
+import React from 'react';
 import { Calendar, ExternalLink } from 'lucide-react';
 import type { BookingResponse, BookingStatus } from '../types';
 import { TabSkeleton } from '../../../components/shared/TabSkeleton';
@@ -16,13 +17,7 @@ export const MyBookingsList: React.FC<MyBookingsListProps> = ({
   onPayBooking,
   isLoading,
 }) => {
-  const [, setTick] = useState(0);
-
-  // Cập nhật mỗi giây cho đồng hồ đếm ngược
-  useEffect(() => {
-    const timer = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const now = useNow(1000);
 
   const formatVND = (price: number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
@@ -36,7 +31,6 @@ export const MyBookingsList: React.FC<MyBookingsListProps> = ({
   const getRemainingHoldTime = (expiresAtStr?: string) => {
     if (!expiresAtStr) return null;
     const expires = new Date(expiresAtStr).getTime();
-    const now = Date.now();
     const diff = expires - now;
     if (diff <= 0) return 'Hết hạn';
     const minutes = Math.floor(diff / 60000);
@@ -51,7 +45,7 @@ export const MyBookingsList: React.FC<MyBookingsListProps> = ({
         return (
           <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-50 text-amber-800 border border-amber-300 inline-flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-            Đang giữ ({remaining})
+            Chờ thanh toán ({remaining})
           </span>
         );
       }

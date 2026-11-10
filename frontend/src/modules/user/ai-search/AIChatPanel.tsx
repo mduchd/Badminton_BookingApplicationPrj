@@ -1,3 +1,4 @@
+import { DialogFrame } from '../../../components/shared/DialogFrame'
 import React, { useState, useRef, useEffect } from 'react'
 import {
   X,
@@ -15,7 +16,7 @@ import {
   Check,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import type { AIMessage, SearchCriteria } from '../../types/user'
+import type { AIMessage, SearchCriteria, AiCourtRecommendation } from '../../types/user'
 import type { BadmintonCourtItem } from '../../types/court'
 import { formatPrice } from '../../../lib/utils'
 import { authStorage } from '../auth/authApi'
@@ -24,12 +25,28 @@ import { API_BASE_URL as API_ROOT_URL } from '../../../lib/apiConfig'
 
 const API_BASE_URL = `${API_ROOT_URL}/v1`
 
+interface SpeechResultEvent { resultIndex: number; results: SpeechRecognitionResultList }
+interface SpeechSession {
+  lang: string; continuous: boolean; interimResults: boolean; maxAlternatives: number
+  onresult: ((event: SpeechResultEvent) => void) | null
+  onerror: ((event: { error: string }) => void) | null
+  onend: (() => void) | null
+  start(): void; stop(): void; abort(): void
+}
+type VoiceWindow = Window & {
+  webkitAudioContext?: typeof AudioContext
+  SpeechRecognition?: new () => SpeechSession
+  webkitSpeechRecognition?: new () => SpeechSession
+}
+
 interface AIChatPanelProps {
   isOpen: boolean
   onClose: () => void
   onApplyCriteria: (criteria: Partial<SearchCriteria>) => void
   onSelectCourt?: (court: BadmintonCourtItem) => void
   onBookCourt?: (court: BadmintonCourtItem) => void
+  onOpenFacilityBooking?: (facilityId: number) => void
+  onChooseRecommendation?: (court: AiCourtRecommendation) => void
   currentCriteria?: SearchCriteria
 }
 
@@ -57,31 +74,27 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
   isOpen,
   onClose,
   onApplyCriteria,
-  currentCriteria,
+  onOpenFacilityBooking,
+  onChooseRecommendation,
 }) => {
   const [messages, setMessages] = useState<AIMessage[]>([
     {
       id: 'msg_welcome',
       sender: 'ai',
-      text: 'Xin chào! Tôi là Trợ lý AI SmashCourt 🏸\n\nBạn có thể hỏi tôi bất kỳ điều gì:\n- Tìm sân & đặt lịch: "Tìm sân Cầu Giấy tối mai sau 19h, dưới 150k/h"\n- Tư vấn trang bị: "Người mới nên chọn vợt 3U hay 4U?"\n- Luật thi đấu: "Luật giao cầu 1.15m & luật tính điểm 21"\n- Chính sách: "Chính sách giữ chỗ 10 phút & hoàn hủy sân"',
+      text: 'Bạn muốn chơi ở đâu và lúc mấy giờ? Tôi có thể giúp bạn tìm sân phù hợp.',
       timestamp: 'Vừa xong',
-      followUpChips: [
-        'Tìm sân Cầu Giấy tối nay',
-        'Sân có máy lạnh dưới 150k',
-        'Tư vấn chọn vợt 3U hay 4U',
-        'Luật giao cầu BWF mới nhất',
-        'Chính sách giữ chỗ 10 phút',
-      ],
     },
   ])
   const [inputValue, setInputValue] = useState('')
+  const conversationCriteria = useRef<Partial<SearchCriteria>>({})
+  const requestController = useRef<AbortController | null>(null)
   const [isThinking, setIsThinking] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [liveTranscript, setLiveTranscript] = useState('')
   const [audioLevels, setAudioLevels] = useState<number[]>([8, 14, 24, 18, 12, 16, 10])
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const recognitionRef = useRef<any>(null)
+  const recognitionRef = useRef<SpeechSession | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
@@ -97,8 +110,6 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
     'Tìm sân Cầu Giấy tối nay sau 19h',
     'Sân có máy lạnh dưới 150k/h',
     'Tư vấn chọn vợt 3U hay 4U',
-    'Luật giao cầu BWF 1.15m',
-    'Chính sách hoàn hủy sân',
   ]
 
   useEffect(() => {
@@ -108,6 +119,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
   // Clean up all audio streams and speech recognition on unmount
   useEffect(() => {
     return () => {
+      requestController.current?.abort()
       intentionalStopRef.current = true
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
@@ -187,7 +199,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
       })
       mediaStreamRef.current = stream
 
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+      const AudioCtx = window.AudioContext || (window as VoiceWindow).webkitAudioContext
       if (AudioCtx) {
         const audioCtx = new AudioCtx({ sampleRate: 16000 })
         audioCtxRef.current = audioCtx
@@ -222,7 +234,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
       finalTranscriptRef.current = ''
       const SpeechRecognition =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+        (window as VoiceWindow).SpeechRecognition || (window as VoiceWindow).webkitSpeechRecognition
 
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition()
@@ -231,7 +243,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
         recognition.interimResults = true
         recognition.maxAlternatives = 5
 
-        recognition.onresult = (event: any) => {
+        recognition.onresult = (event) => {
           resetSilenceTimer()
           restartCountRef.current = 0
 
@@ -278,7 +290,7 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
           }
         }
 
-        recognition.onerror = (event: any) => {
+        recognition.onerror = (event) => {
           const errType = event.error
           console.warn('SpeechRecognition error:', errType)
 
@@ -325,7 +337,10 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
   const handleSendMessage = async (textToSend?: string) => {
     const query = textToSend || inputValue.trim()
-    if (!query) return
+    if (!query || requestController.current) return
+    const controller = new AbortController()
+    requestController.current = controller
+    const deadline = setTimeout(() => controller.abort(), 20000)
 
     // Stop voice if running
     if (isListening) {
@@ -348,52 +363,49 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (token) headers.Authorization = `Bearer ${token}`
       const res = await fetch(`${API_BASE_URL}/ai/search`, {
+        signal: controller.signal,
         method: 'POST', headers,
         body: JSON.stringify({
           message: query,
-          currentCriteria: currentCriteria ? {
-            district: currentCriteria.district || null,
-            startTime: currentCriteria.startTime || null,
-            endTime: currentCriteria.endTime || null,
-            maxPricePerHour: currentCriteria.maxPricePerHour ?? null,
-            amenities: currentCriteria.amenities || [],
-          } : null,
+          currentCriteria: Object.keys(conversationCriteria.current).length ? conversationCriteria.current : null,
         }),
       })
-      if (!res.ok) throw new Error('Không thể xử lý yêu cầu')
+      if (!res.ok) throw new Error(res.status === 429 ? 'Bạn đã hết lượt hỏi hoặc trợ lý đang bận. Vui lòng thử lại sau.' : 'Trợ lý đang tạm gián đoạn. Bạn có thể tiếp tục tìm sân bằng bộ lọc.')
       const body = await res.json()
       if (!body.success || !body.data) throw new Error('Không thể xử lý yêu cầu')
       const data = body.data
       const criteria: Partial<SearchCriteria> = {}
-      for (const key of ['district', 'startTime', 'endTime', 'maxPricePerHour', 'amenities'] as const) {
+      for (const key of ['city', 'maxTotalPrice', 'durationMinutes', 'sportType', 'district', 'date', 'startTime', 'endTime', 'maxPricePerHour', 'amenities'] as const) {
         if (data.extractedCriteria?.[key] != null) (criteria as Record<string, unknown>)[key] = data.extractedCriteria[key]
       }
+      conversationCriteria.current = criteria
       setMessages((prev) => [...prev, {
         id: 'ai_' + Date.now(), sender: 'ai',
-        text: data.recommendedCourts?.length === 0 && (criteria.district || criteria.maxPricePerHour || criteria.amenities?.length)
-          ? `${data.reply}\n\nKhông tìm thấy sân phù hợp trong dữ liệu hiện có.` : data.reply,
+        text: data.reply,
         extractedCriteria: Object.keys(criteria).length ? criteria : undefined,
-        recommendedCourts: data.recommendedCourts || [],
+        recommendedCourts: data.recommendedCourts?.length ? data.recommendedCourts : data.alternatives || [],
         timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       }])
       if (Object.keys(criteria).length) onApplyCriteria(criteria)
-    } catch {
+    } catch (error) {
       setMessages((prev) => [...prev, {
         id: 'ai_' + Date.now(), sender: 'ai', isError: true,
-        text: 'Không thể kết nối trợ lý lúc này. Vui lòng thử lại sau.',
+        text: error instanceof Error && error.name !== 'AbortError' ? error.message : 'Yêu cầu đã hết thời gian chờ. Bạn có thể tìm sân bằng bộ lọc hoặc thử lại.',
         timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       }])
     } finally {
+      clearTimeout(deadline)
+      requestController.current = null
       setIsThinking(false)
     }
   }
 
   return (
-    <div
+    <DialogFrame
       className={`fixed inset-0 z-50 pointer-events-none flex items-center justify-center transition-all duration-300 ${
         isExpanded ? 'p-0' : 'p-3 sm:p-5'
       }`}
-    >
+     onClose={onClose} label="Trợ lý tìm sân">
       {/* Backdrop overlay */}
       <div
         className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs pointer-events-auto overlay-enter"
@@ -426,6 +438,8 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5 text-slate-500 shrink-0">
+              <button type="button" disabled={isThinking} onClick={() => { conversationCriteria.current = {}; setMessages([]) }}
+                className="p-2 text-xs font-semibold text-slate-700 disabled:opacity-50 cursor-pointer" aria-label="Bắt đầu hội thoại mới">Làm mới</button>
               <button
                 type="button"
                 onClick={() => setIsExpanded(!isExpanded)}
@@ -594,12 +608,19 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     </div>
 
                     {msg.recommendedCourts.map((court) => (
-                      <div key={court.facilityId} className="border border-slate-200 rounded-lg p-3">
+                      <div key={`${court.facilityId}-${court.courtId ?? ''}`} className="border border-slate-200 rounded-lg p-3 break-words">
                         <p className="font-bold text-slate-900">{court.facilityName}</p>
                         <p className="text-slate-700 mt-1">{court.address}</p>
                         <p className="text-slate-700 mt-1">Giờ mở cửa: {court.openHours}</p>
-                        <p className="text-slate-700 mt-1">{court.minPricePerHour != null ? `Giá từ ${formatPrice(court.minPricePerHour)}/h` : 'Chưa có bảng giá'}</p>
+                        {court.courtId && <p className="text-slate-700 mt-1">{court.courtName} - {court.date} - {court.startTime}–{court.endTime}</p>}
+                        {court.totalPrice != null && <p className="text-slate-700 mt-1">Tổng tiền: {formatPrice(court.totalPrice)}</p>}
+                        <p className="text-slate-700 mt-1">{court.minPricePerHour != null ? `${court.courtId ? 'Trung bình' : 'Giá từ'} ${formatPrice(court.minPricePerHour)}/h` : 'Chưa có bảng giá'}</p>
                         <p className="text-slate-700 mt-1">{court.matchReason}</p>
+                        {court.courtId && onOpenFacilityBooking && (
+                          <button type="button" onClick={() => onChooseRecommendation ? onChooseRecommendation(court) : onOpenFacilityBooking(court.facilityId)} className="mt-2 rounded-lg bg-[#168039] px-3 py-2 text-sm font-semibold text-white cursor-pointer">
+                            Chọn sân và khung giờ này
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -718,6 +739,6 @@ export const AIChatPanel: React.FC<AIChatPanelProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </DialogFrame>
   )
 }

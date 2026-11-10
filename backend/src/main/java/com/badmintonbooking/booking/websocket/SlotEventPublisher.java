@@ -21,6 +21,20 @@ public class SlotEventPublisher {
     public void publishSlotChange(Long facilityId, Long courtId, LocalDate bookingDate,
                                   LocalTime startTime, LocalTime endTime,
                                   String eventType, String message) {
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override public void afterCommit() {
+                            send(facilityId, courtId, bookingDate, startTime, endTime, eventType, message);
+                        }
+                    });
+        } else {
+            send(facilityId, courtId, bookingDate, startTime, endTime, eventType, message);
+        }
+    }
+
+    private void send(Long facilityId, Long courtId, LocalDate bookingDate, LocalTime startTime,
+                      LocalTime endTime, String eventType, String message) {
         try {
             SlotStatusEvent event = new SlotStatusEvent(
                     facilityId, courtId, bookingDate, startTime, endTime, eventType, message

@@ -14,6 +14,13 @@ public class AiRecommendedCourtDto {
     private Double minPricePerHour;
     private List<String> amenities;
     private String matchReason;
+    private Long courtId;
+    private String courtName;
+    private String date;
+    private String startTime;
+    private String endTime;
+    private java.math.BigDecimal totalPrice;
+    private java.time.OffsetDateTime checkedAt;
 
     public AiRecommendedCourtDto() {}
 
@@ -65,4 +72,18 @@ public class AiRecommendedCourtDto {
 
     public String getMatchReason() { return matchReason; }
     public void setMatchReason(String matchReason) { this.matchReason = matchReason; }
+    public Long getCourtId() { return courtId; }
+    public void setCourtId(Long courtId) { this.courtId = courtId; }
+    public String getCourtName() { return courtName; }
+    public void setCourtName(String courtName) { this.courtName = courtName; }
+    public String getDate() { return date; }
+    public void setDate(String date) { this.date = date; }
+    public String getStartTime() { return startTime; }
+    public void setStartTime(String startTime) { this.startTime = startTime; }
+    public String getEndTime() { return endTime; }
+    public void setEndTime(String endTime) { this.endTime = endTime; }
+    public java.math.BigDecimal getTotalPrice() { return totalPrice; }
+    public void setTotalPrice(java.math.BigDecimal totalPrice) { this.totalPrice = totalPrice; }
+    public java.time.OffsetDateTime getCheckedAt() { return checkedAt; }
+    public void setCheckedAt(java.time.OffsetDateTime checkedAt) { this.checkedAt = checkedAt; }
 }

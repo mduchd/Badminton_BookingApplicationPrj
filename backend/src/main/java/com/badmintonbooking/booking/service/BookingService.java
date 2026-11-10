@@ -91,7 +91,7 @@ public class BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cụm sân"));
 
         // Kiểm tra trạng thái vận hành của Cụm sân
-        if (!"ACTIVE".equalsIgnoreCase(facility.getStatus())) {
+        if (!"ACTIVE".equalsIgnoreCase(facility.getStatus()) || !Boolean.TRUE.equals(facility.getIsApproved())) {
             throw new BadRequestException("Cụm sân \"" + facility.getName() + "\" hiện đang tạm ngưng hoạt động hoặc chưa được phê duyệt, không thể đặt sân!");
         }
 

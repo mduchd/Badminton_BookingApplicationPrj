@@ -11,6 +11,7 @@ public class AiSearchRequest {
 
     private String conversationId;
 
+    @jakarta.validation.Valid
     private SearchCriteriaDto currentCriteria;
 
     public AiSearchRequest() {}

@@ -18,11 +18,12 @@ export const BookingSuccessView: React.FC<{ userId: string }> = ({ userId }) => 
   const { bookingId } = useParams<{ bookingId: string }>()
   const navigate = useNavigate()
   const id = Number(bookingId)
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError } = useQuery({
     queryKey: ['booking', userId, id],
     queryFn: () => bookingApi.getBookingById(id),
     enabled: Number.isSafeInteger(id) && id > 0,
     retry: false,
+    refetchInterval: (query) => query.state.data?.status === 'HELD' || query.state.data?.status === 'PENDING_PAYMENT' ? 3000 : false,
   })
   const booking = data && (data.status === 'CONFIRMED' || data.status === 'COMPLETED') ? {
     ...data,
@@ -40,7 +41,13 @@ export const BookingSuccessView: React.FC<{ userId: string }> = ({ userId }) => 
   if (!booking) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center p-6 text-center">
-        <h2 className="text-xl font-bold text-slate-900 mb-2">{isPending && Number.isSafeInteger(id) && id > 0 ? 'Đang tải đơn đặt sân…' : 'Chưa có biên nhận xác nhận cho đơn này'}</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">{isPending && Number.isSafeInteger(id) && id > 0 ? 'Đang tải đơn đặt sân…' : data?.status === 'HELD' || data?.status === 'PENDING_PAYMENT' ? 'Đang chờ xác nhận thanh toán từ payOS' : 'Chưa có biên nhận xác nhận cho đơn này'}</h2>
+        {!isError && (data?.status === 'HELD' || data?.status === 'PENDING_PAYMENT') && (
+          <>
+            <p role="status" className="text-sm text-slate-600">Đơn chỉ được xác nhận khi hệ thống nhận được thanh toán thành công.</p>
+            <button type="button" onClick={() => navigate(`/checkout/${id}`)} className="mt-4 cursor-pointer text-sm font-semibold text-green-700">Tiếp tục thanh toán</button>
+          </>
+        )}
         <button
           type="button"
           onClick={() => navigate(ROUTES.HOME)}
@@ -110,7 +117,7 @@ export const BookingSuccessView: React.FC<{ userId: string }> = ({ userId }) => 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6 pb-24">
       {/* Success Badge & Header */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 text-center space-y-3">
+      <div className="pb-6 border-b border-slate-200 text-center space-y-3">
         <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
 
         <h1 className="text-xl sm:text-2xl font-black text-slate-900">

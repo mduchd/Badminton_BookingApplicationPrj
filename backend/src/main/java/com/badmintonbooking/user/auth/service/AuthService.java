@@ -53,7 +53,7 @@ public class AuthService {
         return userRepository.findByPhoneVariants(national, "84" + suffix, "0084" + suffix);
     }
 
-    private String normalizePhone(String value) {
+    public static String normalizePhone(String value) {
         if (value == null || !value.trim().matches("\\+?[0-9][0-9\\s().-]*")) {
             throw new IllegalArgumentException("Số điện thoại không hợp lệ");
         }
@@ -71,7 +71,7 @@ public class AuthService {
         if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
             throw new IllegalStateException("Tài khoản của bạn đang bị tạm khóa");
         }
-        String token = jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole());
+        String token = tokenFor(user);
         return AuthResponse.of(token, UserResponse.fromEntity(user));
     }
 
@@ -100,7 +100,7 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
-        String token = jwtTokenProvider.generateToken(savedUser.getId(), savedUser.getEmail(), savedUser.getRole());
+        String token = tokenFor(savedUser);
         return AuthResponse.of(token, UserResponse.fromEntity(savedUser));
     }
 
@@ -111,7 +111,8 @@ public class AuthService {
                     if (identity.picture() != null && !identity.picture().isBlank()) {
                         existing.setAvatarUrl(identity.picture());
                     }
-                    if (identity.name() != null && !identity.name().isBlank()) {
+                    if ((existing.getFullName() == null || existing.getFullName().isBlank())
+                            && identity.name() != null && !identity.name().isBlank()) {
                         existing.setFullName(identity.name());
                     }
                     return existing;
@@ -134,7 +135,7 @@ public class AuthService {
         if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
             throw new IllegalStateException("Tài khoản của bạn đang bị tạm khóa");
         }
-        return AuthResponse.of(jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole()), UserResponse.fromEntity(user));
+        return AuthResponse.of(tokenFor(user), UserResponse.fromEntity(user));
     }
 
     @Transactional(readOnly = true)
@@ -149,6 +150,15 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .filter(account -> "ACTIVE".equalsIgnoreCase(account.getStatus()))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng hoặc tài khoản bị khóa"));
+        if (user.getTokenVersion() != jwtTokenProvider.getTokenVersion(token)) {
+            throw new IllegalArgumentException("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại");
+        }
         return UserResponse.fromEntity(user);
+    }
+
+    private String tokenFor(User user) {
+        return user.getTokenVersion() == 0
+                ? jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole())
+                : jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole(), user.getTokenVersion());
     }
 }

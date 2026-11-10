@@ -1,4 +1,9 @@
-﻿spring:
+spring:
+  mail:
+    properties:
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
   application:
     name: badminton-booking
 
@@ -35,6 +40,8 @@ server:
 
 booking:
   hold-duration-minutes: ${BOOKING_HOLD_DURATION_MINUTES:10}
+ai:
+  enabled: ${AI_ENABLED:true}
 payos:
   enabled: ${PAYOS_ENABLED:true}
   client-id: ${PAYOS_CLIENT_ID:7c48e6a8-78f3-41b8-b462-fdfebe37c142}

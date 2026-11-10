@@ -2,7 +2,6 @@ package com.badmintonbooking.court;
 
 import com.badmintonbooking.booking.entity.Booking;
 import com.badmintonbooking.booking.entity.CourtOccupancy;
-import com.badmintonbooking.booking.enums.ActiveStatus;
 import com.badmintonbooking.booking.enums.BookingStatus;
 import com.badmintonbooking.booking.enums.OccupancyType;
 import com.badmintonbooking.booking.repository.BookingRepository;
@@ -259,46 +258,35 @@ class Tv2CourtManagementServiceTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = BookingStatus.class, names = {"CANCELLED", "EXPIRED"})
-    void confirmBooking_shouldRejectTerminalStatus(BookingStatus status) {
+    @EnumSource(BookingStatus.class)
+    void ownerCannotManuallyConfirmPayment(BookingStatus status) {
         Booking booking = managedBooking(status);
 
-        assertThrows(BadRequestException.class, () -> ownerService.updateOwnerBookingStatus(booking.getId(), "CONFIRMED"));
+        var error = assertThrows(BadRequestException.class,
+                () -> ownerService.updateOwnerBookingStatus(booking.getId(), "CONFIRMED"));
+        assertTrue(error.getMessage().contains("payOS"));
+        assertEquals(status, booking.getStatus());
+        verifyNoInteractions(occupancyRepository);
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = BookingStatus.class, names = {"HELD", "PENDING_PAYMENT"})
+    void unpaidBookingCannotCheckIn(BookingStatus status) {
+        Booking booking = managedBooking(status);
+
+        assertThrows(BadRequestException.class,
+                () -> ownerService.updateOwnerBookingStatus(booking.getId(), "COMPLETED"));
         assertEquals(status, booking.getStatus());
         verifyNoInteractions(occupancyRepository);
     }
 
     @Test
-    void confirmBooking_shouldRejectExpiredHoldBeforeSchedulerRuns() {
-        Booking booking = managedBooking(BookingStatus.HELD);
-        booking.setHoldExpiresAt(OffsetDateTime.now().minusSeconds(1));
+    void paidBookingCanCheckIn() {
+        Booking booking = managedBooking(BookingStatus.CONFIRMED);
 
-        assertThrows(SlotConflictException.class, () -> ownerService.updateOwnerBookingStatus(booking.getId(), "CONFIRMED"));
-        assertEquals(BookingStatus.HELD, booking.getStatus());
-    }
-
-    @Test
-    void confirmBooking_shouldRejectReleasedOccupancy() {
-        Booking booking = managedBooking(BookingStatus.HELD);
-        CourtOccupancy occupancy = new CourtOccupancy();
-        occupancy.setActiveStatus(ActiveStatus.RELEASED);
-        when(occupancyRepository.findByBookingId(booking.getId())).thenReturn(List.of(occupancy));
-
-        assertThrows(SlotConflictException.class, () -> ownerService.updateOwnerBookingStatus(booking.getId(), "CONFIRMED"));
-        assertEquals(BookingStatus.HELD, booking.getStatus());
-        assertEquals(ActiveStatus.RELEASED, occupancy.getActiveStatus());
-    }
-
-    @Test
-    void confirmBooking_shouldConvertActiveHoldAndAllowRetry() {
-        Booking booking = managedBooking(BookingStatus.HELD);
-        CourtOccupancy occupancy = new CourtOccupancy();
-        when(occupancyRepository.findByBookingId(booking.getId())).thenReturn(List.of(occupancy));
-
-        assertEquals("CONFIRMED", ownerService.updateOwnerBookingStatus(booking.getId(), "CONFIRMED").status());
-        assertEquals("CONFIRMED", ownerService.updateOwnerBookingStatus(booking.getId(), "CONFIRMED").status());
-        assertEquals(OccupancyType.BOOKING, occupancy.getOccupancyType());
-        assertEquals(ActiveStatus.ACTIVE, occupancy.getActiveStatus());
+        assertEquals("COMPLETED", ownerService.updateOwnerBookingStatus(booking.getId(), "COMPLETED").status());
+        assertEquals(BookingStatus.COMPLETED, booking.getStatus());
     }
 
     private Booking managedBooking(BookingStatus status) {

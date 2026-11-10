@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import { useApiQuery } from '../../../hooks/useApiQuery'
+import React, { useEffect, useState } from 'react'
 import {
   Phone,
   Search,
   UserCheck,
   CheckCircle2,
-  CreditCard,
   XCircle,
   Calendar,
 } from 'lucide-react'
@@ -19,8 +19,6 @@ export const OwnerBookingsView: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [dateFilter, setDateFilter] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState<string>('')
-  const [bookings, setBookings] = useState<OwnerBookingItem[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
 
   useEffect(() => {
     courtApi
@@ -29,26 +27,11 @@ export const OwnerBookingsView: React.FC = () => {
       .catch(() => {})
   }, [])
 
-  const loadBookings = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await courtApi.getOwnerBookings({
-        facilityId: selectedFacilityId || undefined,
-        status: statusFilter,
-        date: dateFilter || undefined,
-        keyword: searchQuery || undefined,
-      })
-      setBookings(data)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Không thể tải danh sách đơn đặt')
-    } finally {
-      setLoading(false)
-    }
-  }, [selectedFacilityId, statusFilter, dateFilter, searchQuery])
-
-  useEffect(() => {
-    loadBookings()
-  }, [loadBookings])
+  const { data: bookings = [], isFetching: loading, refetch: loadBookings } = useApiQuery({
+    queryKey: ['ownerBookings', selectedFacilityId, statusFilter, dateFilter, searchQuery],
+    queryFn: () => courtApi.getOwnerBookings({ facilityId: selectedFacilityId || undefined, status: statusFilter, date: dateFilter || undefined, keyword: searchQuery || undefined }),
+    enabled: true,
+  })
 
   const handleUpdateStatus = async (
     booking: OwnerBookingItem,
@@ -67,7 +50,7 @@ export const OwnerBookingsView: React.FC = () => {
   return (
     <OwnerLayout
       title="Quản lý Đơn đặt & Đón khách Nhận sân"
-      subtitle="Tra cứu mã đặt chỗ, xác nhận thanh toán tại quầy, đón khách nhận sân và giải phóng khung giờ hủy"
+      subtitle="Thanh toán được xác nhận tự động qua payOS. Chỉ đón khách nhận sân khi đơn đã thanh toán."
     >
       {/* Unified Filter & Table Workplace */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -75,7 +58,7 @@ export const OwnerBookingsView: React.FC = () => {
         <div className="p-4 sm:p-5 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">Cụm sân</label>
-            <select
+            <select aria-label="Cụm sân"
               value={selectedFacilityId}
               onChange={(e) => setSelectedFacilityId(e.target.value)}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-xs sm:text-sm text-slate-900 cursor-pointer"
@@ -91,7 +74,7 @@ export const OwnerBookingsView: React.FC = () => {
 
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">Trạng thái đơn</label>
-            <select
+            <select aria-label="Trạng thái đơn"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-xs sm:text-sm text-slate-900 cursor-pointer"
@@ -107,7 +90,7 @@ export const OwnerBookingsView: React.FC = () => {
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">Ngày thi đấu</label>
             <div className="flex items-center gap-1.5">
-              <input
+              <input aria-label="Ngày thi đấu"
                 type="date"
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
@@ -131,7 +114,7 @@ export const OwnerBookingsView: React.FC = () => {
             </label>
             <div className="relative">
               <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
+              <input aria-label="Tìm khách hàng / Mã đơn"
                 type="text"
                 placeholder="Tên khách, SĐT, mã SMC-..."
                 value={searchQuery}
@@ -209,20 +192,7 @@ export const OwnerBookingsView: React.FC = () => {
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 self-start lg:self-auto flex-wrap">
                   {(bk.status === 'HELD' || bk.status === 'PENDING_PAYMENT') && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleUpdateStatus(
-                          bk,
-                          'CONFIRMED',
-                          `Đã xác nhận thu tiền đơn ${bk.bookingCode}`
-                        )
-                      }
-                      className="px-3.5 py-2 rounded-xl bg-[#e5a92c] hover:bg-[#d49b24] text-white text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5"
-                    >
-                      <CreditCard className="w-3.5 h-3.5" />
-                      <span>Xác nhận thanh toán</span>
-                    </button>
+                    <span className="text-xs font-medium text-amber-800">Chờ khách thanh toán payOS</span>
                   )}
 
                   {bk.status === 'CONFIRMED' && (

@@ -41,7 +41,7 @@ export const CourtResultCard: React.FC<CourtResultCardProps> = ({ court, onBookN
 
         {/* Facility Name on Image */}
         <div className="absolute bottom-3.5 left-4 right-4 text-white">
-          <p className="text-xs font-bold text-emerald-300 tracking-wider uppercase">Cụm sân cầu lông</p>
+          <p className="text-xs font-bold text-emerald-300 tracking-wider ">Cụm sân cầu lông</p>
           <h4 className="text-base sm:text-lg font-black text-white truncate drop-shadow-xs">{court.facilityName}</h4>
         </div>
       </div>
@@ -117,10 +117,10 @@ export const CourtResultCard: React.FC<CourtResultCardProps> = ({ court, onBookN
           <button
             type="button"
             onClick={() => onBookNow(court)}
-            className="px-5 py-2.5 sm:px-6 sm:py-3 rounded-xl bg-[#e5a92c] hover:bg-[#d49b24] active:bg-[#c48d1c] text-white font-black text-xs sm:text-sm uppercase tracking-wider transition-colors flex items-center gap-2 cursor-pointer"
+            className="px-5 py-2.5 sm:px-6 sm:py-3 rounded-xl bg-[#e5a92c] hover:bg-[#d49b24] active:bg-[#c48d1c] text-slate-900 font-black text-xs sm:text-sm tracking-wider transition-colors flex items-center gap-2 cursor-pointer"
           >
             <CalendarPlus className="w-4 h-4" />
-            <span>ĐẶT NGAY</span>
+            <span>Đặt ngay</span>
           </button>
         </div>
       </div>

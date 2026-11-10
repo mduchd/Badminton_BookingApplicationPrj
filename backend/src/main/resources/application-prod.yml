@@ -4,6 +4,10 @@ spring:
     username: ${DB_USER}
     password: ${DB_PASSWORD}
 
+ai:
+  enabled: ${AI_ENABLED:true}
+  distributed-rate-limit: ${AI_DISTRIBUTED_RATE_LIMIT:true}
+
 app:
   jwt:
     secret: ${JWT_SECRET}

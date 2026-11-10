@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react'
+import { PasswordRecovery } from './PasswordRecovery'
+import { DialogFrame } from '../../../components/shared/DialogFrame'
+import { useState } from 'react'
 import { X, Mail, Lock, User as UserIcon, Phone, ArrowRight, CheckCircle2 } from 'lucide-react'
 import type { User, UserRole } from '../../types/user'
 import { toast } from 'sonner'
@@ -13,7 +15,10 @@ interface AuthModalProps {
   onLoginSuccess: (user: User) => void
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({
+export const AuthModal: React.FC<AuthModalProps> = (props) =>
+  props.isOpen ? <AuthContent key={props.initialTab} {...props} /> : null
+
+const AuthContent: React.FC<AuthModalProps> = ({
   isOpen,
   initialTab = 'login',
   onClose,
@@ -21,11 +26,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(initialTab)
   const [tabSlideDir, setTabSlideDir] = useState<'right' | 'left'>('right')
-
-  // Sync tab when initialTab changes
-  useEffect(() => {
-    setActiveTab(initialTab)
-  }, [initialTab])
 
   const switchTab = (tab: 'login' | 'register') => {
     if (tab === activeTab) return
@@ -40,8 +40,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [phone, setPhone] = useState('')
   const [role, setRole] = useState<UserRole>('CUSTOMER')
   const [loading, setLoading] = useState(false)
+  const [recovering, setRecovering] = useState(false)
 
   if (!isOpen) return null
+  if (recovering) return <PasswordRecovery onClose={() => setRecovering(false)} />
 
   const handleStandardAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -88,7 +90,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overlay-enter">
+    <DialogFrame className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overlay-enter" onClose={onClose} label="Đăng nhập và đăng ký">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
@@ -124,7 +126,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               onClick={() => switchTab('login')}
               className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 activeTab === 'login'
-                  ? 'bg-white text-slate-900 shadow-xs'
+                  ? 'bg-white text-slate-900 '
                   : 'text-slate-500 hover:text-slate-800'
               }`}
             >
@@ -135,7 +137,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               onClick={() => switchTab('register')}
               className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 activeTab === 'register'
-                  ? 'bg-white text-slate-900 shadow-xs'
+                  ? 'bg-white text-slate-900 '
                   : 'text-slate-500 hover:text-slate-800'
               }`}
             >
@@ -178,12 +180,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             {activeTab === 'register' && (
               <>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label htmlFor="register-name" className="block text-xs font-semibold text-slate-700 mb-1">
                     Họ và tên
                   </label>
                   <div className="relative">
                     <UserIcon className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
                     <input
+                      id="register-name"
                       type="text"
                       required
                       value={fullName}
@@ -194,12 +197,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label htmlFor="register-phone" className="block text-xs font-semibold text-slate-700 mb-1">
                     Số điện thoại
                   </label>
                   <div className="relative">
                     <Phone className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
                     <input
+                      id="register-phone"
                       type="tel"
                       required
                       value={phone}
@@ -279,10 +283,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 {activeTab === 'login' && (
                   <button
                     type="button"
-                    onClick={() => toast.info('Chức năng cấp lại mật khẩu qua email')}
+                    onClick={() => setRecovering(true)}
                     className="text-xs text-[#1b7a42] hover:text-[#168039] hover:underline cursor-pointer"
                   >
-                    Quên mật khẩu?
+                    Quên mật khẩu
                   </button>
                 )}
               </div>
@@ -345,6 +349,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </DialogFrame>
   )
 }

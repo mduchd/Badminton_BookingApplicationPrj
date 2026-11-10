@@ -60,7 +60,7 @@ export const getNavTabFromPath = (pathname: string): MainNavTab => {
  * - Chỉ hiển thị trên các màn hình duyệt/khám phá cấp cao (Top-level tabs): Trang chủ, Bản đồ, Khám phá, Nổi bật, Tài khoản, Sân đã đặt, Yêu thích.
  * - TỰ ĐỘNG TẮT ở các trang luồng sâu để tránh che lấp nội dung & nút bấm tương tác:
  *   1. /courts/:id/book -> Lưới ma trận chọn giờ (tránh che các hàng sân & thanh tính tiền cố định ở đáy)
- *   2. /checkout/:id -> Luồng thanh toán payOS (tránh xao nhãng & che nút xác nhận chuyển khoản)
+ *   2. /checkout/:id -> Thanh toán payOS; chỉ xác nhận đặt sân sau webhook thành công
  *   3. /booking-success/:id -> Màn hình biên nhận thành công (đã có CTA Thêm lịch/Về trang chủ)
  *   4. /courts/:id -> Chi tiết cụm sân (tối ưu diện tích đọc thông tin & tập trung vào CTA Đặt sân)
  *   5. /owner/* -> Cụm trang quản trị Chủ sân (đã có hệ thống OwnerLayout riêng 5 tab)

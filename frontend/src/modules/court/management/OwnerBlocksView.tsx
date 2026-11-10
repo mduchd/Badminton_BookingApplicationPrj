@@ -1,15 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useApiQuery } from '../../../hooks/useApiQuery'
+import { DialogFrame } from '../../../components/shared/DialogFrame'
+import React, { useMemo, useState } from 'react'
 import { Plus, Wrench, Calendar, Clock, X, Unlock, ShieldAlert } from 'lucide-react'
 import { OwnerLayout } from '../management/OwnerLayout'
 import { courtApi } from '../services/courtApi'
-import type { Facility, MaintenanceBlock, SubCourt } from '../../types/court'
+import type { MaintenanceBlock, SubCourt } from '../../types/court'
 import { toast } from 'sonner'
 
 export const OwnerBlocksView: React.FC = () => {
-  const [facilities, setFacilities] = useState<Facility[]>([])
-  const [selectedFacilityId, setSelectedFacilityId] = useState<string>('')
-  const [blocks, setBlocks] = useState<MaintenanceBlock[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
+  const [facilityChoice, setFacilityChoice] = useState('')
+  const { data: facilities = [], refetch: loadFacilities } = useApiQuery({ queryKey: ['ownerFacilities'], queryFn: courtApi.getOwnerFacilities })
+  const selectedFacilityId = facilityChoice || facilities[0]?.id || ''
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -20,46 +21,16 @@ export const OwnerBlocksView: React.FC = () => {
   const [endTime, setEndTime] = useState('16:30')
   const [reason, setReason] = useState('Bảo dưỡng mặt thảm BWF và kiểm tra hệ thống đèn chiếu sáng')
 
-  const loadFacilities = useCallback(async () => {
-    try {
-      const list = await courtApi.getOwnerFacilities()
-      setFacilities(list)
-      if (list.length > 0) {
-        setSelectedFacilityId((prev) => prev || list[0].id)
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Không thể tải danh sách cụm sân')
-    }
-  }, [])
-
-  useEffect(() => {
-    loadFacilities()
-  }, [loadFacilities])
-
   const currentFacility = useMemo(
     () => facilities.find((f) => f.id === selectedFacilityId) || facilities[0],
     [facilities, selectedFacilityId]
   )
 
-  const loadBlocks = useCallback(async () => {
-    if (!selectedFacilityId) {
-      setLoading(false)
-      return
-    }
-    setLoading(true)
-    try {
-      const data = await courtApi.getMaintenanceBlocks(selectedFacilityId)
-      setBlocks(data)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Không thể tải lịch bảo trì')
-    } finally {
-      setLoading(false)
-    }
-  }, [selectedFacilityId])
-
-  useEffect(() => {
-    loadBlocks()
-  }, [loadBlocks])
+  const { data: blocks = [], isFetching: loading, refetch: loadBlocks } = useApiQuery({
+    queryKey: ['ownerBlocks', selectedFacilityId],
+    queryFn: () => courtApi.getMaintenanceBlocks(selectedFacilityId),
+    enabled: !!selectedFacilityId,
+  })
 
   const handleOpenModal = () => {
     setApplyAllCourts(false)
@@ -136,12 +107,12 @@ export const OwnerBlocksView: React.FC = () => {
     >
       {/* Unified Control Bar */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col items-start sm:flex-row sm:items-center gap-3 min-w-0">
           <span className="text-xs sm:text-sm font-bold text-slate-800">Cụm sân áp dụng:</span>
           <select
             value={selectedFacilityId}
-            onChange={(e) => setSelectedFacilityId(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-xs sm:text-sm text-slate-900 cursor-pointer"
+            onChange={(e) => setFacilityChoice(e.target.value)}
+            className="w-full min-w-0 max-w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-xs sm:text-sm text-slate-900 cursor-pointer"
           >
             {facilities.map((f) => (
               <option key={f.id} value={f.id}>
@@ -283,7 +254,7 @@ export const OwnerBlocksView: React.FC = () => {
 
       {/* Add Maintenance Block Modal */}
       {isModalOpen && currentFacility && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <DialogFrame className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs" onClose={() => setIsModalOpen(false)} label="Thiết lập sân">
           <div className="bg-white rounded-2xl border border-slate-200 max-w-md w-full max-h-[min(90vh,700px)] flex flex-col overflow-hidden shadow-xl">
             <div className="p-4 sm:p-5 border-b border-slate-200 shrink-0 flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-900">Tạo lịch khóa sân bảo trì</h3>
@@ -316,7 +287,7 @@ export const OwnerBlocksView: React.FC = () => {
               {!applyAllCourts && (
                 <div>
                   <label className="text-slate-700 font-bold block mb-1">Chọn sân con</label>
-                  <select
+                  <select aria-label="Chọn sân con"
                     value={courtId}
                     onChange={(e) => setCourtId(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 font-semibold text-slate-900 cursor-pointer"
@@ -332,7 +303,7 @@ export const OwnerBlocksView: React.FC = () => {
 
               <div>
                 <label className="text-slate-700 font-bold block mb-1">Ngày thực hiện *</label>
-                <input
+                <input aria-label="Ngày thực hiện *"
                   type="date"
                   required
                   value={date}
@@ -344,7 +315,7 @@ export const OwnerBlocksView: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-slate-700 font-bold block mb-1">Từ giờ *</label>
-                  <input
+                  <input aria-label="Từ giờ *"
                     type="time"
                     required
                     value={startTime}
@@ -354,7 +325,7 @@ export const OwnerBlocksView: React.FC = () => {
                 </div>
                 <div>
                   <label className="text-slate-700 font-bold block mb-1">Đến giờ *</label>
-                  <input
+                  <input aria-label="Đến giờ *"
                     type="time"
                     required
                     value={endTime}
@@ -368,7 +339,7 @@ export const OwnerBlocksView: React.FC = () => {
                 <label className="text-slate-700 font-bold block mb-1">
                   Nội dung công việc bảo trì *
                 </label>
-                <textarea
+                <textarea aria-label="Nội dung công việc bảo trì *"
                   rows={3}
                   required
                   value={reason}
@@ -403,7 +374,7 @@ export const OwnerBlocksView: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </DialogFrame>
       )}
     </OwnerLayout>
   )

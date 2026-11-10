@@ -1,4 +1,6 @@
+import { errorMessage } from '../../../lib/errors'
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookingApi } from '../services/bookingApi';
 import type { TimeSlot } from '../types';
@@ -8,6 +10,7 @@ import { MyBookingsList } from '../components/MyBookingsList';
 
 export const BookingPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // State bộ lọc ngày và sân
   const todayStr = new Date().toISOString().split('T')[0];
@@ -54,13 +57,13 @@ export const BookingPage: React.FC = () => {
       });
     },
     onSuccess: (data) => {
-      showToast(`Giữ chỗ thành công! Mã đơn #${data.id}. Thời gian giữ chỗ: 10 phút.`);
+      navigate(`/checkout/${data.id}`);
       setSelectedSlot(null);
       queryClient.invalidateQueries({ queryKey: ['courtAvailability'] });
       queryClient.invalidateQueries({ queryKey: ['myBookings'] });
     },
-    onError: (err: any) => {
-      const msg = err.response?.data?.message || err.message || 'Không thể đặt sân vào khung giờ này!';
+    onError: (err: unknown) => {
+      const msg = errorMessage(err) || 'Không thể đặt sân vào khung giờ này!';
       showToast(msg, 'error');
     },
   });
@@ -73,8 +76,8 @@ export const BookingPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['courtAvailability'] });
       queryClient.invalidateQueries({ queryKey: ['myBookings'] });
     },
-    onError: (err: any) => {
-      const msg = err.response?.data?.message || err.message || 'Hủy đơn thất bại!';
+    onError: (err: unknown) => {
+      const msg = errorMessage(err) || 'Hủy đơn thất bại!';
       showToast(msg, 'error');
     },
   });
@@ -124,7 +127,7 @@ export const BookingPage: React.FC = () => {
             {/* Chọn Ngày */}
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Ngày đặt sân:</label>
-              <input
+              <input aria-label="Ngày đặt sân:"
                 type="date"
                 value={selectedDate}
                 min={todayStr}
@@ -203,6 +206,7 @@ export const BookingPage: React.FC = () => {
         <MyBookingsList
           bookings={myBookings}
           onCancelBooking={(id) => cancelBookingMutation.mutate(id)}
+          onPayBooking={(booking) => navigate(`/checkout/${booking.id}`)}
           isLoading={isLoadingMyBookings}
         />
       </main>

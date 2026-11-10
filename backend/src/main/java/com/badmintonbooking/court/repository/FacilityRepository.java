@@ -15,6 +15,7 @@ import java.util.Optional;
 @Repository
 public interface FacilityRepository extends JpaRepository<Facility, Long>, JpaSpecificationExecutor<Facility> {
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "amenitySet")
     List<Facility> findByStatus(String status);
 
     List<Facility> findByOwnerIdOrderByCreatedAtDesc(Long ownerId);

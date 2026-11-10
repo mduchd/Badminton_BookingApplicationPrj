@@ -1,5 +1,5 @@
 import "leaflet/dist/leaflet.css"
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useEffectEvent, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Crosshair, ExternalLink, Layers, MapPin, Navigation } from 'lucide-react'
@@ -46,7 +46,10 @@ export const LocationMapPicker: React.FC<LocationMapPickerProps> = ({
   const safeLat = Number.isFinite(latitude) ? latitude : 21.0285
   const safeLng = Number.isFinite(longitude) ? longitude : 105.8542
 
+  const initialOptions = useRef({ lat: safeLat, lng: safeLng, tileStyle })
+  const changeCoordinates = useEffectEvent(onChangeCoordinates)
   useEffect(() => {
+    const { lat: safeLat, lng: safeLng, tileStyle } = initialOptions.current
     if (viewMode !== 'picker' || !mapContainerRef.current) return
 
     if (!mapRef.current) {
@@ -83,7 +86,7 @@ export const LocationMapPicker: React.FC<LocationMapPickerProps> = ({
 
       marker.on('dragend', () => {
         const pos = marker.getLatLng()
-        onChangeCoordinates(
+        changeCoordinates(
           Number(pos.lat.toFixed(6)),
           Number(pos.lng.toFixed(6))
         )
@@ -93,15 +96,14 @@ export const LocationMapPicker: React.FC<LocationMapPickerProps> = ({
         const nextLat = Number(ev.latlng.lat.toFixed(6))
         const nextLng = Number(ev.latlng.lng.toFixed(6))
         marker.setLatLng([nextLat, nextLng])
-        onChangeCoordinates(nextLat, nextLng)
+        changeCoordinates(nextLat, nextLng)
       })
 
       mapRef.current = map
       markerRef.current = marker
 
-      setTimeout(() => {
-        map.invalidateSize()
-      }, 120)
+      const timer = window.setTimeout(() => map.invalidateSize(), 120)
+      map.once('unload', () => window.clearTimeout(timer))
     }
 
     return () => {
@@ -248,7 +250,7 @@ export const LocationMapPicker: React.FC<LocationMapPickerProps> = ({
             <label className="block text-[11px] font-semibold text-slate-600 mb-1">
               Vĩ độ (Latitude)
             </label>
-            <input
+            <input aria-label="Vĩ độ (Latitude)"
               type="number"
               step="0.000001"
               value={safeLat}
@@ -260,7 +262,7 @@ export const LocationMapPicker: React.FC<LocationMapPickerProps> = ({
             <label className="block text-[11px] font-semibold text-slate-600 mb-1">
               Kinh độ (Longitude)
             </label>
-            <input
+            <input aria-label="Kinh độ (Longitude)"
               type="number"
               step="0.000001"
               value={safeLng}

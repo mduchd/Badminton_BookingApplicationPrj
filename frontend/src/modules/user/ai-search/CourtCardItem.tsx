@@ -57,12 +57,12 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
       className="card-enter bg-white rounded-2xl overflow-hidden border border-slate-200/80 shadow-xs hover:border-slate-300 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col group select-none"
     >
       {/* Top Image & Floating Badges */}
-      <div className="relative h-44 sm:h-48 w-full overflow-hidden bg-slate-100">
+      <div className="relative h-44 sm:h-48 w-full shrink-0 overflow-hidden bg-slate-100">
         {court.imageUrl && <img src={venueThumbnail(court.imageUrl)} alt={court.name} className="w-full h-full object-cover" loading={index < 3 ? 'eager' : 'lazy'} fetchPriority={index === 0 ? 'high' : 'auto'} decoding="async" onError={(event) => { if (event.currentTarget.getAttribute('src') !== court.imageUrl) event.currentTarget.src = court.imageUrl }} />}
 
         {/* Top-Left Badges */}
         <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap z-10">
-          {court.rating && (
+          {court.reviewCount > 0 && court.rating > 0 && (
             <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-white/95 text-slate-800 shadow-xs flex items-center gap-1 backdrop-blur-xs">
               <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
               <span>{court.rating}</span>
@@ -96,26 +96,26 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
       </div>
 
       {/* Bottom Info Section */}
-      <div className="p-3.5 flex items-center gap-3">
+      <div className="p-3.5 grid flex-1 grid-cols-[40px_minmax(0,1fr)] grid-rows-[1fr_auto] items-center gap-3">
         {/* Round Logo */}
-        <div className="w-12 h-12 rounded-full border border-slate-200 overflow-hidden flex-shrink-0 bg-slate-50 shadow-2xs">
+        <div className="w-10 h-10 rounded-full border border-slate-200 overflow-hidden flex-shrink-0 bg-slate-50 shadow-2xs">
           {court.logoUrl && <img src={logoThumbnail(court.logoUrl)} alt={court.name} width={48} height={48} className="w-full h-full object-cover" loading="lazy" decoding="async" onError={(event) => { if (event.currentTarget.getAttribute('src') !== court.logoUrl) event.currentTarget.src = court.logoUrl }} />}
         </div>
 
         {/* Text Details */}
         <div className="flex-1 min-w-0 pr-1">
-          <h3 className="text-xs sm:text-[13px] font-bold text-slate-900 truncate group-hover:text-emerald-700 transition-colors">
-            {court.name}
+          <h3 className="h-10 text-sm leading-5 font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
+            <button type="button" onClick={(event) => { event.stopPropagation(); handleCardClick() }} className="line-clamp-2 w-full break-words cursor-pointer text-left" title={court.name} aria-label={`Xem chi tiết ${court.name}`}>{court.name}</button>
           </h3>
 
-          <div className="text-[11px] text-slate-700 font-medium truncate mt-0.5">
+          <div className="h-4 text-[11px] leading-4 text-slate-700 font-medium truncate mt-0.5" title={court.address}>
             {court.distance && <span className="text-[#ea580c] font-semibold mr-1">[{court.distance}]</span>}
             <span>{court.address}</span>
           </div>
 
-          <div className="flex items-center gap-1 text-[10px] text-slate-600 font-medium mt-1">
-            <Clock className="w-3 h-3 text-slate-500" />
-            <span>{court.openHours}</span>
+          <div className="flex h-4 items-center gap-1 text-xs leading-4 text-slate-600 font-medium mt-1">
+            <Clock className="w-3 h-3 shrink-0 text-slate-500" />
+            <span className="truncate">{court.openHours}</span>
           </div>
         </div>
 
@@ -123,7 +123,7 @@ export const CourtCardItem: React.FC<CourtCardItemProps> = ({
         <button
           type="button"
           onClick={handleBookClick}
-          className="px-3.5 py-2 rounded-lg bg-[#e5a92c] hover:bg-[#d49b24] active:bg-[#c48d1c] text-white font-bold text-xs transition-colors flex-shrink-0 cursor-pointer"
+          className="col-span-2 w-full px-3.5 py-2 rounded-lg bg-[#1b7a42] hover:bg-[#156335] text-white font-bold text-xs transition-colors flex-shrink-0 cursor-pointer"
         >
           Đặt lịch
         </button>

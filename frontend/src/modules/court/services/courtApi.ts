@@ -1,3 +1,4 @@
+import type { CourtDto, FacilityDto, PriceRuleDto, MaintenanceDto, OwnerBookingDto, FacilityDetailDto, OwnerDashboardDto } from './apiDtos'
 import { API_BASE_URL } from '../../../lib/apiConfig'
 import { fetchPublicCatalog } from '../../../lib/publicCatalog'
 import { authStorage } from '../../user/auth/authApi'
@@ -77,7 +78,7 @@ function normalizeTimeStr(value?: string | null, fallback = '06:00'): string {
   return hhmm === '23:59' ? '24:00' : hhmm
 }
 
-function mapCourtDto(dto: any, fallbackFacilityId?: string): SubCourt {
+function mapCourtDto(dto: CourtDto, fallbackFacilityId?: string): SubCourt {
   const rawType = String(dto.courtType || 'STANDARD').toLowerCase()
   const courtType: SubCourt['courtType'] =
     rawType === 'vip' ? 'vip' : rawType === 'training' ? 'training' : 'standard'
@@ -99,7 +100,7 @@ function mapCourtDto(dto: any, fallbackFacilityId?: string): SubCourt {
   }
 }
 
-function mapFacilityDto(dto: any): Facility {
+function mapFacilityDto(dto: FacilityDto): Facility {
   const id = String(dto.id)
   const rawStatus = String(dto.status || 'ACTIVE').toUpperCase()
   const status: Facility['status'] =
@@ -137,7 +138,7 @@ function mapFacilityDto(dto: any): Facility {
     logoUrl: dto.logoUrl || '/images/logos/badminton-club-logo.svg',
     imageUrl: dto.imageUrl || gallery[0],
     galleryImages: gallery,
-    distance: dto.distanceKm != null ? `${Number(dto.distanceKm).toFixed(1)}km` : '1.5km',
+    distance: dto.distanceKm != null ? `${Number(dto.distanceKm).toFixed(1)}km` : '',
     streetAddress: dto.streetAddress || '',
     ward: dto.ward || '',
     district: dto.district || 'Cầu Giấy',
@@ -165,12 +166,12 @@ function mapFacilityDto(dto: any): Facility {
     isApproved: dto.isApproved !== false,
     status,
     subCourts: Array.isArray(dto.courts)
-      ? dto.courts.map((c: any) => mapCourtDto(c, id))
+      ? dto.courts.map((c) => mapCourtDto(c, id))
       : [],
   }
 }
 
-function mapPriceRuleDto(dto: any): PriceRule {
+function mapPriceRuleDto(dto: PriceRuleDto): PriceRule {
   const rawDay = String(dto.dayType || 'ALL').toUpperCase()
   const dayOfWeek: PriceRule['dayOfWeek'] =
     rawDay === 'WEEKDAY' ? 'WEEKDAY' : rawDay === 'WEEKEND' ? 'WEEKEND' : 'ALL'
@@ -198,7 +199,7 @@ function mapPriceRuleDto(dto: any): PriceRule {
   }
 }
 
-function mapMaintenanceDto(dto: any): MaintenanceBlock {
+function mapMaintenanceDto(dto: MaintenanceDto): MaintenanceBlock {
   return {
     id: String(dto.id),
     facilityId: String(dto.facilityId ?? ''),
@@ -214,7 +215,7 @@ function mapMaintenanceDto(dto: any): MaintenanceBlock {
   }
 }
 
-function mapOwnerBookingDto(dto: any): OwnerBookingItem {
+function mapOwnerBookingDto(dto: OwnerBookingDto): OwnerBookingItem {
   return {
     id: String(dto.id),
     bookingCode: dto.bookingCode || `SMC-${dto.id}`,
@@ -223,7 +224,7 @@ function mapOwnerBookingDto(dto: any): OwnerBookingItem {
     courtId: String(dto.courtId ?? ''),
     courtName: dto.courtName || 'Sân 1',
     customerName: dto.customerName || 'Khách đặt sân',
-    customerPhone: dto.customerPhone || '0912 345 678',
+    customerPhone: dto.customerPhone || '',
     customerEmail: dto.customerEmail || '',
     bookingDate: String(dto.bookingDate),
     startTime: normalizeTimeStr(dto.startTime, '18:00'),
@@ -264,6 +265,10 @@ export function facilityToCourtItem(fac: Facility): BadmintonCourtItem {
   }
 }
 
+function facilityPayload(payload: FacilityUpsertPayload) {
+  return { ...payload, closeTime: payload.closeTime === '24:00' ? '23:59' : payload.closeTime }
+}
+
 export const courtApi = {
   searchFacilitiesPage: async (params: { keyword?: string; district?: string; maxPrice?: number; amenities?: string[]; minRating?: number; ids?: string[]; page?: number; size?: number } = {}): Promise<{ content: Facility[]; totalElements: number; totalPages: number }> => {
     const qs = new URLSearchParams()
@@ -276,7 +281,7 @@ export const courtApi = {
     qs.set('page', String(params.page ?? 0))
     qs.set('size', String(params.size ?? 24))
     const data = await fetchPublicCatalog(qs.toString())
-    return { ...data, content: data.content.map(mapFacilityDto) }
+    return { ...data, content: (data.content as FacilityDto[]).map(mapFacilityDto) }
   },
   getFavorites: async (): Promise<string[]> =>
     (await apiRequest<number[]>('/facilities/favorites')).map(String),
@@ -302,7 +307,7 @@ export const courtApi = {
     }
 
     const suffix = qs.toString() ? `?${qs.toString()}` : ''
-    const data = await apiRequest<any[]>(`/facilities${suffix}`)
+    const data = await apiRequest<FacilityDto[]>(`/facilities${suffix}`)
     return data.map(mapFacilityDto)
   },
 
@@ -311,7 +316,7 @@ export const courtApi = {
   getFacilityDetail: async (
     facilityId: string
   ): Promise<{ facility: Facility; priceRules: PriceRule[]; maintenanceBlocks: MaintenanceBlock[] }> => {
-    const dto = await apiRequest<any>(`/facilities/${facilityId}`)
+    const dto = await apiRequest<FacilityDetailDto>(`/facilities/${facilityId}`)
     return {
       facility: mapFacilityDto({ ...dto.facility, courts: dto.courts }),
       priceRules: dto.priceRules.map(mapPriceRuleDto),
@@ -320,18 +325,18 @@ export const courtApi = {
   },
 
   getOwnerFacilities: async (): Promise<Facility[]> =>
-    (await apiRequest<any[]>('/owner/facilities')).map(mapFacilityDto),
+    (await apiRequest<FacilityDto[]>('/owner/facilities')).map(mapFacilityDto),
 
   createFacility: async (payload: FacilityUpsertPayload): Promise<Facility> =>
     mapFacilityDto(await apiRequest('/owner/facilities', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(facilityPayload(payload)),
     })),
 
   updateFacility: async (facilityId: string, payload: FacilityUpsertPayload): Promise<Facility> =>
     mapFacilityDto(await apiRequest(`/owner/facilities/${facilityId}`, {
       method: 'PUT',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(facilityPayload(payload)),
     })),
 
   updateFacilityStatus: async (
@@ -362,7 +367,7 @@ export const courtApi = {
     apiRequest(`/owner/courts/${courtId}`, { method: 'DELETE' }),
 
   getOwnerPriceRules: async (facilityId: string): Promise<PriceRule[]> =>
-    (await apiRequest<any[]>(`/owner/facilities/${facilityId}/price-rules`)).map(mapPriceRuleDto),
+    (await apiRequest<PriceRuleDto[]>(`/owner/facilities/${facilityId}/price-rules`)).map(mapPriceRuleDto),
 
   createPriceRule: async (facilityId: string, payload: PriceRuleUpsertPayload): Promise<PriceRule> =>
     mapPriceRuleDto(await apiRequest(`/owner/facilities/${facilityId}/price-rules`, {
@@ -380,13 +385,13 @@ export const courtApi = {
     apiRequest(`/owner/price-rules/${ruleId}`, { method: 'DELETE' }),
 
   getMaintenanceBlocks: async (facilityId: string): Promise<MaintenanceBlock[]> =>
-    (await apiRequest<any[]>(`/owner/facilities/${facilityId}/maintenance`)).map(mapMaintenanceDto),
+    (await apiRequest<MaintenanceDto[]>(`/owner/facilities/${facilityId}/maintenance`)).map(mapMaintenanceDto),
 
   createMaintenanceBlock: async (
     facilityId: string,
     payload: MaintenanceCreatePayload
   ): Promise<MaintenanceBlock[]> => {
-    const data = await apiRequest<any[]>(`/owner/facilities/${facilityId}/maintenance`, {
+    const data = await apiRequest<MaintenanceDto[]>(`/owner/facilities/${facilityId}/maintenance`, {
       method: 'POST',
       body: JSON.stringify({ ...payload, courtId: payload.courtId ? Number(payload.courtId) : null }),
     })
@@ -401,7 +406,7 @@ export const courtApi = {
     if (facilityId) qs.set('facilityId', facilityId)
     if (fromDate) qs.set('fromDate', fromDate)
     if (toDate) qs.set('toDate', toDate)
-    const dto = await apiRequest<any>(`/owner/dashboard?${qs}`)
+    const dto = await apiRequest<OwnerDashboardDto>(`/owner/dashboard?${qs}`)
     return {
       facilityId: String(dto.facilityId ?? ''),
       facilityName: dto.facilityName || '',
@@ -409,21 +414,21 @@ export const courtApi = {
       toDate: String(dto.toDate),
       totalRevenue: Number(dto.totalRevenue || 0),
       todayRevenue: Number(dto.todayRevenue || 0),
-      confirmedBookings: Number(dto.confirmedBookings || 0),
-      completedBookings: Number(dto.completedBookings || 0),
-      heldBookings: Number(dto.heldBookings || 0),
-      cancelledBookings: Number(dto.cancelledBookings || 0),
-      occupancyRate: Number(dto.occupancyRate || 0),
-      activeCourts: Number(dto.activeCourts || 0),
-      maintenanceCourts: Number(dto.maintenanceCourts || 0),
-      totalCourts: Number(dto.totalCourts || 0),
-      dailyRevenueSeries: (dto.dailyRevenueSeries || []).map((d: any) => ({
+      confirmedBookings: Number(dto.confirmedBookingsCount || 0),
+      completedBookings: Number(dto.completedBookingsCount || 0),
+      heldBookings: Number(dto.heldBookingsCount || 0),
+      cancelledBookings: Number(dto.cancelledBookingsCount || 0),
+      occupancyRate: Number(dto.occupancyRatePercent || 0),
+      activeCourts: Number(dto.activeCourtsCount || 0),
+      maintenanceCourts: Number(dto.maintenanceCourtsCount || 0),
+      totalCourts: Number(dto.totalCourtsCount || 0),
+      dailyRevenueSeries: (dto.dailyRevenue || []).map((d) => ({
         date: String(d.date),
         label: d.label,
         revenue: Number(d.revenue || 0),
         bookingCount: Number(d.bookingCount || 0),
       })),
-      courtRevenues: (dto.courtRevenues || []).map((c: any) => ({
+      courtRevenues: (dto.courtRevenues || []).map((c) => ({
         courtId: String(c.courtId),
         courtName: c.courtName,
         courtType: c.courtType,
@@ -432,18 +437,18 @@ export const courtApi = {
         bookingCount: Number(c.bookingCount || 0),
         bookedHours: Number(c.bookedHours || 0),
       })),
-      hourlyBands: (dto.hourlyBands || []).map((b: any) => ({
+      hourlyBands: (dto.hourlyBands || []).map((b) => ({
         bandLabel: b.bandLabel,
         occupancyPercent: Number(b.occupancyPercent || 0),
-        bookedSlots: Number(b.bookedSlots || 0),
-        isPeak: Boolean(b.isPeak),
+        bookedSlots: Number(b.bookingCount || 0),
+        isPeak: Number(b.occupancyPercent) >= 70,
       })),
-      liveCourtStatuses: (dto.liveCourtStatuses || []).map((s: any) => ({
+      liveCourtStatuses: (dto.liveCourts || []).map((s) => ({
         courtId: String(s.courtId),
         courtName: s.courtName,
         courtType: s.courtType,
-        liveStatus: s.liveStatus,
-        currentInfo: s.currentInfo,
+        liveStatus: s.currentStatus,
+        currentInfo: s.currentSlotInfo,
       })),
       todayCheckInQueue: (dto.todayCheckInQueue || []).map(mapOwnerBookingDto),
     }
@@ -460,7 +465,7 @@ export const courtApi = {
     if (params.status && params.status !== 'ALL') qs.set('status', params.status)
     if (params.date) qs.set('date', params.date)
     if (params.keyword?.trim()) qs.set('keyword', params.keyword.trim())
-    const data = await apiRequest<any[]>(`/owner/bookings?${qs}`)
+    const data = await apiRequest<OwnerBookingDto[]>(`/owner/bookings?${qs}`)
     return data.map(mapOwnerBookingDto)
   },
 

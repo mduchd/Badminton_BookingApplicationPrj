@@ -1,7 +1,12 @@
 .env
 .env.*
 !.env.example
+!frontend/.env.integrations.example
 .idea/
 
 .netlify/
 .vercel/
+.verification/
+backend/hs_err_pid*.log
+frontend/test-results/
+frontend/playwright-report/

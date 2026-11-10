@@ -25,7 +25,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Value("${app.cors.allowed-origins:http://localhost:*,http://127.0.0.1:*,https://smashcourt-booking.netlify.app}")
+    @Value("${app.cors.allowed-origins:http://localhost:*,http://127.0.0.1:*,https://smashcourt-booking.vercel.app,https://smashcourt-booking.netlify.app}")
     private List<String> allowedOrigins;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
@@ -46,6 +46,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/admin/**").hasRole("SYSTEM_ADMIN")
                 .requestMatchers("/api/v1/auth/**").permitAll()
+                .requestMatchers("/api/v1/account/**").authenticated()
                 .requestMatchers("/api/v1/public/**").permitAll()
                 .requestMatchers("/api/facilities/favorites", "/api/facilities/favorites/**")
                     .hasAnyRole("CUSTOMER", "COURT_OWNER", "SYSTEM_ADMIN")
@@ -66,6 +67,9 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         List<String> origins = new ArrayList<>(allowedOrigins);
+        if (!origins.contains("https://smashcourt-booking.vercel.app")) {
+            origins.add("https://smashcourt-booking.vercel.app");
+        }
         if (!origins.contains("https://smashcourt-booking.netlify.app")) {
             origins.add("https://smashcourt-booking.netlify.app");
         }

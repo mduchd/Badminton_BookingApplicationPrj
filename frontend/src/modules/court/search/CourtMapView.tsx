@@ -1,5 +1,5 @@
 import "leaflet/dist/leaflet.css"
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
+import React, { useEffect, useEffectEvent, useRef, useState, useMemo, useCallback } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import Supercluster from 'supercluster'
@@ -357,6 +357,8 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
     }
   }, [clusterIndex, selectedCourt?.id])
 
+  const renderLatestClusters = useEffectEvent(renderClusters)
+  const initialMapStyle = useRef(mapStyle)
   // Initialize Map Instance
   useEffect(() => {
     const container = mapContainerRef.current
@@ -370,8 +372,8 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
       }
       mapInstanceRef.current = null
     }
-    if ((container as any)._leaflet_id) {
-      delete (container as any)._leaflet_id
+    if ((container as HTMLDivElement & { _leaflet_id?: number })._leaflet_id) {
+      delete (container as HTMLDivElement & { _leaflet_id?: number })._leaflet_id
     }
 
     const map = L.map(container, {
@@ -380,7 +382,7 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
       zoomControl: false,
     })
 
-    const cfg = resolveMapTileConfig(mapStyle)
+    const cfg = resolveMapTileConfig(initialMapStyle.current)
     const tileLayer = L.tileLayer(cfg.url, {
       maxZoom: 20,
       subdomains: cfg.subdomains,
@@ -398,7 +400,7 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
 
     const timer = setTimeout(() => {
       map.invalidateSize()
-      renderClusters()
+      renderLatestClusters()
     }, 140)
 
     return () => {
@@ -411,8 +413,8 @@ export const CourtMapView: React.FC<CourtMapViewProps> = ({
       mapInstanceRef.current = null
       tileLayerRef.current = null
       markersLayerRef.current = null
-      if ((container as any)._leaflet_id) {
-        delete (container as any)._leaflet_id
+      if ((container as HTMLDivElement & { _leaflet_id?: number })._leaflet_id) {
+        delete (container as HTMLDivElement & { _leaflet_id?: number })._leaflet_id
       }
     }
   }, [])

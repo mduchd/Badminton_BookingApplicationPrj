@@ -1,4 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import { useApiQuery } from '../../../hooks/useApiQuery'
+import { ProfileForm } from '../profile/ProfileForm'
+import { IntegrationSettings } from './IntegrationSettings'
+import { EmptyState } from '../../../components/shared/EmptyState'
+import { Button } from '../../../components/shared/Button'
+import { buildBookingIcs } from '../../booking/calendarExport'
+import React, { useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -10,8 +16,6 @@ import {
   Download,
   Clock,
   MapPin,
-  Bell,
-  Save,
   Users,
   Trophy,
   Crown,
@@ -24,6 +28,7 @@ import {
   User as UserIcon,
   ChevronDown,
   Building,
+  Bell,
 } from 'lucide-react'
 import type { User } from '../../types/user'
 import { toast } from 'sonner'
@@ -40,7 +45,7 @@ export interface UserBooking {
   dayLabel: string
   timeRange: string
   totalPrice: number
-  status: 'CONFIRMED' | 'COMPLETED' | 'CANCELLED'
+  status: 'HELD' | 'PENDING_PAYMENT' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED'
   sportType: string
   statusMessage?: string
 }
@@ -106,104 +111,33 @@ export const AccountView: React.FC<AccountViewProps> = ({
   const [dateFilterOpen, setDateFilterOpen] = useState(false)
   const [selectedDateFilter, setSelectedDateFilter] = useState<string>('all')
 
-  // Edit profile state
-  const [editName, setEditName] = useState(currentUser?.fullName || '')
-  const [editPhone, setEditPhone] = useState(currentUser?.phone || '')
-
-  const [bookings, setBookings] = useState<UserBooking[]>([])
-  useEffect(() => {
-    let active = true
-    setBookings([])
-    if (currentUser) {
-      bookingApi.getMyBookings().then((items) => {
-        if (!active) return
-        setBookings(items.filter((b) => ['CONFIRMED', 'COMPLETED', 'CANCELLED', 'EXPIRED'].includes(b.status)).map((b) => ({
-          id: String(b.id), facilityName: b.facilityName, courtName: b.courtName,
-          address: '', date: b.bookingDate, dayLabel: '',
-          timeRange: `${b.startTime.slice(0, 5)} - ${b.endTime.slice(0, 5)}`,
-          totalPrice: b.totalAmount, status: b.status === 'EXPIRED' ? 'CANCELLED' : b.status as UserBooking['status'], sportType: 'Cầu lông',
-        })))
-      }).catch(() => { if (active) toast.error('Không thể tải lịch đặt sân.') })
-    }
-    return () => { active = false }
-  }, [currentUser?.id])
+  const { data: bookingItems = [], isPending: bookingsLoading, isError: bookingsError, refetch: reloadBookings } = useApiQuery({
+    queryKey: ['myBookings', currentUser?.id], queryFn: bookingApi.getMyBookings, enabled: !!currentUser,
+  })
+  const bookings: UserBooking[] = currentUser ? bookingItems.map(b => ({
+    id: String(b.id), facilityName: b.facilityName, courtName: b.courtName,
+    address: '', date: b.bookingDate, dayLabel: '', timeRange: `${b.startTime.slice(0, 5)} - ${b.endTime.slice(0, 5)}`,
+    totalPrice: b.totalAmount, status: b.status === 'EXPIRED' ? 'CANCELLED' : b.status, sportType: 'Cầu lông',
+  })) : []
 
   // Filtered bookings
   const filteredBookings = bookings.filter((b) => {
     if (bookingStatusFilter !== 'all' && b.status !== bookingStatusFilter) {
       return false
     }
-    if (selectedDateFilter === 'may' && !b.date.includes('May')) {
+    if (selectedDateFilter === 'month' && !b.date.startsWith(new Date().toISOString().slice(0, 7))) {
       return false
     }
     return true
   })
 
-  // Save profile changes
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!currentUser) return
-    onUpdateUser({
-      ...currentUser,
-      fullName: editName,
-      phone: editPhone,
-    })
-    setActiveSection('bookings')
-    toast.success('Cập nhật thông tin thành công!')
-  }
-
-  // Toggle FCM Web Push
-  const handleToggleFcm = () => {
-    if (!currentUser) {
-      toast.info('Vui lòng đăng nhập để bật thông báo!')
-      return
-    }
-    const nextState = !currentUser.fcmEnabled
-    onUpdateUser({ ...currentUser, fcmEnabled: nextState })
-    if (nextState) {
-      toast.success('Đã kích hoạt thông báo Web Push!')
-    } else {
-      toast.info('Đã tắt thông báo Web Push.')
-    }
-  }
-
-  // Toggle Google Calendar
-  const handleToggleCalendar = () => {
-    if (!currentUser) {
-      toast.info('Vui lòng đăng nhập để đồng bộ lịch!')
-      return
-    }
-    const next = !currentUser.calendarConnected
-    onUpdateUser({ ...currentUser, calendarConnected: next, calendarEmail: next ? currentUser.email : undefined })
-    if (next) {
-      toast.success('Đã liên kết Google Calendar thành công!')
-    } else {
-      toast.info('Đã hủy liên kết Google Calendar.')
-    }
-  }
-
-  // Download .ics sample
   const handleDownloadIcs = (booking: UserBooking) => {
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//SmashCourt//Badminton Booking VN//EN
-CALSCALE:GREGORIAN
-BEGIN:VEVENT
-SUMMARY:Đặt sân: ${booking.facilityName} (${booking.courtName})
-DESCRIPTION:Lịch đặt sân thể thao qua hệ thống SmashCourt. Khung giờ: ${booking.timeRange}
-LOCATION:${booking.address}
-STATUS:CONFIRMED
-END:VEVENT
-END:VCALENDAR`
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' })
-    const url = window.URL.createObjectURL(blob)
+    const blob = new Blob([buildBookingIcs(booking)], { type: 'text/calendar;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `smashcourt-${booking.id}.ics`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    toast.success('Đã tải file lịch .ics về máy!')
+    link.href = url; link.download = `smashcourt-${booking.id}.ics`
+    document.body.appendChild(link); link.click(); link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   return (
@@ -545,7 +479,7 @@ END:VCALENDAR`
                 onClick={() => setBookingStatusFilter('all')}
                 className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                   bookingStatusFilter === 'all'
-                    ? 'bg-white text-[#168039] font-bold shadow-xs'
+                    ? 'bg-white text-[#168039] font-bold '
                     : 'text-slate-700 hover:text-slate-900'
                 }`}
               >
@@ -556,7 +490,7 @@ END:VCALENDAR`
                 onClick={() => setBookingStatusFilter('CONFIRMED')}
                 className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                   bookingStatusFilter === 'CONFIRMED'
-                    ? 'bg-white text-[#168039] font-bold shadow-xs'
+                    ? 'bg-white text-[#168039] font-bold '
                     : 'text-slate-700 hover:text-slate-900'
                 }`}
               >
@@ -567,7 +501,7 @@ END:VCALENDAR`
                 onClick={() => setBookingStatusFilter('COMPLETED')}
                 className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                   bookingStatusFilter === 'COMPLETED'
-                    ? 'bg-white text-[#168039] font-bold shadow-xs'
+                    ? 'bg-white text-[#168039] font-bold '
                     : 'text-slate-700 hover:text-slate-900'
                 }`}
               >
@@ -578,7 +512,7 @@ END:VCALENDAR`
                 onClick={() => setBookingStatusFilter('CANCELLED')}
                 className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                   bookingStatusFilter === 'CANCELLED'
-                    ? 'bg-white text-rose-600 font-bold shadow-xs'
+                    ? 'bg-white text-rose-600 font-bold '
                     : 'text-slate-700 hover:text-slate-900'
                 }`}
               >
@@ -591,9 +525,9 @@ END:VCALENDAR`
               <button
                 type="button"
                 onClick={() => setDateFilterOpen(!dateFilterOpen)}
-                className="px-3.5 py-1.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white text-xs font-semibold text-slate-800 flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
+                className="px-3.5 py-1.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white text-xs font-semibold text-slate-800 flex items-center gap-2 transition-colors cursor-pointer "
               >
-                <span>{selectedDateFilter === 'may' ? 'Tháng 5/2026' : 'Tất cả'}</span>
+                <span>{selectedDateFilter === 'month' ? 'Tháng này' : 'Tất cả'}</span>
                 <Calendar className="w-3.5 h-3.5 text-[#168039]" />
                 <ChevronDown className="w-3 h-3 text-slate-500" />
               </button>
@@ -613,12 +547,12 @@ END:VCALENDAR`
                   <button
                     type="button"
                     onClick={() => {
-                      setSelectedDateFilter('may')
+                      setSelectedDateFilter('month')
                       setDateFilterOpen(false)
                     }}
                     className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-slate-800 font-medium cursor-pointer"
                   >
-                    Tháng 5/2026
+                    Tháng này
                   </button>
                 </div>
               )}
@@ -634,25 +568,8 @@ END:VCALENDAR`
           {/* 1. SECTION: RESERVED BOOKINGS */}
           {activeSection === 'bookings' && (
             <div className="space-y-6 flex-1 w-full">
-              {filteredBookings.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center py-24 text-center">
-                  <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 mb-3">
-                    <Calendar className="w-8 h-8" />
-                  </div>
-                  <p className="text-base font-bold text-slate-900">
-                    Bạn chưa có lịch đặt sân nào
-                  </p>
-                  <p className="text-xs text-slate-600 mt-1 max-w-sm font-medium">
-                    Chưa có lịch đặt sân nào trong mục này. Hãy tìm sân gần nhất và đặt sân ngay!
-                  </p>
-                  <button
-                    type="button"
-                    onClick={onNavigateHome}
-                    className="mt-4 px-4 py-2 rounded-xl bg-[#168039] hover:bg-[#136c30] text-white text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    Đặt sân ngay
-                  </button>
-                </div>
+              {currentUser && bookingsLoading ? <p role="status" className="py-12 text-sm text-slate-600">Đang tải lịch đặt sân…</p> : bookingsError ? <EmptyState title="Không thể tải lịch đặt sân" action={<Button variant="secondary" onClick={() => void reloadBookings()}>Thử lại</Button>} /> : filteredBookings.length === 0 ? (
+                <EmptyState title={currentUser ? 'Chưa có lịch đặt sân trong mục này' : 'Đăng nhập để xem lịch đặt sân'} description={currentUser ? 'Chọn sân và khung giờ phù hợp để bắt đầu.' : undefined} action={<Button onClick={currentUser ? onNavigateHome : () => onOpenAuth('login')}>{currentUser ? 'Đặt sân ngay' : 'Đăng nhập'}</Button>} />
               ) : (
                 <div className="space-y-3.5 w-full">
                   {filteredBookings.map((b, idx) => (
@@ -664,16 +581,14 @@ END:VCALENDAR`
                       {/* Top Header Row: Green Day Tag + Facility Name + Status Pill */}
                       <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="bg-[#168039] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-md shrink-0">
-                            Ngày
-                          </span>
-                          <h3 className="text-sm sm:text-base font-extrabold text-slate-900 truncate">
+                          <h3 className="text-sm sm:text-base font-bold text-slate-900 break-words">
                             {b.facilityName}
                           </h3>
                         </div>
 
                         {/* Status Badge */}
                         <div className="flex items-center gap-1.5 shrink-0">
+                          {(b.status === 'HELD' || b.status === 'PENDING_PAYMENT') && <span className="text-xs font-bold text-amber-900">Chờ thanh toán</span>}
                           {b.status === 'CONFIRMED' && (
                             <span className="inline-flex items-center gap-1 text-xs font-bold text-[#168039] bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
                               <span>Đã xác nhận</span>
@@ -705,22 +620,22 @@ END:VCALENDAR`
                           <span className="text-slate-600">{b.date}</span>
                         </div>
 
-                        <div className="flex items-start gap-2 font-medium">
+                        {b.address && <div className="flex items-start gap-2 font-medium">
                           <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
                           <span className="text-slate-500 shrink-0">Địa chỉ:</span>
                           <span className="text-slate-800">{b.address}</span>
-                        </div>
+                        </div>}
                       </div>
 
                       {/* Bottom Action Row: Lưu .ics + Total Price */}
                       <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-3">
                         <button
                           type="button"
-                          onClick={() => handleDownloadIcs(b)}
+                          onClick={() => b.status !== 'CONFIRMED' && b.status !== 'COMPLETED' ? navigate(`/checkout/${b.id}`) : handleDownloadIcs(b)}
                           className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
                         >
-                          <Download className="w-3.5 h-3.5 text-[#168039]" />
-                          <span>Lưu .ics</span>
+                          {b.status !== 'CONFIRMED' && b.status !== 'COMPLETED' ? <ChevronRight className="w-3.5 h-3.5 text-[#168039]" /> : <Download className="w-3.5 h-3.5 text-[#168039]" />}
+                          <span>{b.status !== 'CONFIRMED' && b.status !== 'COMPLETED' ? 'Xem đơn' : 'Lưu .ics'}</span>
                         </button>
 
                         <div className="flex items-baseline gap-1">
@@ -739,132 +654,15 @@ END:VCALENDAR`
 
           {/* 2. SECTION: EDIT PROFILE (Full Width Workplace) */}
           {activeSection === 'profile' && (
-            <div className="w-full flex-1">
-              <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/90 shadow-xs space-y-6 w-full">
-                {/* Header Profile Bar */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
-                  <div className="flex items-center gap-4">
-                    <UserAvatar
-                      src={currentUser?.avatarUrl}
-                      name={currentUser?.fullName}
-                      className="w-16 h-16 text-xl"
-                      ringClassName="ring-2 ring-emerald-500/20 shrink-0"
-                      fallbackBgColor="bg-[#168039] text-white"
-                    />
-                    <div>
-                      <h3 className="text-base sm:text-lg font-bold text-slate-900">
-                        {currentUser?.fullName || 'Tài khoản SmashCourt'}
-                      </h3>
-                      <p className="text-xs text-slate-600 font-medium mt-0.5">
-                        {currentUser?.email || currentUser?.phone || 'Chưa cập nhật email'}
-                      </p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#168039] bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md">
-                          <CheckCircle2 className="w-3 h-3 text-[#168039]" />
-                          <span>Đã kích hoạt</span>
-                        </span>
-                        <span className="text-[11px] font-medium text-slate-500">
-                          {currentUser?.role === 'COURT_OWNER' ? 'Chủ cụm sân' : currentUser?.role === 'SYSTEM_ADMIN' ? 'Quản trị viên' : 'Khách hàng'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+            <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 sm:p-8 space-y-6">
+              {currentUser ? <>
+                <div className="flex items-center gap-4 border-b border-slate-100 pb-5">
+                  <UserAvatar src={currentUser.avatarUrl} name={currentUser.fullName} className="h-14 w-14" />
+                  <div className="min-w-0"><h3 className="break-words text-lg font-bold text-slate-900">{currentUser.fullName}</h3><p className="break-words text-sm text-slate-600">{currentUser.email}</p></div>
                 </div>
-
-                {/* Profile Form (Responsive 2-column Grid) */}
-                <form onSubmit={handleSaveProfile} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Họ và tên
-                      </label>
-                      <input
-                        type="text"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        required
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#168039] text-slate-900 font-medium"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Email đăng ký
-                      </label>
-                      <input
-                        type="email"
-                        value={currentUser?.email || ''}
-                        disabled
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-600 text-xs sm:text-sm cursor-not-allowed font-medium"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Số điện thoại liên hệ
-                      </label>
-                      <input
-                        type="tel"
-                        value={editPhone}
-                        onChange={(e) => setEditPhone(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#168039] text-slate-900 font-medium"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Hạng tài khoản
-                      </label>
-                      <div className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-xs sm:text-sm font-medium flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Crown className="w-4 h-4 text-[#e5a92c]" />
-                          <span>Hội viên SmashCourt tiêu chuẩn</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setActiveSection('membership')}
-                          className="text-xs text-[#168039] font-bold hover:underline cursor-pointer"
-                        >
-                          Xem chi tiết
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-5 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
-                    <div className="flex items-center gap-2.5">
-                      <button
-                        type="submit"
-                        className="py-2.5 px-6 rounded-xl bg-[#168039] hover:bg-[#136c30] text-white text-xs sm:text-sm font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <Save className="w-4 h-4" />
-                        <span>Lưu thay đổi</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActiveSection('bookings')}
-                        className="py-2.5 px-5 rounded-xl border border-slate-200 text-slate-700 text-xs sm:text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
-                      >
-                        Hủy
-                      </button>
-                    </div>
-
-                    {currentUser && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onLogout()
-                          toast.info('Đã đăng xuất khỏi SmashCourt')
-                        }}
-                        className="py-2.5 px-4 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs sm:text-sm font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <LogOut className="w-3.5 h-3.5 text-rose-600" />
-                        <span>Đăng xuất tài khoản</span>
-                      </button>
-                    )}
-                  </div>
-                </form>
-              </div>
+                <ProfileForm key={currentUser.id} user={currentUser} onSaved={onUpdateUser} />
+                <Button variant="danger" onClick={onLogout}>Đăng xuất</Button>
+              </> : <EmptyState title="Đăng nhập để xem hồ sơ" action={<Button onClick={() => onOpenAuth('login')}>Đăng nhập</Button>} />}
             </div>
           )}
 
@@ -879,7 +677,7 @@ END:VCALENDAR`
                 </div>
               </div>
               <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                Bạn hiện đang sử dụng hạng thành viên tiêu chuẩn. Tham gia các buổi chơi và hoàn thành đặt sân để tích lũy điểm thưởng, thăng hạng thành viên và nhận các voucher giảm giá đặt sân hàng tháng.
+                Chương trình hội viên và tích điểm hiện chưa được hỗ trợ. Bạn vẫn có thể đặt sân theo ngày và theo dõi đơn trong mục Lịch đặt.
               </p>
             </div>
           )}
@@ -895,7 +693,7 @@ END:VCALENDAR`
                 </div>
               </div>
               <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                Bạn chưa tham gia nhóm câu lạc bộ nào. Hãy khám phá mục Giao lưu trên trang chủ để kết nối cùng các nhóm cầu lông, pickleball đang tìm thành viên!
+                Tính năng nhóm câu lạc bộ và tìm bạn giao lưu hiện chưa được hỗ trợ.
               </p>
             </div>
           )}
@@ -911,7 +709,7 @@ END:VCALENDAR`
                 </div>
               </div>
               <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                Hiện tại chưa có khóa học hoặc giải đấu nào được kích hoạt trong lịch trình của bạn.
+                Đăng ký khóa học và giải đấu hiện chưa được hỗ trợ.
               </p>
             </div>
           )}
@@ -927,65 +725,15 @@ END:VCALENDAR`
                 </div>
               </div>
               <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                Ví của bạn hiện chưa có mã giảm giá nào còn hiệu lực. Đón chờ các sự kiện khai trương cụm sân mới trên hệ thống để nhận mã ưu đãi nhé!
+                Ví voucher hiện chưa được hỗ trợ. Giá thanh toán hiển thị theo đơn đặt sân của bạn.
               </p>
             </div>
           )}
 
           {/* 7. SECTION: SETTINGS */}
           {activeSection === 'settings' && (
-            <div className="w-full space-y-5">
-              <h3 className="font-bold text-slate-900 text-sm">Cài đặt thông báo & Đồng bộ lịch</h3>
-
-              <div className="rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden bg-white w-full">
-                {/* FCM Push */}
-                <div className="p-4 sm:p-5 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <Bell className="w-5 h-5 text-[#168039] shrink-0" />
-                    <div>
-                      <div className="text-xs sm:text-sm font-bold text-slate-900">Thông báo trình duyệt Web Push</div>
-                      <div className="text-xs text-slate-600 font-medium">Nhận nhắc giờ thi đấu & thông báo duyệt đơn đặt sân</div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleToggleFcm}
-                    className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
-                      currentUser?.fcmEnabled ? 'bg-[#168039]' : 'bg-slate-300'
-                    }`}
-                  >
-                    <div
-                      className={`bg-white w-5 h-5 rounded-full transform transition-transform ${
-                        currentUser?.fcmEnabled ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {/* Google Calendar */}
-                <div className="p-4 sm:p-5 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <Calendar className="w-5 h-5 text-[#168039] shrink-0" />
-                    <div>
-                      <div className="text-xs sm:text-sm font-bold text-slate-900">Đồng bộ Google Calendar</div>
-                      <div className="text-xs text-slate-600 font-medium">Tự động thêm lịch thi đấu đã đặt vào Google Calendar</div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleToggleCalendar}
-                    className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
-                      currentUser?.calendarConnected ? 'bg-[#168039]' : 'bg-slate-300'
-                    }`}
-                  >
-                    <div
-                      className={`bg-white w-5 h-5 rounded-full transform transition-transform ${
-                        currentUser?.calendarConnected ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
+            <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 sm:p-8">
+              {currentUser ? <IntegrationSettings user={currentUser} onUpdated={onUpdateUser} /> : <EmptyState title="Đăng nhập để quản lý kết nối" action={<Button onClick={() => onOpenAuth('login')}>Đăng nhập</Button>} />}
             </div>
           )}
 

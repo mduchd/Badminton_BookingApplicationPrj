@@ -1,5 +1,6 @@
 import React from 'react';
 import type { CourtAvailability, TimeSlot } from '../types';
+import { isSlotInRange } from '../timeRangeSelection';
 
 interface TimeSlotGridProps {
   availability?: CourtAvailability;
@@ -76,7 +77,7 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
       {/* Grid danh sách khung giờ phẳng */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 mt-5">
         {availability.slots.map((slot) => {
-          const isSelected = selectedSlot?.startTime === slot.startTime;
+          const isSelected = isSlotInRange(slot, selectedSlot);
           const isAvailable = slot.available;
 
           let btnClass = "relative flex flex-col p-3 rounded-xl border transition-colors text-left ";
@@ -100,6 +101,7 @@ export const TimeSlotGrid: React.FC<TimeSlotGridProps> = ({
               type="button"
               key={slot.startTime}
               disabled={!isAvailable}
+              aria-pressed={isSelected}
               onClick={() => onSelectSlot(slot)}
               className={btnClass}
             >
