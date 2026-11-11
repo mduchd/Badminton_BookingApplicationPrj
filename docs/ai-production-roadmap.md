@@ -2,6 +2,10 @@
 
 Ngày lập: 09/11/2026. Phạm vi: backend Spring Boot, frontend React, PostgreSQL và tích hợp DeepSeek hiện có.
 
+Cập nhật schema 11/11/2026: V21 loại bỏ bảng dự phòng `alobooking_schedule_slots`
+vì chưa có luồng nhập/đọc lịch ngoài. Khi triển khai tính năng này cần thiết kế
+schema và thêm migration mới, thay vì dựa vào bảng cũ đã loại bỏ.
+
 **1. Mục tiêu và mức ưu tiên**
 
 AI phải giúp người dùng đi từ nhu cầu tự nhiên đến một lựa chọn có thể đặt: đúng môn, địa điểm, ngày, khoảng giờ, sân con và giá. Người dùng chọn kết quả để chuyển sang quy trình giữ chỗ/đặt sân hiện có. Việc xác nhận đặt và thanh toán vẫn cần thao tác rõ ràng của người dùng.
@@ -25,7 +29,7 @@ Mục tiêu đầu tiên: “Mai 19–21h ở Cầu Giấy, cầu lông, tối �
 | Giá | Có luật theo sân/cụm sân, ngày trong tuần, nhóm khách, ngày hiệu lực | AI lấy giá thấp nhất thay vì giá khoảng giờ; hàm giá availability hiện chưa lọc ngày hiệu lực; thuật toán chia đoạn 30 phút cần kiểm tra tại ranh giới luật giá |
 | Booking | Tính tiền ở backend, snapshot giá, tạo HOLD, có thời hạn giữ chỗ | Cần nối từ kết quả chat; kiểm thử cạnh tranh, hết hạn, đổi giá, retry và idempotency |
 | PostgreSQL | Có exclusion constraint chống occupancy chồng lấn; có index lịch | Cần kiểm thử thật trên PostgreSQL và xác nhận migration đã áp dụng ở môi trường chạy |
-| Lịch ngoài | Migration V13 tạo `alobooking_schedule_slots`, có `observed_at` | Chưa thấy service/repository ingest và đọc lịch này trong Java; không được suy ra trống từ việc thiếu bản ghi |
+| Lịch ngoài | Chưa triển khai ingest/đọc lịch ngoài; bảng dự phòng V13 đã được loại bỏ ở V21 | Khi triển khai cần schema mới có thời điểm quan sát; không được suy ra trống từ việc thiếu dữ liệu |
 | Hội thoại/UI | Chat gọi API thật và hiển thị gợi ý; request có `conversationId` | Chưa có quản lý hội thoại phía server; card chưa có ngày/giờ trống/giá cả buổi/nút chọn sân |
 | Rate limit | 15 yêu cầu/phút theo khóa, lưu trong RAM | Không dùng chung giữa instance; map chưa dọn khóa không hoạt động; IP đang lấy trực tiếp từ X-Forwarded-For |
 | Xử lý lỗi | Có handler chung, timeout gọi AI | Lỗi quota đang là RuntimeException; handler chung có thể trả nội dung exception; chưa có mã lỗi AI ổn định |
@@ -99,7 +103,7 @@ Chi tiết cần chốt cho P0:
 | Snapshot lịch ngoài còn trong ngưỡng mới | Hiển thị trạng thái quan sát, nguồn và thời điểm cập nhật | Kiểm tra tại nguồn; chỉ đặt nội bộ nếu có tích hợp đặt được xác nhận |
 | Lịch ngoài thiếu, hết hạn hoặc đồng bộ lỗi | Trạng thái chưa biết; loại khỏi danh sách khẳng định còn chỗ | Kiểm tra lại tại nguồn hoặc xem sân khác |
 
-- Thiếu dòng trong `alobooking_schedule_slots` nghĩa là **chưa có dữ liệu**, không phải `AVAILABLE`.
+- Khi triển khai kho lịch ngoài mới, thiếu bản ghi phải có nghĩa là **chưa có dữ liệu**, không phải `AVAILABLE`.
 - Nếu chưa có quyền truy cập nguồn ổn định, pilot vận hành với sân nội bộ đủ điều kiện; sân ngoài vẫn có thể xuất hiện trong mục tra cứu riêng.
 - Khi triển khai đọc lịch ngoài: cần mapping mã sân con, múi giờ, thời điểm quan sát, trạng thái, độ phủ toàn khoảng và ngưỡng hết hạn theo nguồn.
 - Cần xác minh quyền truy cập/API, hạn mức, quyền lưu trữ và độ tin cậy của nguồn trước khi xây ingest. Không mặc định website có thể được thu thập liên tục.

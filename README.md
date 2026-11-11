@@ -1,5 +1,16 @@
 # Badminton-Booking-Application
 
+## Database schema
+
+Sau migration V21, schema `public` có 20 bảng: 19 bảng ứng dụng và
+`flyway_schema_history`. V21 loại bỏ `booking_calendar_links` và
+`alobooking_schedule_slots`, hai bảng không được các luồng hiện tại sử dụng.
+Google Calendar tiếp tục dùng `user_calendar_connections`, `calendar_consents`
+và `booking_deliveries`; hồ sơ danh mục AloBooking vẫn được giữ nguyên.
+
+Áp dụng V21 qua Flyway khi triển khai cùng mã mới. Giữ nguyên các migration cũ
+để database đã triển khai có thể nâng cấp mà không lỗi checksum.
+
 ## Danh mục sân AloBooking
 
 Khi backend khởi động với PostgreSQL và Flyway, migration V8 tự nhập 90 cụm sân từ `backend/src/main/resources/data/badminton_venues.json`. Mở tab **Cụm sân** trong trang **Khám phá** để xem danh mục.
