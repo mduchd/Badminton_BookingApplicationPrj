@@ -7,9 +7,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -57,17 +60,26 @@ public class CloudinaryUploadService {
             .connectTimeout(Duration.ofSeconds(15))
             .build();
 
+    private final ObjectMapper objectMapper;
+
+    public CloudinaryUploadService(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
     public UploadedImageDto uploadImage(MultipartFile file, String baseOrigin) {
-        validateImageFile(file);
+        byte[] content = validateAndRead(file);
 
         if (isCloudinaryConfigured()) {
             try {
-                return uploadToCloudinary(file);
+                return uploadToCloudinary(file, content);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                log.warn("Cloudinary upload interrupted, falling back to local storage");
             } catch (Exception ex) {
                 log.warn("Cloudinary upload failed, falling back to local storage: {}", ex.getMessage());
             }
         }
-        return saveToLocalStorage(file, baseOrigin);
+        return saveToLocalStorage(file, content, baseOrigin);
     }
 
     public boolean isCloudinaryConfigured() {
@@ -76,7 +88,11 @@ public class CloudinaryUploadService {
                 && apiSecret != null && !apiSecret.isBlank();
     }
 
-    private void validateImageFile(MultipartFile file) {
+    /**
+     * Validates size, declared content type and the real file signature (magic bytes),
+     * so a non-image file cannot be uploaded by only spoofing the Content-Type header.
+     */
+    private byte[] validateAndRead(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("Vui lòng chọn ít nhất một tệp hình ảnh hợp lệ.");
         }
@@ -85,17 +101,46 @@ public class CloudinaryUploadService {
         }
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase(Locale.ROOT))) {
-            throw new BadRequestException("Định dạng tệp không hỗ trợ. Vui lòng chọn ảnh JPG, PNG hoặc WEBP.");
+            throw new BadRequestException("Định dạng tệp không hỗ trợ. Vui lòng chọn ảnh JPG, PNG, WEBP hoặc GIF.");
         }
+        byte[] content;
+        try {
+            content = file.getBytes();
+        } catch (IOException ex) {
+            throw new BadRequestException("Không thể đọc tệp ảnh tải lên.");
+        }
+        if (detectImageType(content) == null) {
+            throw new BadRequestException("Nội dung tệp không phải là ảnh hợp lệ (JPG, PNG, WEBP hoặc GIF).");
+        }
+        return content;
     }
 
-    private UploadedImageDto uploadToCloudinary(MultipartFile file) throws Exception {
+    /** Returns the detected MIME type from magic bytes, or null if not a supported image. */
+    private String detectImageType(byte[] b) {
+        if (b.length >= 3 && (b[0] & 0xFF) == 0xFF && (b[1] & 0xFF) == 0xD8 && (b[2] & 0xFF) == 0xFF) {
+            return "image/jpeg";
+        }
+        if (b.length >= 8 && (b[0] & 0xFF) == 0x89 && b[1] == 'P' && b[2] == 'N' && b[3] == 'G'
+                && b[4] == 0x0D && b[5] == 0x0A && b[6] == 0x1A && b[7] == 0x0A) {
+            return "image/png";
+        }
+        if (b.length >= 6 && b[0] == 'G' && b[1] == 'I' && b[2] == 'F' && b[3] == '8'
+                && (b[4] == '7' || b[4] == '9') && b[5] == 'a') {
+            return "image/gif";
+        }
+        if (b.length >= 12 && b[0] == 'R' && b[1] == 'I' && b[2] == 'F' && b[3] == 'F'
+                && b[8] == 'W' && b[9] == 'E' && b[10] == 'B' && b[11] == 'P') {
+            return "image/webp";
+        }
+        return null;
+    }
+
+    private UploadedImageDto uploadToCloudinary(MultipartFile file, byte[] content) throws Exception {
         long timestamp = System.currentTimeMillis() / 1000L;
-        String paramsToSign = "folder=" + folder + "&timestamp=" + timestamp + apiSecret;
-        String signature = sha1Hex(paramsToSign);
+        String signature = sha1Hex("folder=" + folder + "&timestamp=" + timestamp + apiSecret.trim());
 
         String boundary = "----SmashCourtCloudinary" + UUID.randomUUID().toString().replace("-", "");
-        byte[] bodyBytes = buildMultipartBody(boundary, file, timestamp, signature);
+        byte[] bodyBytes = buildMultipartBody(boundary, file, content, timestamp, signature);
 
         URI endpoint = URI.create("https://api.cloudinary.com/v1_1/" + cloudName.trim() + "/image/upload");
         HttpRequest request = HttpRequest.newBuilder(endpoint)
@@ -109,15 +154,15 @@ public class CloudinaryUploadService {
             throw new IOException("Cloudinary HTTP " + response.statusCode() + ": " + response.body());
         }
 
-        String json = response.body();
-        String secureUrl = extractJsonString(json, "secure_url");
-        String publicId = extractJsonString(json, "public_id");
+        JsonNode json = objectMapper.readTree(response.body());
+        String secureUrl = json.path("secure_url").asText(null);
+        String publicId = json.path("public_id").asText(null);
         if (secureUrl == null || secureUrl.isBlank()) {
             throw new IOException("Không nhận được secure_url từ Cloudinary.");
         }
 
         return new UploadedImageDto(
-                secureUrl.replace("\\/", "/"),
+                secureUrl,
                 publicId,
                 "CLOUDINARY",
                 file.getOriginalFilename(),
@@ -125,16 +170,22 @@ public class CloudinaryUploadService {
         );
     }
 
-    private UploadedImageDto saveToLocalStorage(MultipartFile file, String baseOrigin) {
+    private UploadedImageDto saveToLocalStorage(MultipartFile file, byte[] content, String baseOrigin) {
         try {
             Path facilitiesDir = Paths.get(uploadDir, "facilities").toAbsolutePath().normalize();
             Files.createDirectories(facilitiesDir);
 
-            String ext = resolveExtension(file.getOriginalFilename(), file.getContentType());
+            // Extension is derived from the detected content, never from the client-supplied name.
+            String ext = extensionFor(detectImageType(content));
             String storedName = "sc_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + ext;
-            Path targetPath = facilitiesDir.resolve(storedName);
+            Path targetPath = facilitiesDir.resolve(storedName).normalize();
+            if (!targetPath.startsWith(facilitiesDir)) {
+                throw new BadRequestException("Tên tệp không hợp lệ.");
+            }
 
-            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+            try (InputStream in = new java.io.ByteArrayInputStream(content)) {
+                Files.copy(in, targetPath, StandardCopyOption.REPLACE_EXISTING);
+            }
 
             String origin = (baseOrigin != null && !baseOrigin.isBlank())
                     ? baseOrigin.replaceAll("/+$", "")
@@ -149,24 +200,26 @@ public class CloudinaryUploadService {
                     file.getSize()
             );
         } catch (IOException ex) {
-            throw new RuntimeException("Không thể lưu tệp ảnh tải lên: " + ex.getMessage(), ex);
+            log.error("Failed to store uploaded image locally", ex);
+            throw new RuntimeException("Không thể lưu tệp ảnh tải lên.", ex);
         }
     }
 
-    private byte[] buildMultipartBody(String boundary, MultipartFile file, long timestamp, String signature) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+    private byte[] buildMultipartBody(String boundary, MultipartFile file, byte[] content,
+                                      long timestamp, String signature) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream(content.length + 1024);
         writeFormField(out, boundary, "api_key", apiKey.trim());
         writeFormField(out, boundary, "timestamp", String.valueOf(timestamp));
         writeFormField(out, boundary, "folder", folder);
         writeFormField(out, boundary, "signature", signature);
 
-        String filename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "upload.jpg";
-        String contentType = file.getContentType() != null ? file.getContentType() : "image/jpeg";
+        String filename = sanitizeFilename(file.getOriginalFilename());
+        String contentType = detectImageType(content);
 
         out.write(("--" + boundary + "\r\n").getBytes(StandardCharsets.UTF_8));
         out.write(("Content-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\"\r\n").getBytes(StandardCharsets.UTF_8));
         out.write(("Content-Type: " + contentType + "\r\n\r\n").getBytes(StandardCharsets.UTF_8));
-        out.write(file.getBytes());
+        out.write(content);
         out.write("\r\n".getBytes(StandardCharsets.UTF_8));
         out.write(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
         return out.toByteArray();
@@ -178,31 +231,27 @@ public class CloudinaryUploadService {
         out.write((value + "\r\n").getBytes(StandardCharsets.UTF_8));
     }
 
+    /** Strips path segments and characters that could break the multipart header. */
+    private String sanitizeFilename(String originalName) {
+        if (originalName == null || originalName.isBlank()) {
+            return "upload.jpg";
+        }
+        String name = originalName.replace('\\', '/');
+        name = name.substring(name.lastIndexOf('/') + 1);
+        name = name.replaceAll("[\"\\r\\n]", "_");
+        return name.isBlank() ? "upload.jpg" : name;
+    }
+
     private String sha1Hex(String value) throws Exception {
         MessageDigest md = MessageDigest.getInstance("SHA-1");
         byte[] digest = md.digest(value.getBytes(StandardCharsets.UTF_8));
         return HexFormat.of().formatHex(digest);
     }
 
-    private String extractJsonString(String json, String key) {
-        String pattern = "\"" + key + "\":\"";
-        int idx = json.indexOf(pattern);
-        if (idx == -1) return null;
-        int start = idx + pattern.length();
-        int end = json.indexOf("\"", start);
-        return end > start ? json.substring(start, end) : null;
-    }
-
-    private String resolveExtension(String originalName, String contentType) {
-        if (originalName != null && originalName.contains(".")) {
-            String ext = originalName.substring(originalName.lastIndexOf('.')).toLowerCase(Locale.ROOT);
-            if (ext.matches("\\.(jpg|jpeg|png|webp|gif)")) {
-                return ext;
-            }
-        }
-        if ("image/png".equalsIgnoreCase(contentType)) return ".png";
-        if ("image/webp".equalsIgnoreCase(contentType)) return ".webp";
-        if ("image/gif".equalsIgnoreCase(contentType)) return ".gif";
+    private String extensionFor(String mimeType) {
+        if ("image/png".equals(mimeType)) return ".png";
+        if ("image/webp".equals(mimeType)) return ".webp";
+        if ("image/gif".equals(mimeType)) return ".gif";
         return ".jpg";
     }
 }

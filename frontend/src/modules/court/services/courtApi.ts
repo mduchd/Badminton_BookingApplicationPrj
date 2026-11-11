@@ -22,6 +22,10 @@ import type {
   UploadedImageItem,
 } from '../../types/court'
 
+const MAX_UPLOAD_FILES = 10
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+
 export class ApiHttpError extends Error {
   status: number
   constructor(message: string, status: number) {
@@ -457,6 +461,17 @@ export const courtApi = {
 
   uploadImages: async (files: File[]): Promise<UploadedImageItem[]> => {
     if (files.length === 0) return []
+    if (files.length > MAX_UPLOAD_FILES) {
+      throw new Error(`Mỗi lần chỉ được tải lên tối đa ${MAX_UPLOAD_FILES} ảnh.`)
+    }
+    for (const file of files) {
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        throw new Error(`"${file.name}" không đúng định dạng. Chỉ hỗ trợ JPG, PNG, WEBP hoặc GIF.`)
+      }
+      if (file.size > MAX_UPLOAD_BYTES) {
+        throw new Error(`"${file.name}" vượt quá dung lượng tối đa 10MB.`)
+      }
+    }
     const formData = new FormData()
     files.forEach((file) => formData.append('files', file))
     return apiRequest('/owner/uploads/images', { method: 'POST', body: formData })
