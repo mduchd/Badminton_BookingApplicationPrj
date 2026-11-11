@@ -205,6 +205,10 @@ public class OwnerCourtController {
             throw new BadRequestException("Vui lòng chọn ít nhất một tệp ảnh để tải lên.");
         }
 
+        if (toUpload.size() > 10) {
+            throw new BadRequestException("Mỗi lần chỉ được tải lên tối đa 10 ảnh.");
+        }
+
         String baseOrigin = buildBaseOrigin(servletRequest);
         List<UploadedImageDto> uploaded = toUpload.stream()
                 .map(file -> cloudinaryUploadService.uploadImage(file, baseOrigin))
