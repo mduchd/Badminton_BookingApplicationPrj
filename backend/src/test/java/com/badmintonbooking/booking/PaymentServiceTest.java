@@ -234,4 +234,23 @@ class PaymentServiceTest {
         assertThrows(BadRequestException.class, () -> service.processPayOsWebhook(payload(Map.of())));
         verifyNoInteractions(payments, bookings);
     }
+
+    @Test
+    void paymentResponseSafelySerializesWithoutLazyException() {
+        payment.setId(10L);
+        payment.setBookingId(100L);
+        payment.setAmount(BigDecimal.valueOf(180000));
+        payment.setStatus(PaymentStatus.SUCCESS);
+        payment.setTransactionRef("TRANS-123");
+        payment.setQrCode("000201-qr-code");
+
+        com.badmintonbooking.booking.dto.PaymentResponse response = com.badmintonbooking.booking.dto.PaymentResponse.from(payment);
+        assertNotNull(response);
+        assertEquals(10L, response.id());
+        assertEquals(100L, response.bookingId());
+        assertEquals(PaymentStatus.SUCCESS, response.status());
+        assertEquals(BigDecimal.valueOf(180000), response.amount());
+        assertEquals("TRANS-123", response.transactionRef());
+        assertEquals("000201-qr-code", response.qrCode());
+    }
 }

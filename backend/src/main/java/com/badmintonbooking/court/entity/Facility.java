@@ -87,10 +87,10 @@ public class Facility {
     private BigDecimal maxPrice = BigDecimal.valueOf(140000);
 
     @Column(nullable = false, length = 50)
-    private String status = "ACTIVE";
+    private String status = "PENDING_APPROVAL";
 
     @Column(name = "is_approved", nullable = false)
-    private Boolean isApproved = true;
+    private Boolean isApproved = false;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "facility_amenities", joinColumns = @JoinColumn(name = "facility_id"))
@@ -191,7 +191,7 @@ public class Facility {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
-    public Boolean getIsApproved() { return isApproved != null ? isApproved : true; }
+    public Boolean getIsApproved() { return isApproved != null ? isApproved : false; }
     public void setIsApproved(Boolean isApproved) { this.isApproved = isApproved; }
 
     public Set<String> getAmenitySet() { return amenitySet; }

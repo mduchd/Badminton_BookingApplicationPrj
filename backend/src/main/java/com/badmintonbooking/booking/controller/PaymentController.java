@@ -3,6 +3,7 @@ package com.badmintonbooking.booking.controller;
 import com.badmintonbooking.booking.dto.CheckoutRequest;
 import com.badmintonbooking.booking.dto.CheckoutResponse;
 import com.badmintonbooking.booking.dto.MockPayRequest;
+import com.badmintonbooking.booking.dto.PaymentResponse;
 import com.badmintonbooking.booking.entity.Payment;
 import com.badmintonbooking.booking.service.PaymentService;
 import com.badmintonbooking.common.dto.ApiResponse;
@@ -85,10 +86,10 @@ public class PaymentController {
      * Lấy thông tin thanh toán theo mã booking
      */
     @GetMapping("/payments/booking/{bookingId}")
-    public ResponseEntity<ApiResponse<Payment>> getPaymentByBooking(
+    public ResponseEntity<ApiResponse<PaymentResponse>> getPaymentByBooking(
             @PathVariable("bookingId") Long bookingId, Authentication authentication
     ) {
         Payment payment = paymentService.getPaymentByBookingId(bookingId, currentUserId(authentication));
-        return ResponseEntity.ok(ApiResponse.ok(payment, "Lấy thông tin thanh toán thành công"));
+        return ResponseEntity.ok(ApiResponse.ok(PaymentResponse.from(payment), "Lấy thông tin thanh toán thành công"));
     }
 }

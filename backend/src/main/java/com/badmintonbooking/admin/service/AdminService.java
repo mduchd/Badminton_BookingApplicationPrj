@@ -70,7 +70,7 @@ public class AdminService {
             return new AdminFacilityDto(f.getId(), f.getOwnerId(), owner != null ? owner.getFullName() : "N/A",
                     owner != null ? owner.getEmail() : "N/A", owner != null ? owner.getPhone() : "N/A", f.getName(), f.getCity(),
                     f.getDistrict(), f.getWard(), f.getAddress(), f.getImageUrl(), f.getLogoUrl(), f.getOpenTime(), f.getCloseTime(),
-                    f.getStatus(), "ACTIVE".equalsIgnoreCase(f.getStatus()) || "PAUSED".equalsIgnoreCase(f.getStatus()),
+                    f.getStatus(), Boolean.TRUE.equals(f.getIsApproved()),
                     counts.getOrDefault(f.getId(), 0L).intValue(), f.getRejectionReason(), f.getCreatedAt(), f.getUpdatedAt());
         }).toList();
         return new PageImpl<>(items, result.getPageable(), result.getTotalElements());
@@ -218,7 +218,7 @@ public class AdminService {
                 .map(f -> {
                     User owner = f.getOwnerId() != null ? ownerMap.get(f.getOwnerId()) : null;
                     int courtsCount = courtMap.getOrDefault(f.getId(), Collections.emptyList()).size();
-                    boolean isApproved = "ACTIVE".equalsIgnoreCase(f.getStatus()) || "PAUSED".equalsIgnoreCase(f.getStatus());
+                    boolean isApproved = Boolean.TRUE.equals(f.getIsApproved());
                     return new AdminFacilityDto(
                             f.getId(),
                             f.getOwnerId(),
@@ -257,12 +257,14 @@ public class AdminService {
         String action = request.action().toUpperCase();
         if ("APPROVE".equals(action)) {
             facility.setStatus("ACTIVE");
+            facility.setIsApproved(true);
             facility.setRejectionReason(null);
             facility.setUpdatedAt(OffsetDateTime.now());
             facilityRepository.save(facility);
             log.info("Admin [{}] đã phê duyệt cụm sân #{} - {}", getCurrentAdminEmail(), facilityId, facility.getName());
         } else if ("REJECT".equals(action)) {
             facility.setStatus("REJECTED");
+            facility.setIsApproved(false);
             facility.setRejectionReason(request.rejectionReason() != null ? request.rejectionReason().trim() : "Hồ sơ chưa đạt tiêu chuẩn");
             facility.setUpdatedAt(OffsetDateTime.now());
             facilityRepository.save(facility);
@@ -273,7 +275,7 @@ public class AdminService {
 
         User owner = facility.getOwnerId() != null ? userRepository.findById(facility.getOwnerId()).orElse(null) : null;
         int courtsCount = courtRepository.findByFacilityId(facilityId).size();
-        boolean isApproved = "ACTIVE".equalsIgnoreCase(facility.getStatus());
+        boolean isApproved = Boolean.TRUE.equals(facility.getIsApproved());
 
         return new AdminFacilityDto(
                 facility.getId(),
@@ -309,6 +311,11 @@ public class AdminService {
 
         String targetStatus = request.status().toUpperCase();
         facility.setStatus(targetStatus);
+        if ("REJECTED".equals(targetStatus)) {
+            facility.setIsApproved(false);
+        } else if ("ACTIVE".equals(targetStatus) && (facility.getIsApproved() == null || !facility.getIsApproved())) {
+            facility.setIsApproved(true);
+        }
         facility.setUpdatedAt(OffsetDateTime.now());
         facilityRepository.save(facility);
 
@@ -317,7 +324,7 @@ public class AdminService {
 
         User owner = facility.getOwnerId() != null ? userRepository.findById(facility.getOwnerId()).orElse(null) : null;
         int courtsCount = courtRepository.findByFacilityId(facilityId).size();
-        boolean isApproved = "ACTIVE".equalsIgnoreCase(facility.getStatus()) || "PAUSED".equalsIgnoreCase(facility.getStatus());
+        boolean isApproved = Boolean.TRUE.equals(facility.getIsApproved());
 
         return new AdminFacilityDto(
                 facility.getId(),

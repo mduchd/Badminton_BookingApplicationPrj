@@ -2,6 +2,7 @@ package com.badmintonbooking.booking.entity;
 
 import com.badmintonbooking.booking.enums.PaymentProvider;
 import com.badmintonbooking.booking.enums.PaymentStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -18,6 +19,7 @@ public class Payment {
     @Column(name = "booking_id", nullable = false)
     private Long bookingId;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "booking_id", insertable = false, updatable = false)
     private Booking booking;
@@ -62,6 +64,7 @@ public class Payment {
     public Long getBookingId() { return bookingId; }
     public void setBookingId(Long bookingId) { this.bookingId = bookingId; }
 
+    @JsonIgnore
     public Booking getBooking() { return booking; }
     public void setBooking(Booking booking) { this.booking = booking; }
 

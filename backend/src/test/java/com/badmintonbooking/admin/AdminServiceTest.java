@@ -129,6 +129,8 @@ public class AdminServiceTest {
 
         assertEquals("ACTIVE", dto.status());
         assertTrue(dto.isApproved());
+        assertTrue(f.getIsApproved());
+        assertEquals("ACTIVE", f.getStatus());
         verify(facilityRepository, times(1)).save(f);
     }
 
@@ -148,6 +150,8 @@ public class AdminServiceTest {
 
         assertEquals("REJECTED", dto.status());
         assertFalse(dto.isApproved());
+        assertFalse(f.getIsApproved());
+        assertEquals("REJECTED", f.getStatus());
         assertEquals("Thiếu ảnh các sân con thực tế", dto.rejectionReason());
         verify(facilityRepository, times(1)).save(f);
     }

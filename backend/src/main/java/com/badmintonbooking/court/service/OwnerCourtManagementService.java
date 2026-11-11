@@ -90,7 +90,17 @@ public class OwnerCourtManagementService {
 
         Facility facility = new Facility();
         facility.setOwnerId(actor.getId());
-        applyFacilityFields(facility, req, true);
+        applyFacilityFields(facility, req, true, actor);
+
+        if (!ownerAuthService.isAdmin(actor)) {
+            facility.setStatus("PENDING_APPROVAL");
+            facility.setIsApproved(false);
+        } else {
+            if (facility.getStatus() == null || "PENDING_APPROVAL".equalsIgnoreCase(facility.getStatus())) {
+                facility.setStatus("ACTIVE");
+                facility.setIsApproved(true);
+            }
+        }
 
         Facility saved = facilityRepository.save(facility);
         syncGalleryImages(saved.getId(), req.imageUrl(), req.galleryImages());
@@ -119,7 +129,13 @@ public class OwnerCourtManagementService {
         User actor = ownerAuthService.requireCurrentOwnerOrAdmin();
         Facility facility = requireManagedFacility(facilityId, actor);
 
-        applyFacilityFields(facility, req, false);
+        if (!ownerAuthService.isAdmin(actor) && isAdminRestricted(facility)) {
+            if (req.status() != null && "ACTIVE".equalsIgnoreCase(normalizeFacilityStatus(req.status()))) {
+                throw new BadRequestException("Cụm sân đang trong trạng thái kiểm duyệt hoặc tạm khóa/đình chỉ bởi Quản trị viên, Chủ sân không thể tự chuyển sang trạng thái hoạt động.");
+            }
+        }
+
+        applyFacilityFields(facility, req, false, actor);
         facility.setUpdatedAt(OffsetDateTime.now());
         Facility saved = facilityRepository.save(facility);
 
@@ -135,6 +151,11 @@ public class OwnerCourtManagementService {
     public FacilitySummaryDto updateFacilityStatus(Long facilityId, String nextStatus) {
         User actor = ownerAuthService.requireCurrentOwnerOrAdmin();
         Facility facility = requireManagedFacility(facilityId, actor);
+
+        if (!ownerAuthService.isAdmin(actor) && isAdminRestricted(facility)) {
+            throw new BadRequestException("Cụm sân đang trong trạng thái kiểm duyệt hoặc tạm khóa/đình chỉ bởi Quản trị viên, Chủ sân không thể tự thay đổi trạng thái.");
+        }
+
         String normalized = normalizeFacilityStatus(nextStatus);
         facility.setStatus(normalized);
         facility.setUpdatedAt(OffsetDateTime.now());
@@ -667,7 +688,17 @@ public class OwnerCourtManagementService {
         return facility;
     }
 
-    private void applyFacilityFields(Facility facility, FacilityUpsertRequest req, boolean isNew) {
+    private boolean isAdminRestricted(Facility facility) {
+        if (facility == null) return false;
+        String status = facility.getStatus();
+        boolean isSuspendedOrPaused = "PAUSED".equalsIgnoreCase(status)
+                || "SUSPENDED".equalsIgnoreCase(status)
+                || "REJECTED".equalsIgnoreCase(status);
+        boolean notApproved = !Boolean.TRUE.equals(facility.getIsApproved());
+        return isSuspendedOrPaused || notApproved;
+    }
+
+    private void applyFacilityFields(Facility facility, FacilityUpsertRequest req, boolean isNew, User actor) {
         String cleanName = req.name().trim();
         facility.setName(cleanName);
 
@@ -723,7 +754,11 @@ public class OwnerCourtManagementService {
             facility.setSportType(req.sportType().trim().toLowerCase(Locale.ROOT));
         }
         if (req.status() != null && !req.status().isBlank()) {
-            facility.setStatus(normalizeFacilityStatus(req.status()));
+            if (!isNew && isAdminRestricted(facility) && !ownerAuthService.isAdmin(actor)) {
+                // Giữ nguyên trạng thái kiểm soát do Admin áp đặt (PAUSED / SUSPENDED / REJECTED)
+            } else {
+                facility.setStatus(normalizeFacilityStatus(req.status()));
+            }
         }
 
         if (req.amenities() != null) {

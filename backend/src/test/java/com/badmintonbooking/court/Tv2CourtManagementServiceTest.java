@@ -289,6 +289,56 @@ class Tv2CourtManagementServiceTest {
         assertEquals(BookingStatus.COMPLETED, booking.getStatus());
     }
 
+    @Test
+    void ownerCannotOverrideAdminSuspendedFacilityViaUpdateStatus() {
+        User owner = new User();
+        owner.setId(2L);
+        owner.setRole("COURT_OWNER");
+
+        Facility facility = new Facility();
+        facility.setId(1L);
+        facility.setOwnerId(2L);
+        facility.setStatus("SUSPENDED");
+        facility.setIsApproved(true);
+
+        when(ownerAuthService.requireCurrentOwnerOrAdmin()).thenReturn(owner);
+        when(ownerAuthService.isAdmin(owner)).thenReturn(false);
+        when(facilityRepository.findById(1L)).thenReturn(Optional.of(facility));
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () ->
+                ownerService.updateFacilityStatus(1L, "ACTIVE")
+        );
+        assertTrue(ex.getMessage().contains("Quản trị viên"));
+    }
+
+    @Test
+    void ownerCannotOverrideAdminPausedFacilityViaUpdateFacility() {
+        User owner = new User();
+        owner.setId(2L);
+        owner.setRole("COURT_OWNER");
+
+        Facility facility = new Facility();
+        facility.setId(1L);
+        facility.setOwnerId(2L);
+        facility.setStatus("PAUSED");
+        facility.setIsApproved(true);
+
+        when(ownerAuthService.requireCurrentOwnerOrAdmin()).thenReturn(owner);
+        when(ownerAuthService.isAdmin(owner)).thenReturn(false);
+        when(facilityRepository.findById(1L)).thenReturn(Optional.of(facility));
+
+        FacilityUpsertRequest req = new FacilityUpsertRequest(
+                "Sân Test", "Hà Nội", "Cầu Giấy", "Dịch Vọng", "123 Cầu Giấy",
+                null, 21.0, 105.0, LocalTime.of(6, 0), LocalTime.of(22, 0),
+                "0912345678", null, null, null, null, List.of(), List.of(), "badminton", "ACTIVE", List.of()
+        );
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () ->
+                ownerService.updateFacility(1L, req)
+        );
+        assertTrue(ex.getMessage().contains("Quản trị viên"));
+    }
+
     private Booking managedBooking(BookingStatus status) {
         User owner = new User();
         owner.setId(2L);

@@ -95,7 +95,7 @@ public class PublicFacilityController {
         return ResponseEntity.ok(facilityQueryService.getFacilityPriceRules(id));
     }
     private void requirePublicFacility(FacilitySummaryDto facility) {
-        if (!Boolean.TRUE.equals(facility.isApproved()) || "INACTIVE".equalsIgnoreCase(facility.status())) {
+        if (!Boolean.TRUE.equals(facility.isApproved()) || !"ACTIVE".equalsIgnoreCase(facility.status())) {
             throw new ResourceNotFoundException("Không tìm thấy cụm sân.");
         }
     }
