@@ -9,6 +9,4 @@ public interface BookingDeliveryRepository extends JpaRepository<BookingDelivery
     java.util.List<Long> candidates(@Param("today") java.time.LocalDate today, @Param("now") java.time.OffsetDateTime now, org.springframework.data.domain.Pageable page);
     @Modifying @Query("UPDATE BookingDelivery d SET d.calendarStatus=null WHERE d.bookingId IN (SELECT b.id FROM Booking b WHERE b.customerId=:userId)")
     void resetCalendar(@Param("userId") Long userId);
-    @Modifying @Query("UPDATE BookingDelivery d SET d.pushStatus=null WHERE d.bookingId IN (SELECT b.id FROM Booking b WHERE b.customerId=:userId)")
-    void resetPush(@Param("userId") Long userId);
 }

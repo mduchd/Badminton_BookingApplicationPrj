@@ -10,7 +10,6 @@ import java.util.List;
 @Repository
 public interface CourtRepository extends JpaRepository<Court, Long> {
     List<Court> findByFacilityIdInAndStatus(Collection<Long> facilityIds, String status);
-    List<Court> findByFacilityIdAndStatus(Long facilityId, String status);
     List<Court> findByFacilityId(Long facilityId);
     List<Court> findByFacilityIdOrderByCourtNumberAscIdAsc(Long facilityId);
     List<Court> findByFacilityIdInOrderByCourtNumberAscIdAsc(Collection<Long> facilityIds);

@@ -11,7 +11,6 @@ import org.springframework.stereotype.Repository;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface CourtOccupancyRepository extends JpaRepository<CourtOccupancy, Long> {
@@ -47,8 +46,6 @@ public interface CourtOccupancyRepository extends JpaRepository<CourtOccupancy, 
             @Param("occupancyType") OccupancyType occupancyType,
             @Param("activeStatus") ActiveStatus activeStatus
     );
-
-    Optional<CourtOccupancy> findByBookingIdAndActiveStatus(Long bookingId, ActiveStatus activeStatus);
 
     List<CourtOccupancy> findByBookingId(Long bookingId);
 }

@@ -74,10 +74,5 @@ export const bookingApi = {
   },
 };
 
-export const getCourtAvailability = bookingApi.getCourtAvailability;
-export const createHeldBooking = bookingApi.createHeldBooking;
-export const getMyBookings = bookingApi.getMyBookings;
-export const getBookingById = bookingApi.getBookingById;
-export const cancelBooking = bookingApi.cancelBooking;
 export const createCheckout = bookingApi.createCheckout;
 export const getPaymentByBookingId = bookingApi.getPaymentByBookingId;

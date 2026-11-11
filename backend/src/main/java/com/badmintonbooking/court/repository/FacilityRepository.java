@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface FacilityRepository extends JpaRepository<Facility, Long>, JpaSpecificationExecutor<Facility> {
@@ -22,20 +21,7 @@ public interface FacilityRepository extends JpaRepository<Facility, Long>, JpaSp
 
     List<Facility> findAllByOrderByCreatedAtDesc();
 
-    Optional<Facility> findBySlug(String slug);
-
     boolean existsBySlug(String slug);
-
-    List<Facility> findByDistrictAndStatus(String district, String status);
-
-    @Query("SELECT f FROM Facility f WHERE f.status = 'ACTIVE' " +
-           "AND (:district IS NULL OR LOWER(f.district) LIKE LOWER(CONCAT('%', CAST(:district AS string), '%')) " +
-           "     OR LOWER(f.address) LIKE LOWER(CONCAT('%', CAST(:district AS string), '%'))) " +
-           "AND (:sportType IS NULL OR LOWER(f.sportType) = LOWER(CAST(:sportType AS string)))")
-    List<Facility> searchActiveFacilities(
-            @Param("district") String district,
-            @Param("sportType") String sportType
-    );
 
     @Query("SELECT DISTINCT f FROM Facility f " +
            "WHERE f.status = 'ACTIVE' AND f.isApproved = true " +

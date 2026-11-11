@@ -31,8 +31,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             LocalDate toDate
     );
 
-    List<Booking> findByCourtIdAndBookingDate(Long courtId, LocalDate bookingDate);
-
     boolean existsByCourtId(Long courtId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
