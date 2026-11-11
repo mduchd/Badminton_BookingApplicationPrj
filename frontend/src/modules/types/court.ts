@@ -43,7 +43,7 @@ export interface Facility {
   description: string
   ownerId: string
   isApproved: boolean
-  status: 'active' | 'paused' | 'maintenance' | 'inactive' | 'ACTIVE' | 'PENDING_APPROVAL' | 'PAUSED' | 'REJECTED'
+  status: 'active' | 'paused' | 'maintenance' | 'inactive' | 'ACTIVE' | 'PENDING_APPROVAL' | 'PAUSED' | 'REJECTED' | 'SUSPENDED' | 'INACTIVE' | 'MAINTENANCE'
   rejectionReason?: string
   subCourtCount?: number
   subCourts: SubCourt[]

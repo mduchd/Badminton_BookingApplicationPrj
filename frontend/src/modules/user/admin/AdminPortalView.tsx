@@ -1,5 +1,5 @@
 import { DialogFrame } from '../../../components/shared/DialogFrame'
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { authStorage } from '../auth/authApi'
 import {
@@ -100,19 +100,25 @@ export const AdminPortalView: React.FC = () => {
     openHours: f.openTime && f.closeTime ? `${f.openTime.slice(0, 5)} – ${f.closeTime.slice(0, 5)}` : '', rating: 0, reviewCount: 0,
     pricePerHour: 0, amenities: [], latitude: 0, longitude: 0, phone: f.ownerPhone || '',
     description: '', ownerId: String(f.ownerId || ''), isApproved: f.isApproved,
-    status: f.status === 'ACTIVE' ? 'active' : 'paused',
+    rejectionReason: f.rejectionReason,
+    status: f.status === 'ACTIVE' ? 'active' : f.status as Facility['status'],
     subCourts: Array.from({ length: f.subCourtCount }, (_, i) => ({
       id: String(i), facilityId: String(f.id), name: `Sân ${i + 1}`, courtType: 'standard' as const, status: 'active' as const,
     })),
   })
 
-  const loadDashboardData = () => Promise.all([
+  const dashboardLoadVersion = useRef(0)
+  const loadDashboardData = () => {
+    const version = ++dashboardLoadVersion.current
+    return Promise.all([
     adminApi.getDashboardMetrics(), adminApi.getUsers(), adminApi.getTransactions(), adminApi.getSystemSettings(),
   ]).then(([dashboard, userData, transactionData, settingsData]) => {
+    if (version !== dashboardLoadVersion.current) return
     setMetrics(dashboard); setFacilityRefresh(value => value + 1)
     setUsers(userData); setTransactions(transactionData); setSettings(settingsData)
   }).catch(() => toast.error('Không thể tải dữ liệu quản trị. Vui lòng thử lại.'))
-    .finally(() => setLoading(false))
+    .finally(() => { if (version === dashboardLoadVersion.current) setLoading(false) })
+  }
 
   useEffect(() => {
     void loadDashboardData()
@@ -178,7 +184,7 @@ export const AdminPortalView: React.FC = () => {
     }
     const updated = facilities.map((f) => {
       if (f.id === selectedFacility.id) {
-        return { ...f, isApproved: false, status: 'paused' as const, rejectionReason: reason }
+        return { ...f, isApproved: false, status: 'REJECTED' as const, rejectionReason: reason }
       }
       return f
     })

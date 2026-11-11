@@ -106,9 +106,11 @@ function mapFacilityDto(dto: FacilityDto): Facility {
   const status: Facility['status'] =
     rawStatus === 'MAINTENANCE'
       ? 'maintenance'
-      : rawStatus === 'INACTIVE' || rawStatus === 'PAUSED'
-      ? 'paused'
-      : 'active'
+      : rawStatus === 'ACTIVE'
+      ? 'active'
+      : ['PAUSED', 'SUSPENDED', 'PENDING_APPROVAL', 'REJECTED'].includes(rawStatus)
+      ? rawStatus as Facility['status']
+      : 'inactive'
 
   const openTime = normalizeTimeStr(dto.openTime, '05:30')
   const closeTime = normalizeTimeStr(dto.closeTime, '23:00')
@@ -163,7 +165,8 @@ function mapFacilityDto(dto: FacilityDto): Facility {
     messengerUrl: dto.messengerUrl || '',
     description: dto.description || '',
     ownerId: String(dto.ownerId ?? '2'),
-    isApproved: dto.isApproved !== false,
+    isApproved: dto.isApproved === true,
+    rejectionReason: dto.rejectionReason,
     status,
     subCourts: Array.isArray(dto.courts)
       ? dto.courts.map((c) => mapCourtDto(c, id))

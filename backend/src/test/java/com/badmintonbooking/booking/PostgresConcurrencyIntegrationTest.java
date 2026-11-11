@@ -26,6 +26,7 @@ class PostgresConcurrencyIntegrationTest {
 
     @Test void realBookingsSerializeRetriesAndCompetingCustomers() throws Exception {
         var facility = new Facility(); facility.setName("Booking concurrency fixture"); facility.setAddress("Isolated test");
+        facility.setStatus("ACTIVE"); facility.setIsApproved(true);
         facility = facilities.saveAndFlush(facility);
         var court = new Court(); court.setFacilityId(facility.getId()); court.setName("Concurrent court");
         court = courts.saveAndFlush(court);

@@ -96,9 +96,9 @@ public class OwnerCourtManagementService {
             facility.setStatus("PENDING_APPROVAL");
             facility.setIsApproved(false);
         } else {
+            facility.setIsApproved(true);
             if (facility.getStatus() == null || "PENDING_APPROVAL".equalsIgnoreCase(facility.getStatus())) {
                 facility.setStatus("ACTIVE");
-                facility.setIsApproved(true);
             }
         }
 
@@ -171,7 +171,10 @@ public class OwnerCourtManagementService {
         if (existingBookings.isEmpty()) {
             facilityRepository.delete(facility);
         } else {
-            facility.setStatus("INACTIVE");
+            // Deactivation must never erase an administrator's moderation decision.
+            if (ownerAuthService.isAdmin(actor) || !isAdminRestricted(facility)) {
+                facility.setStatus("INACTIVE");
+            }
             facility.setUpdatedAt(OffsetDateTime.now());
             facilityRepository.save(facility);
         }
@@ -234,20 +237,13 @@ public class OwnerCourtManagementService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sân con với id: " + courtId));
         Facility facility = requireManagedFacility(court.getFacilityId(), actor);
 
-        boolean hasActiveBookings = !bookingRepository.findByCourtIdAndBookingDate(courtId, LocalDate.now()).isEmpty();
-        if (hasActiveBookings) {
+        if (bookingRepository.existsByCourtId(courtId)) {
             court.setStatus("INACTIVE");
             court.setUpdatedAt(OffsetDateTime.now());
             courtRepository.save(court);
         } else {
-            try {
-                courtRepository.delete(court);
-                courtRepository.flush();
-            } catch (Exception ex) {
-                court.setStatus("INACTIVE");
-                court.setUpdatedAt(OffsetDateTime.now());
-                courtRepository.save(court);
-            }
+            courtRepository.delete(court);
+            courtRepository.flush();
         }
         recalculateFacilityPriceBounds(facility);
     }
@@ -298,6 +294,14 @@ public class OwnerCourtManagementService {
         }
         Facility facility = requireManagedFacility(facId, actor);
         validatePriceRuleWindow(req);
+
+        if (req.courtId() != null) {
+            Court target = courtRepository.findById(req.courtId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sân con để áp bảng giá."));
+            if (!facility.getId().equals(target.getFacilityId())) {
+                throw new BadRequestException("Sân con không thuộc cụm sân đã chọn.");
+            }
+        }
 
         applyPriceRuleFields(rule, req);
         PriceRule saved = priceRuleRepository.save(rule);
@@ -880,11 +884,15 @@ public class OwnerCourtManagementService {
     }
 
     private String normalizeFacilityStatus(String raw) {
-        if (raw == null) return "ACTIVE";
-        String upper = raw.trim().toUpperCase(Locale.ROOT);
-        if ("PAUSED".equals(upper) || "INACTIVE".equals(upper)) return "INACTIVE";
-        if ("MAINTENANCE".equals(upper)) return "MAINTENANCE";
-        return "ACTIVE";
+        if (raw == null || raw.isBlank()) {
+            throw new BadRequestException("Thiếu trạng thái vận hành cụm sân.");
+        }
+        return switch (raw.trim().toUpperCase(Locale.ROOT)) {
+            case "ACTIVE" -> "ACTIVE";
+            case "PAUSED", "INACTIVE" -> "INACTIVE";
+            case "MAINTENANCE" -> "MAINTENANCE";
+            default -> throw new BadRequestException("Trạng thái vận hành cụm sân không hợp lệ.");
+        };
     }
 
     private List<OwnerBookingItemDto> toOwnerBookingDtos(List<Booking> bookings, Map<Long, Facility> facMap) {

@@ -99,6 +99,8 @@ class AvailabilityServiceTest {
         mockCourt.setName("Sân 1");
 
         mockFacility = new Facility();
+        mockFacility.setStatus("ACTIVE");
+        mockFacility.setIsApproved(true);
         mockFacility.setId(10L);
         mockFacility.setName("Cụm Sân Cầu Giấy");
         mockFacility.setOpenTime(LocalTime.of(6, 0));

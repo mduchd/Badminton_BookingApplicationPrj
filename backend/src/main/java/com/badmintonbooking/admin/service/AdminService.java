@@ -51,8 +51,8 @@ public class AdminService {
             if (district != null && !district.isBlank() && !"ALL".equalsIgnoreCase(district))
                 conditions.add(cb.equal(root.get("district"), district));
             if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
-                if ("APPROVED".equals(status)) conditions.add(root.get("status").in("ACTIVE", "PAUSED"));
-                else if ("PENDING".equals(status)) conditions.add(cb.not(root.get("status").in("ACTIVE", "PAUSED")));
+                if ("APPROVED".equalsIgnoreCase(status)) conditions.add(cb.isTrue(root.get("isApproved")));
+                else if ("PENDING".equalsIgnoreCase(status)) conditions.add(root.get("status").in("PENDING_APPROVAL", "PENDING"));
                 else conditions.add(cb.equal(root.get("status"), status));
             }
             return cb.and(conditions.toArray(jakarta.persistence.criteria.Predicate[]::new));
@@ -208,7 +208,11 @@ public class AdminService {
                         if (!matchName && !matchAddress) return false;
                     }
                     if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
-                        if (!status.equalsIgnoreCase(f.getStatus())) return false;
+                        if ("APPROVED".equalsIgnoreCase(status)) {
+                            if (!Boolean.TRUE.equals(f.getIsApproved())) return false;
+                        } else if ("PENDING".equalsIgnoreCase(status)) {
+                            if (!List.of("PENDING_APPROVAL", "PENDING").contains(f.getStatus())) return false;
+                        } else if (!status.equalsIgnoreCase(f.getStatus())) return false;
                     }
                     if (district != null && !district.isBlank() && !"ALL".equalsIgnoreCase(district)) {
                         if (f.getDistrict() == null || !f.getDistrict().equalsIgnoreCase(district)) return false;
@@ -310,6 +314,9 @@ public class AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cụm sân #" + facilityId));
 
         String targetStatus = request.status().toUpperCase();
+        if (!List.of("ACTIVE", "PAUSED", "SUSPENDED", "REJECTED", "INACTIVE", "MAINTENANCE").contains(targetStatus)) {
+            throw new BadRequestException("Trạng thái vận hành cụm sân không hợp lệ.");
+        }
         facility.setStatus(targetStatus);
         if ("REJECTED".equals(targetStatus)) {
             facility.setIsApproved(false);

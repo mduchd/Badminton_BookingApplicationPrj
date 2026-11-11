@@ -35,6 +35,8 @@ class FacilityPaginationIntegrationTest {
     void filtersBeforePagingAndPreservesStableOrder() throws Exception {
         for (int i = 0; i < 25; i++) {
             Facility facility = new Facility();
+            facility.setStatus("ACTIVE");
+            facility.setIsApproved(true);
             facility.setName("Pagination " + i);
             facility.setAddress("Test address");
             facility.setDistrict(i < 13 ? "Quan A" : "Quan B");

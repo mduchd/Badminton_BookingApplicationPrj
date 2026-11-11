@@ -90,6 +90,7 @@ class BookingServiceTest {
         mockFacility.setName("Cụm Sân Cầu Giấy");
         mockFacility.setAddress("123 Cầu Giấy");
         mockFacility.setStatus("ACTIVE");
+        mockFacility.setIsApproved(true);
     }
 
     @Test

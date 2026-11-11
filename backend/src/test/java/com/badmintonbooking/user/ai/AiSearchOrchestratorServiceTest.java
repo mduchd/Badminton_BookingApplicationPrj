@@ -19,7 +19,7 @@ class AiSearchOrchestratorServiceTest {
         criteria.setDate(java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(1).toString());
         criteria.setStartTime("19:00"); criteria.setEndTime("21:00"); criteria.setMaxTotalPrice(250000.0);
         when(llm.parseMessage(anyString(), isNull())).thenReturn(new LlmClient.LlmParseResult(criteria, "test"));
-        var facility = new Facility(); facility.setId(5L);
+        var facility = new Facility(); facility.setId(5L); facility.setStatus("ACTIVE"); facility.setIsApproved(true);
         var court = new Court(); court.setId(9L); court.setFacilityId(5L);
         when(facilities.findByStatus("ACTIVE")).thenReturn(List.of(facility));
         when(courts.findByFacilityIdInAndStatus(List.of(5L), "ACTIVE")).thenReturn(List.of(court));
@@ -43,7 +43,7 @@ class AiSearchOrchestratorServiceTest {
         var date = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(1);
         criteria.setDate(date.toString()); criteria.setStartTime("19:00"); criteria.setEndTime("21:00");
         when(llm.parseMessage(anyString(), isNull())).thenReturn(new LlmClient.LlmParseResult(criteria, "test"));
-        var facility = new Facility(); facility.setId(5L);
+        var facility = new Facility(); facility.setId(5L); facility.setStatus("ACTIVE"); facility.setIsApproved(true);
         var busy = new Court(); busy.setId(1L); busy.setFacilityId(5L);
         var free = new Court(); free.setId(2L); free.setName("Sân 2"); free.setFacilityId(5L);
         when(facilities.findByStatus("ACTIVE")).thenReturn(List.of(facility));
@@ -67,7 +67,7 @@ class AiSearchOrchestratorServiceTest {
         SearchCriteriaDto criteria = new SearchCriteriaDto();
         criteria.setDistrict(null);
         when(llm.parseMessage(anyString(), isNull())).thenReturn(new LlmClient.LlmParseResult(criteria, "Kết quả"));
-        Facility fac = new Facility(); fac.setId(5L); fac.setName("Sân thật"); fac.setDistrict("Cầu Giấy"); fac.setAddress("Cầu Giấy");
+        Facility fac = new Facility(); fac.setId(5L); fac.setStatus("ACTIVE"); fac.setIsApproved(true); fac.setName("Sân thật"); fac.setDistrict("Cầu Giấy"); fac.setAddress("Cầu Giấy");
         Court court = new Court(); court.setId(9L); court.setFacilityId(5L);
         PriceRule price = new PriceRule(); price.setPricePerSlot(new BigDecimal("70000")); price.setSlotDurationMinutes(30);
         when(facilities.findByStatus("ACTIVE")).thenReturn(List.of(fac));

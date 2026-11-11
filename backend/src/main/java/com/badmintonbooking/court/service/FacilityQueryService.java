@@ -326,7 +326,8 @@ public class FacilityQueryService {
                 f.getStatus(),
                 f.getIsApproved(),
                 f.getAmenities(),
-                courts
+                courts,
+                f.getRejectionReason()
         );
     }
 

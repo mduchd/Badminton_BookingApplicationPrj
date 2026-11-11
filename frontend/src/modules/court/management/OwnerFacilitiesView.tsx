@@ -20,6 +20,7 @@ import {
 import { OwnerLayout } from './OwnerLayout'
 import { LocationMapPicker } from './LocationMapPicker'
 import { courtApi } from '../services/courtApi'
+import { canOwnerChangeFacilityStatus, facilityStatusLabel } from '../facilityStatus'
 import { standardizeVietnameseAddress } from '../../../lib/facilityLocation'
 import type {
   CourtUpsertPayload,
@@ -94,6 +95,7 @@ interface FacilityFormState {
   amenities: string[]
   sportType: 'badminton'
   status: 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE'
+  statusLocked: boolean
   draftCourts: CourtUpsertPayload[]
 
 }
@@ -153,7 +155,7 @@ function composeMultiPhoneString(state: {
 
 export const OwnerFacilitiesView: React.FC = () => {
   const [searchKeyword, setSearchKeyword] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'maintenance' | 'paused'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'maintenance' | 'paused' | 'PENDING_APPROVAL' | 'REJECTED'>('all')
 
   // Facility Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -195,7 +197,9 @@ export const OwnerFacilitiesView: React.FC = () => {
 
   const filteredFacilities = useMemo(() => {
     return facilities.filter((f) => {
-      if (statusFilter !== 'all' && f.status !== statusFilter) return false
+      if (statusFilter === 'paused') {
+        if (!['paused', 'inactive', 'PAUSED', 'SUSPENDED'].includes(f.status)) return false
+      } else if (statusFilter !== 'all' && f.status !== statusFilter) return false
       if (searchKeyword.trim()) {
         const kw = searchKeyword.trim().toLowerCase()
         const hit =
@@ -250,6 +254,7 @@ export const OwnerFacilitiesView: React.FC = () => {
       amenities: ['Máy lạnh', 'Thảm tiêu chuẩn BWF', 'Đèn LED chống chói', 'Bãi đỗ ô tô', 'Bán nước & cầu'],
       sportType: 'badminton',
       status: 'ACTIVE',
+      statusLocked: false,
       draftCourts: Array.from({ length: 6 }, (_, idx) => ({
         name: `Sân ${idx + 1}`,
         courtNumber: idx + 1,
@@ -300,6 +305,7 @@ export const OwnerFacilitiesView: React.FC = () => {
       galleryImages: fac.galleryImages.length > 0 ? [...fac.galleryImages] : [fac.imageUrl],
       amenities: [...fac.amenities],
       sportType: 'badminton',
+      statusLocked: !canOwnerChangeFacilityStatus(fac),
       status:
         fac.status === 'maintenance'
           ? 'MAINTENANCE'
@@ -469,13 +475,13 @@ export const OwnerFacilitiesView: React.FC = () => {
         galleryImages: formState.galleryImages,
         amenities: formState.amenities,
         sportType: formState.sportType,
-        status: formState.status,
+        status: formState.statusLocked ? undefined : formState.status,
         courts: formState.isNew ? formState.draftCourts : undefined,
       }
 
       if (formState.isNew) {
         await courtApi.createFacility(payload)
-        toast.success('Đã khởi tạo chi nhánh và danh sách sân con thành công!')
+        toast.success('Đã tạo cụm sân. Hồ sơ đang chờ quản trị viên duyệt.')
       } else if (formState.id) {
         await courtApi.updateFacility(formState.id, payload)
         toast.success('Cập nhật thông tin và cài đặt chi nhánh thành công!')
@@ -603,12 +609,14 @@ export const OwnerFacilitiesView: React.FC = () => {
             />
           </div>
 
-          <div className="inline-flex p-1 rounded-xl bg-slate-100 border border-slate-200 self-start">
+          <div className="inline-flex flex-wrap p-1 rounded-xl bg-slate-100 border border-slate-200 self-start">
             {[
               { id: 'all' as const, label: 'Tất cả' },
               { id: 'active' as const, label: 'Đang mở' },
               { id: 'maintenance' as const, label: 'Bảo trì' },
               { id: 'paused' as const, label: 'Tạm ngưng' },
+              { id: 'PENDING_APPROVAL' as const, label: 'Chờ duyệt' },
+              { id: 'REJECTED' as const, label: 'Bị từ chối' },
             ].map((st) => (
               <button
                 key={st.id}
@@ -678,13 +686,10 @@ export const OwnerFacilitiesView: React.FC = () => {
                             : 'bg-slate-600 text-white'
                         }`}
                       >
-                        {fac.status === 'active'
-                          ? 'Đang hoạt động'
-                          : fac.status === 'maintenance'
-                          ? 'Đang bảo trì'
-                          : 'Tạm ngưng'}
+                        {facilityStatusLabel(fac)}
                       </span>
                     </div>
+                    {fac.rejectionReason && <p className="text-sm font-medium text-rose-700 break-words">Lý do từ chối: {fac.rejectionReason}</p>}
 
                     <div className="flex items-start gap-1.5 text-xs sm:text-sm text-slate-700 font-medium">
                       <MapPin className="w-4 h-4 text-[#168039] shrink-0 mt-0.5" />
@@ -754,8 +759,10 @@ export const OwnerFacilitiesView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleToggleFacilityStatus(fac)}
-                    className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer"
+                    className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                     title="Chuyển trạng thái Mở / Bảo trì"
+                    disabled={!canOwnerChangeFacilityStatus(fac)}
+                    aria-label="Chuyển trạng thái Mở / Bảo trì"
                   >
                     <Power className="w-4 h-4" />
                   </button>
@@ -923,18 +930,20 @@ export const OwnerFacilitiesView: React.FC = () => {
                       </label>
                       <select aria-label="Trạng thái vận hành"
                         value={formState.status}
+                        disabled={formState.statusLocked}
                         onChange={(e) =>
                           setFormState({
                             ...formState,
                             status: e.target.value as FacilityFormState['status'],
                           })
                         }
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 font-semibold text-slate-900 cursor-pointer"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 font-semibold text-slate-900 cursor-pointer disabled:cursor-not-allowed"
                       >
                         <option value="ACTIVE">Mở đặt lịch online</option>
                         <option value="MAINTENANCE">Tạm khóa bảo trì</option>
                         <option value="INACTIVE">Ẩn / Tắt nhận lịch</option>
                       </select>
+                      {formState.statusLocked && <p className="mt-2 text-xs font-medium text-slate-700">Bạn vẫn có thể sửa hồ sơ. Trạng thái nhận đặt sân do quản trị viên xét duyệt.</p>}
                     </div>
                   </div>
 

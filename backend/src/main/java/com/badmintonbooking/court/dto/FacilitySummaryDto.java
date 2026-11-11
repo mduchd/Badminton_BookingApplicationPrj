@@ -38,5 +38,6 @@ public record FacilitySummaryDto(
         String status,
         Boolean isApproved,
         List<String> amenities,
-        List<CourtDto> courts
+        List<CourtDto> courts,
+        String rejectionReason
 ) {}

@@ -11,7 +11,7 @@ export interface FacilityDto {
   normalizedAddress?: string; streetAddress?: string; ward?: string; district?: string; city?: string; address?: string
   distanceKm?: number; openHours?: string; mapsEmbedUrl?: string; mapsDirectionsUrl?: string; sportType?: string
   rating?: number; reviewCount?: number; minPrice?: number; maxPrice?: number; pricePerHour?: number; amenities?: string[]
-  phone?: string; messengerUrl?: string; description?: string; isApproved?: boolean; courts?: CourtDto[]
+  phone?: string; messengerUrl?: string; description?: string; isApproved?: boolean; courts?: CourtDto[]; rejectionReason?: string
 }
 export interface PriceRuleDto {
   id: Id; facilityId?: Id; courtId?: Id; courtName?: string; name?: string; dayType?: string; customerType?: string
